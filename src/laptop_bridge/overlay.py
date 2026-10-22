@@ -320,9 +320,12 @@ class GuidanceOverlay(QWidget):
         # Simple green triangular guide marker, matching the companion visual
         # language. The marker is separate from the instructional bubble.
         path = QPainterPath()
-        path.moveTo(cx, cy - 16)
-        path.lineTo(cx + 16, cy + 14)
-        path.lineTo(cx - 14, cy + 7)
+        # Equilateral triangle: side length 22px, centered on the cursor.
+        side = 22.0
+        height = side * math.sqrt(3.0) / 2.0
+        path.moveTo(cx, cy - (2.0 * height / 3.0))
+        path.lineTo(cx + side / 2.0, cy + height / 3.0)
+        path.lineTo(cx - side / 2.0, cy + height / 3.0)
         path.closeSubpath()
 
         # Flat single-color marker: no shadow, badge, or 3D duplicate edge.
