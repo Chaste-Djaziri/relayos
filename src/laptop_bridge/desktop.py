@@ -1,17 +1,21 @@
-"""PySide6 macOS menu-bar companion for local Laptop Bridge approvals."""
+"""PySide6 macOS menu-bar companion for local Laptop Bridge approvals, guidance overlay, and coding sessions."""
 import json
 import sys
+import time
 from datetime import datetime
+from pathlib import Path
 
 from PySide6.QtCore import QProcess, QTimer, Qt
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtGui import QAction, QFont, QIcon
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QDialog, QDialogButtonBox, QFormLayout, QLabel,
-    QMainWindow, QMenu, QMessageBox, QPlainTextEdit, QSystemTrayIcon,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QApplication, QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
+    QHBoxLayout, QHeaderView, QLabel, QMainWindow, QMenu, QMessageBox,
+    QPlainTextEdit, QPushButton, QSystemTrayIcon, QTableWidget,
+    QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
-from . import state
+from . import capture, state
+from .overlay import GuidanceOverlay
 
 
 class ApprovalDialog(QDialog):
@@ -19,14 +23,35 @@ class ApprovalDialog(QDialog):
         super().__init__(parent)
         self.request = request
         self.setWindowTitle("Laptop Bridge approval")
+        self.setMinimumWidth(480)
         layout = QFormLayout(self)
-        layout.addRow("Action", QLabel(request["kind"]))
-        layout.addRow("Configured target", QLabel(request["target"]))
-        argv = QPlainTextEdit(json.dumps(request["argv"], indent=2))
-        argv.setReadOnly(True)
-        argv.setMinimumHeight(90)
-        layout.addRow("Exact command", argv)
-        layout.addRow("Expires", QLabel(datetime.fromtimestamp(request["created_at"] + state.TTL).strftime("%Y-%m-%d %H:%M:%S")))
+
+        if request["kind"] == "project_session":
+            self.setWindowTitle("Laptop Bridge: Project Coding Session Approval")
+            kind_label = QLabel("60-Minute Project Coding Session")
+            kind_label.setStyleSheet("font-weight: bold; color: #0284c7;")
+            layout.addRow("Action", kind_label)
+            layout.addRow("Project folder", QLabel(request["target"]))
+            info = QLabel(
+                "Grants MCP server access to read, list, write, patch, and execute "
+                "non-interactive commands strictly inside this folder for 60 minutes.\n"
+                "Path containment and symlink escape checks are strictly enforced."
+            )
+            info.setWordWrap(True)
+            layout.addRow("Permission scope", info)
+        else:
+            layout.addRow("Action", QLabel(request["kind"]))
+            layout.addRow("Configured target", QLabel(request["target"]))
+            argv = QPlainTextEdit(json.dumps(request["argv"], indent=2))
+            argv.setReadOnly(True)
+            argv.setMinimumHeight(90)
+            layout.addRow("Exact command", argv)
+
+        layout.addRow(
+            "Expires",
+            QLabel(datetime.fromtimestamp(request["created_at"] + state.TTL).strftime("%Y-%m-%d %H:%M:%S")),
+        )
+
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Approve")
         buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Deny")
@@ -40,36 +65,147 @@ class StatusWindow(QMainWindow):
         super().__init__()
         self.companion = companion
         self.setWindowTitle("Laptop Bridge")
+        self.setMinimumSize(680, 520)
+
         content = QWidget()
         layout = QVBoxLayout(content)
+        layout.setSpacing(12)
+
+        # 1. Server and Permission Status
+        status_box = QVBoxLayout()
         self.status = QLabel()
-        self.stop = QCheckBox("Emergency stop: block all new and approved sensitive actions")
-        self.stop.toggled.connect(state.set_emergency_stop)
+        self.status.setStyleSheet("font-size: 13px; font-weight: bold;")
+        status_box.addWidget(self.status)
+
+        perm_layout = QHBoxLayout()
+        self.perm_label = QLabel()
+        self.perm_button = QPushButton("Request Permission")
+        self.perm_button.clicked.connect(self._request_permission)
+        perm_layout.addWidget(self.perm_label)
+        perm_layout.addWidget(self.perm_button)
+        perm_layout.addStretch()
+        status_box.addLayout(perm_layout)
+
+        # Display sharing / guidance indicator
+        self.display_sharing_label = QLabel()
+        status_box.addWidget(self.display_sharing_label)
+
+        layout.addLayout(status_box)
+
+        # 2. Emergency Stop
+        self.stop = QCheckBox("Emergency stop: block all actions and terminate active coding sessions")
+        self.stop.setStyleSheet("font-weight: bold; color: #dc2626;")
+        self.stop.toggled.connect(self.companion.set_emergency_stop)
+        layout.addWidget(self.stop)
+
+        # 3. Active Coding Sessions Section
+        session_header = QHBoxLayout()
+        session_title = QLabel("Active Project Coding Sessions (60-minute limit)")
+        session_title.setStyleSheet("font-weight: bold; font-size: 12px;")
+        session_header.addWidget(session_title)
+        session_header.addStretch()
+        start_session_btn = QPushButton("New Project Session…")
+        start_session_btn.clicked.connect(self.companion.start_project_session_dialog)
+        session_header.addWidget(start_session_btn)
+        layout.addLayout(session_header)
+
+        self.session_info = QLabel("No active project sessions")
+        self.session_info.setStyleSheet("color: #64748b; padding-left: 8px;")
+        layout.addWidget(self.session_info)
+
+        # 4. Overlay Controls
+        overlay_box = QHBoxLayout()
+        overlay_title = QLabel("Visual Guidance:")
+        overlay_title.setStyleSheet("font-weight: bold;")
+        overlay_box.addWidget(overlay_title)
+
+        test_guidance_btn = QPushButton("Demo Guidance")
+        test_guidance_btn.clicked.connect(self.companion.demo_guidance)
+        overlay_box.addWidget(test_guidance_btn)
+
+        self.clear_guidance_btn = QPushButton("Clear Guidance")
+        self.clear_guidance_btn.clicked.connect(self.companion.clear_guidance)
+        overlay_box.addWidget(self.clear_guidance_btn)
+        overlay_box.addStretch()
+        layout.addLayout(overlay_box)
+
+        # 5. Recent Action History
+        history_title = QLabel("Recent Action History (metadata only, 30-day retention)")
+        history_title.setStyleSheet("font-weight: bold; font-size: 12px;")
+        layout.addWidget(history_title)
+
         self.history = QTableWidget(0, 5)
         self.history.setHorizontalHeaderLabels(["Time", "Action", "Target", "Decision", "Result"])
         self.history.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        layout.addWidget(self.status)
-        layout.addWidget(self.stop)
-        layout.addWidget(QLabel("Recent action history (metadata only)"))
+        self.history.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         layout.addWidget(self.history)
+
         self.setCentralWidget(content)
+
+    def _request_permission(self):
+        capture.request_screen_recording_permission()
+        self.refresh()
 
     def refresh(self):
         process = self.companion.server
         running = process.state() == QProcess.ProcessState.Running
-        detail = "Running at http://127.0.0.1:8765/mcp" if running else "Server is not running"
+        detail = "Server: Running at http://127.0.0.1:8765/mcp" if running else "Server: Stopped"
         self.status.setText(detail)
+
+        has_perm = capture.has_screen_recording_permission()
+        if has_perm:
+            self.perm_label.setText("Screen Recording: Granted")
+            self.perm_label.setStyleSheet("color: #16a34a;")
+            self.perm_button.setVisible(False)
+        else:
+            self.perm_label.setText("Screen Recording: Permission Required")
+            self.perm_label.setStyleSheet("color: #d97706;")
+            self.perm_button.setVisible(True)
+
+        if self.companion.overlay.is_guidance_active():
+            self.display_sharing_label.setText(
+                f"Display Sharing: Active (Guidance visible on Display {self.companion.overlay.target_display_id})"
+            )
+            self.display_sharing_label.setStyleSheet("color: #0284c7; font-weight: bold;")
+            self.clear_guidance_btn.setEnabled(True)
+        else:
+            self.display_sharing_label.setText("Display Sharing: Inactive (no overlay visible)")
+            self.display_sharing_label.setStyleSheet("color: #64748b;")
+            self.clear_guidance_btn.setEnabled(False)
+
         self.stop.blockSignals(True)
         self.stop.setChecked(state.emergency_stop())
         self.stop.blockSignals(False)
+
+        # Update active project sessions & countdown
+        sessions = state.active_project_sessions()
+        if sessions:
+            now = time.time()
+            lines = []
+            for s in sessions:
+                remaining = max(0, int(s["expires_at"] - now))
+                mins, secs = divmod(remaining, 60)
+                lines.append(f"• {s['root']}  [{mins}m {secs:02d}s remaining]")
+            self.session_info.setText("\n".join(lines))
+            self.session_info.setStyleSheet("color: #0369a1; font-weight: 500; padding-left: 8px;")
+        else:
+            self.session_info.setText("No active project sessions")
+            self.session_info.setStyleSheet("color: #64748b; padding-left: 8px;")
+
+        # Update history
         rows = state.recent_history()
         self.history.setRowCount(len(rows))
         for row_index, row in enumerate(rows):
             result = "" if row["exit_code"] is None else str(row["exit_code"])
-            values = [datetime.fromtimestamp(row["recorded_at"]).strftime("%Y-%m-%d %H:%M:%S"), row["kind"], row["target"], row["decision"], result]
+            values = [
+                datetime.fromtimestamp(row["recorded_at"]).strftime("%Y-%m-%d %H:%M:%S"),
+                row["kind"],
+                row["target"],
+                row["decision"],
+                result,
+            ]
             for column, value in enumerate(values):
                 self.history.setItem(row_index, column, QTableWidgetItem(value))
-        self.history.resizeColumnsToContents()
 
 
 class Companion:
@@ -79,27 +215,54 @@ class Companion:
         self.server.finished.connect(self._server_stopped)
         self.restart_requested = False
         self.pending_dialog = False
+
+        self.overlay = GuidanceOverlay()
         self.window = StatusWindow(self)
+
         self.tray = QSystemTrayIcon(QIcon.fromTheme("computer"), app)
         menu = QMenu()
+
         self.status_action = QAction("Server: stopped", menu)
         self.status_action.setEnabled(False)
         menu.addAction(self.status_action)
+
+        self.overlay_status_action = QAction("Overlay: inactive", menu)
+        self.overlay_status_action.setEnabled(False)
+        menu.addAction(self.overlay_status_action)
+
+        self.session_status_action = QAction("Active session: none", menu)
+        self.session_status_action.setEnabled(False)
+        menu.addAction(self.session_status_action)
+
+        menu.addSeparator()
+        menu.addAction("Start Project Coding Session…", self.start_project_session_dialog)
+        menu.addAction("Show Guidance…", self.demo_guidance)
+        menu.addAction("Clear Guidance", self.clear_guidance)
+
+        menu.addSeparator()
         menu.addAction("Open Laptop Bridge…", self.show_window)
         menu.addAction("Restart server", self.restart_server)
+
         menu.addSeparator()
         self.stop_action = QAction("Emergency stop", menu, checkable=True)
         self.stop_action.setChecked(state.emergency_stop())
         self.stop_action.toggled.connect(self.set_emergency_stop)
         menu.addAction(self.stop_action)
+
         menu.addSeparator()
         menu.addAction("Quit", self.quit)
+
         self.tray.setContextMenu(menu)
-        self.tray.activated.connect(lambda reason: self.show_window() if reason == QSystemTrayIcon.ActivationReason.Trigger else None)
+        self.tray.activated.connect(
+            lambda reason: self.show_window() if reason == QSystemTrayIcon.ActivationReason.Trigger else None
+        )
         self.tray.show()
+
+        # Responsive polling for pending requests and desktop jobs (200ms)
         self.poller = QTimer()
         self.poller.timeout.connect(self.poll)
-        self.poller.start(750)
+        self.poller.start(200)
+
         self.start_server()
 
     def start_server(self):
@@ -124,13 +287,103 @@ class Companion:
 
     def set_emergency_stop(self, enabled):
         state.set_emergency_stop(enabled)
+        if enabled:
+            self.overlay.clear_guidance()
         self.stop_action.setChecked(enabled)
+        self.window.refresh()
+
+    def start_project_session_dialog(self):
+        if state.emergency_stop():
+            QMessageBox.warning(self.window, "Emergency stop", "Emergency stop is enabled. Disable it before approving new sessions.")
+            return
+        folder = QFileDialog.getExistingDirectory(self.window, "Select Project Root for 60-Minute Coding Session")
+        if not folder:
+            return
+        folder_path = str(Path(folder).resolve())
+        reply = QMessageBox.question(
+            self.window,
+            "Approve Project Coding Session",
+            f"Grant Laptop Bridge MCP server 60-minute read/write/patch/command access strictly inside:\n\n{folder_path}\n\nProceed?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                token = state.create_project_session_request(folder_path)
+                state.approve(token)
+                session = state.activate_project_session(token)
+                self.window.refresh()
+                QMessageBox.information(
+                    self.window,
+                    "Coding Session Active",
+                    f"Approved 60-minute coding session for:\n{session['root']}\n\nSession ID: {session['session_id']}",
+                )
+            except Exception as err:
+                QMessageBox.critical(self.window, "Session Error", str(err))
+
+    def demo_guidance(self):
+        self.overlay.show_guidance(
+            display_id=0,
+            x=320,
+            y=240,
+            label="Laptop Bridge",
+            message="Visual guidance active. Mouse trailing enabled.",
+            timeout_seconds=15,
+        )
+        self.window.refresh()
+
+    def clear_guidance(self):
+        self.overlay.clear_guidance()
         self.window.refresh()
 
     def poll(self):
         running = self.server.state() == QProcess.ProcessState.Running
         self.status_action.setText("Server: running" if running else "Server: stopped")
+
+        if self.overlay.is_guidance_active():
+            self.overlay_status_action.setText(f"Overlay: active (Display {self.overlay.target_display_id})")
+        else:
+            self.overlay_status_action.setText("Overlay: inactive")
+
+        sessions = state.active_project_sessions()
+        if sessions:
+            remaining = max(0, int(sessions[0]["expires_at"] - time.time()))
+            mins = remaining // 60
+            self.session_status_action.setText(f"Active session: {mins}m left")
+        else:
+            self.session_status_action.setText("Active session: none")
+
         self.window.refresh()
+
+        # Handle queued desktop jobs
+        for job in state.claim_desktop_jobs():
+            kind = job["kind"]
+            payload = job.get("payload", {})
+            job_id = job["job_id"]
+
+            if kind == "screen_snapshot":
+                try:
+                    metadata, png_bytes = capture.capture_snapshot(payload.get("display_id"))
+                    state.complete_desktop_job(job_id, result=metadata, blob=png_bytes)
+                except Exception as error:
+                    state.complete_desktop_job(job_id, result={"error": str(error)})
+            elif kind == "show_guidance":
+                try:
+                    self.overlay.show_guidance(
+                        display_id=payload.get("display_id", 0),
+                        x=payload.get("x", 200),
+                        y=payload.get("y", 200),
+                        label=payload.get("label", "Laptop Bridge"),
+                        message=payload.get("message", ""),
+                        timeout_seconds=payload.get("timeout_seconds", 15),
+                    )
+                    state.complete_desktop_job(job_id, result={"status": "displayed"})
+                except Exception as error:
+                    state.complete_desktop_job(job_id, result={"error": str(error)})
+            elif kind == "clear_guidance":
+                self.overlay.clear_guidance()
+                state.complete_desktop_job(job_id, result={"status": "cleared"})
+
+        # Handle pending approval requests
         if self.pending_dialog or state.emergency_stop():
             return
         pending = state.pending_requests()
@@ -155,6 +408,7 @@ class Companion:
         self.window.activateWindow()
 
     def quit(self):
+        self.overlay.clear_guidance()
         if self.server.state() != QProcess.ProcessState.NotRunning:
             self.server.terminate()
             self.server.waitForFinished(3000)
