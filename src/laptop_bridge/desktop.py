@@ -443,5 +443,6 @@ def main():
     app.setQuitOnLastWindowClosed(False)
     if not QSystemTrayIcon.isSystemTrayAvailable():
         raise SystemExit("Laptop Bridge requires a system tray")
-    Companion(app)
+    companion = Companion(app)
+    app.companion = companion
     raise SystemExit(app.exec())
