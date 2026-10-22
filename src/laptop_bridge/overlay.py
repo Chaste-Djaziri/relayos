@@ -191,12 +191,12 @@ class GuidanceOverlay(QWidget):
 
         elif self.state == self.STATE_TRAILING:
             # Trailing mode: follow user's real cursor with smooth lag and offset
-            trailing_target = cur_local + QPointF(24, 24)
+            trailing_target = cur_local + QPointF(18, 18)
             dx = trailing_target.x() - self.current_cursor_pt.x()
             dy = trailing_target.y() - self.current_cursor_pt.y()
             self.current_cursor_pt = QPointF(
-                self.current_cursor_pt.x() + dx * 0.18,
-                self.current_cursor_pt.y() + dy * 0.18,
+                self.current_cursor_pt.x() + dx * 0.28,
+                self.current_cursor_pt.y() + dy * 0.28,
             )
 
         self.update()
@@ -208,13 +208,7 @@ class GuidanceOverlay(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # 1. Draw Target Ring & Pulse
-        self._draw_target_ring(painter)
-
-        # 2. Draw Instructional Bubble (if message or label present)
-        self._draw_bubble(painter)
-
-        # 3. Draw Distinct "Laptop Bridge" Guide Cursor
+        # The guide is intentionally only a simple secondary triangle cursor.
         self._draw_guide_cursor(painter)
 
     def _draw_target_ring(self, painter: QPainter):
