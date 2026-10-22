@@ -109,11 +109,16 @@ def _wait_for_desktop_job(job_id, timeout=15):
 def _session_path(session_id, raw_path, must_exist=True):
     session = project_session(session_id)
     root = Path(session["root"]).resolve(strict=True)
-    path = Path(raw_path).expanduser()
-    path = (root / path).resolve(strict=must_exist) if not path.is_absolute() else path.resolve(strict=must_exist)
-    if path != root and root not in path.parents:
+    raw = Path(raw_path).expanduser()
+    target = (root / raw) if not raw.is_absolute() else raw
+    resolved = target.resolve(strict=False)
+    if resolved != root and root not in resolved.parents:
         raise PermissionError("Path is outside the approved project root")
-    return session, path
+    if must_exist:
+        resolved = target.resolve(strict=True)
+        if resolved != root and root not in resolved.parents:
+            raise PermissionError("Path is outside the approved project root")
+    return session, resolved
 
 
 @mcp.tool()
@@ -183,7 +188,7 @@ def apply_project_patch(session_id: str, patch: str) -> dict:
         result = subprocess.run(
             ["/usr/bin/git", "apply", "--whitespace=nowarn", "-"], input=patch,
             text=True, capture_output=True, timeout=20, shell=False, cwd=root,
-            stdin=subprocess.DEVNULL, check=False,
+            check=False,
         )
     except subprocess.TimeoutExpired:
         record_result("apply_project_patch", session["root"], duration_ms=int((time.monotonic() - started) * 1000))
