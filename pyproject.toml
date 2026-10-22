@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "laptop-bridge"
+version = "0.1.0"
+description = "Permission-gated local laptop MCP agent for macOS and Windows"
+requires-python = ">=3.11"
+dependencies = ["mcp>=2,<3", "psutil>=6,<9"]
+
+[project.scripts]
+laptop-bridge = "laptop_bridge.server:main"
+laptop-bridge-approvals = "laptop_bridge.approvals:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
