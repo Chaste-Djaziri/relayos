@@ -11,6 +11,7 @@ TTL = 300
 HISTORY_RETENTION = 30 * 24 * 60 * 60
 PROJECT_SESSION_TTL = 60 * 60
 JOB_TTL = 30
+GUIDANCE_SESSION_TTL = 15 * 60
 
 
 _INITIALIZED_DBS = set()
@@ -55,6 +56,17 @@ def _db():
                 check_at REAL NOT NULL, expires_at REAL, project_session TEXT,
                 metadata_json TEXT NOT NULL, created_at REAL NOT NULL, completed_at REAL
             );
+            CREATE TABLE IF NOT EXISTS guidance_sessions (
+                token TEXT PRIMARY KEY, created_at REAL NOT NULL,
+                expires_at REAL NOT NULL, status TEXT NOT NULL,
+                stopped_at REAL, last_capture_at REAL
+            );
+            CREATE TABLE IF NOT EXISTS guidance_click_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, session_token TEXT NOT NULL,
+                display_id INTEGER NOT NULL, x REAL NOT NULL, y REAL NOT NULL,
+                button TEXT NOT NULL, modifiers_json TEXT NOT NULL,
+                occurred_at REAL NOT NULL, consumed_at REAL
+            );
             """)
             _INITIALIZED_DBS.add(db_path)
         yield connection
@@ -91,6 +103,7 @@ def set_emergency_stop(enabled):
         if enabled:
             now = time.time()
             connection.execute("UPDATE project_sessions SET status = 'revoked', revoked_at = ? WHERE status = 'active'", (now,))
+            connection.execute("UPDATE guidance_sessions SET status = 'stopped', stopped_at = ? WHERE status = 'active'", (now,))
             connection.execute("UPDATE desktop_jobs SET status = 'cancelled', completed_at = ? WHERE status IN ('pending', 'claimed')", (now,))
         connection.commit()
 
@@ -230,6 +243,82 @@ def queue_desktop_job(kind, payload):
             (token, kind, json.dumps(payload), time.time()),
         )
     return token
+
+
+def start_guidance_session(max_duration_seconds=900):
+    if emergency_stop():
+        raise PermissionError("Emergency stop is enabled")
+    duration = max(1, min(int(max_duration_seconds), GUIDANCE_SESSION_TTL))
+    token = secrets.token_urlsafe(18)
+    now = time.time()
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        _expire(connection, now)
+        active = connection.execute("SELECT token FROM guidance_sessions WHERE status = 'active' AND expires_at > ?", (now,)).fetchone()
+        if active:
+            connection.rollback()
+            raise PermissionError("A guidance session is already active")
+        connection.execute("INSERT INTO guidance_sessions (token, created_at, expires_at, status) VALUES (?, ?, ?, 'active')", (token, now, now + duration))
+        connection.commit()
+    return guidance_session_status(token)
+
+
+def guidance_session_status(token=None):
+    with _db() as connection:
+        now = time.time()
+        connection.execute("BEGIN IMMEDIATE")
+        connection.execute("UPDATE guidance_sessions SET status = 'expired' WHERE status = 'active' AND expires_at <= ?", (now,))
+        query = "SELECT token, created_at, expires_at, status, last_capture_at FROM guidance_sessions WHERE status = 'active'"
+        params = ()
+        if token:
+            query += " AND token = ?"
+            params = (token,)
+        query += " ORDER BY created_at DESC LIMIT 1"
+        row = connection.execute(query, params).fetchone()
+        connection.commit()
+    if row is None:
+        return {"active": False, "session_id": token}
+    return {"active": True, "session_id": row["token"], "created_at": row["created_at"], "expires_at": row["expires_at"], "last_capture_at": row["last_capture_at"]}
+
+
+def stop_guidance_session(token=None):
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        now = time.time()
+        query = "UPDATE guidance_sessions SET status = 'stopped', stopped_at = ? WHERE status = 'active'"
+        params = (now,)
+        if token:
+            query += " AND token = ?"
+            params = (now, token)
+        updated = connection.execute(query, params).rowcount
+        connection.commit()
+    return updated > 0
+
+
+def touch_guidance_capture(token):
+    with _db() as connection:
+        connection.execute("UPDATE guidance_sessions SET last_capture_at = ? WHERE token = ? AND status = 'active'", (time.time(), token))
+
+
+def queue_guidance_click(token, display_id, x, y, button="left", modifiers=None, occurred_at=None):
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        if not guidance_session_status(token).get("active"):
+            connection.rollback()
+            return False
+        connection.execute("INSERT INTO guidance_click_events (session_token, display_id, x, y, button, modifiers_json, occurred_at) VALUES (?, ?, ?, ?, ?, ?, ?)", (token, int(display_id), float(x), float(y), button, json.dumps(modifiers or []), occurred_at or time.time()))
+        connection.commit()
+    return True
+
+
+def get_guidance_clicks(token, consume=True):
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        rows = connection.execute("SELECT id, display_id, x, y, button, modifiers_json, occurred_at FROM guidance_click_events WHERE session_token = ? AND consumed_at IS NULL ORDER BY id", (token,)).fetchall()
+        if consume and rows:
+            connection.executemany("UPDATE guidance_click_events SET consumed_at = ? WHERE id = ?", [(time.time(), row["id"]) for row in rows])
+        connection.commit()
+    return [{"event_id": row["id"], "display_id": row["display_id"], "x": row["x"], "y": row["y"], "button": row["button"], "modifiers": json.loads(row["modifiers_json"]), "occurred_at": row["occurred_at"]} for row in rows]
 
 
 def claim_desktop_jobs():
