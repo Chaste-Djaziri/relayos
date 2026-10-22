@@ -22,6 +22,8 @@ rm -rf "build/${APP_NAME}" "${DIST_DIR}/${APP_NAME}.app"
   --name "${APP_NAME}" \
   --paths src \
   --osx-bundle-identifier "rw.shangazi.laptop-bridge" \
+  --hidden-import AppKit \
+  --hidden-import Foundation \
   --osx-entitlements-file packaging/macos.entitlements \
   packaging/desktop_entry.py
 
