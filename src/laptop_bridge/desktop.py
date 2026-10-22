@@ -77,6 +77,7 @@ class Companion:
         self.app = app
         self.server = QProcess()
         self.server.finished.connect(self._server_stopped)
+        self.restart_requested = False
         self.pending_dialog = False
         self.window = StatusWindow(self)
         self.tray = QSystemTrayIcon(QIcon.fromTheme("computer"), app)
@@ -111,12 +112,15 @@ class Companion:
         if self.server.state() == QProcess.ProcessState.NotRunning:
             self.start_server()
         else:
-            self.server.finished.connect(self.start_server)
+            self.restart_requested = True
             self.server.terminate()
 
     def _server_stopped(self):
         self.status_action.setText("Server: stopped")
         self.window.refresh()
+        if self.restart_requested:
+            self.restart_requested = False
+            self.start_server()
 
     def set_emergency_stop(self, enabled):
         state.set_emergency_stop(enabled)
