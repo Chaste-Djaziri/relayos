@@ -281,6 +281,10 @@ class Companion:
         self.poller.start(200)
 
         self.start_server()
+        # Show the onboarding/status window on first launch when macOS permissions
+        # still need attention; subsequent launches remain tray-first.
+        if not capture.has_screen_recording_permission() or not capture.has_accessibility_permission():
+            QTimer.singleShot(350, self.show_window)
 
     def start_server(self):
         if self.server.state() != QProcess.ProcessState.NotRunning:
