@@ -23,7 +23,7 @@ rm -rf "build/${APP_NAME}" "${DIST_DIR}/${APP_NAME}.app"
   --paths src \
   --osx-bundle-identifier "rw.shangazi.laptop-bridge" \
   --osx-entitlements-file packaging/macos.entitlements \
-  -m laptop_bridge.desktop
+  packaging/desktop_entry.py
 
 APP_PATH="${DIST_DIR}/${APP_NAME}.app"
 if [ -n "${SIGNING_IDENTITY}" ]; then
