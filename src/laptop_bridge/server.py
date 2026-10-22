@@ -105,9 +105,9 @@ def read_text_file(path: str) -> str:
         raise ValueError("Not a regular file or file too large")
     return file.read_text(encoding="utf-8")
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False))
 def propose_action(kind: str, target: str) -> dict:
-    """Request local human approval for an allowlisted app or command. No action is performed."""
+    """Request confirmation for an allowlisted app or command. No action is performed yet."""
     if emergency_stop():
         raise PermissionError("Emergency stop is enabled")
     config = load_config()
@@ -122,7 +122,7 @@ def propose_action(kind: str, target: str) -> dict:
     token = request(kind, {"target": target, "argv": argv})
     return {"request_id": token, "message": "Run laptop-bridge-approvals list, then approve ID locally. Then call execute_approved_action with this ID."}
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False))
 def execute_approved_action(request_id: str) -> dict:
     """Run a previously approved, allowlisted action. Approval is single-use, expires after five minutes."""
     item = consume(request_id)
@@ -194,7 +194,7 @@ def approve_project_session(request_id: str) -> dict:
     return activate_project_session(request_id)
 
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False))
 def project_session_status(request_id: str) -> dict:
     """Turn an approved project-session request into its one-hour session and return its ID."""
     return activate_project_session(request_id)
@@ -344,7 +344,7 @@ def run_project_command(
     return {"exit_code": result.returncode, "stdout": result.stdout[:8192], "stderr": result.stderr[:8192]}
 
 
-@mcp.tool(annotations=ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True))
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=False))
 def screen_snapshot() -> list:
     """Capture the active display once through the visible local companion; no screenshot is retained."""
     started = time.monotonic()
@@ -357,7 +357,7 @@ def screen_snapshot() -> list:
     return [result, ImageContent(data=base64.b64encode(blob).decode("ascii"), mime_type="image/png")]
 
 
-@mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=False))
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False))
 def start_guidance_session(max_duration_seconds: int = 900) -> dict:
     """Start an explicit, bounded visual guidance session (maximum 15 minutes)."""
     session = start_guidance_session_state(max_duration_seconds)
@@ -370,7 +370,7 @@ def guidance_session_status(session_id: str | None = None) -> dict:
     return guidance_session_status_state(session_id)
 
 
-@mcp.tool(annotations=ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=False))
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=False))
 def refresh_guidance_screen(session_id: str) -> list:
     """Capture one current display frame for an active guidance session."""
     session = guidance_session_status_state(session_id)
