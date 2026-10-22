@@ -8,7 +8,9 @@ CONFIG_FILE = STATE_DIR / "config.json"
 DATABASE_FILE = STATE_DIR / "state.sqlite3"
 
 DEFAULT = {
-    "allowed_folders": [str(Path.home() / "Documents")],
+    # No directory is implicitly authorized. Users grant individual roots
+    # through a confirmed project session or explicitly configure them.
+    "allowed_folders": [],
     "allowed_apps": {},
     "allowed_commands": {},
     "max_read_bytes": 65536,
