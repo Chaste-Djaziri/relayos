@@ -68,7 +68,7 @@ class StatusWindow(QMainWindow):
         super().__init__()
         self.companion = companion
         self.setWindowTitle("Laptop Bridge")
-        self.setMinimumSize(680, 520)
+        self.setMinimumSize(760, 640)
 
         content = QWidget()
         layout = QVBoxLayout(content)
@@ -124,6 +124,19 @@ class StatusWindow(QMainWindow):
         self.session_info = QLabel("No active project sessions")
         self.session_info.setStyleSheet("color: #64748b; padding-left: 8px;")
         layout.addWidget(self.session_info)
+
+        grants_title = QLabel("Always-Allowed Commands (until revoked)")
+        grants_title.setStyleSheet("font-weight: bold; font-size: 12px;")
+        layout.addWidget(grants_title)
+        self.grants = QTableWidget(0, 4)
+        self.grants.setHorizontalHeaderLabels(["Executable", "Project", "Saved", ""])
+        self.grants.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.grants.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        self.grants.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.grants.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self.grants.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self.grants.setMaximumHeight(150)
+        layout.addWidget(self.grants)
 
         # 4. Overlay Controls
         overlay_box = QHBoxLayout()
@@ -212,6 +225,16 @@ class StatusWindow(QMainWindow):
         else:
             self.session_info.setText("No active project sessions")
             self.session_info.setStyleSheet("color: #64748b; padding-left: 8px;")
+
+        grants = state.saved_command_grants()
+        self.grants.setRowCount(len(grants))
+        for row_index, grant in enumerate(grants):
+            self.grants.setItem(row_index, 0, QTableWidgetItem(grant["executable"]))
+            self.grants.setItem(row_index, 1, QTableWidgetItem(grant["project_root"]))
+            self.grants.setItem(row_index, 2, QTableWidgetItem(datetime.fromtimestamp(grant["created_at"]).strftime("%Y-%m-%d %H:%M")))
+            revoke = QPushButton("Revoke")
+            revoke.clicked.connect(lambda _checked=False, token=grant["token"]: self.companion.revoke_command_grant(token))
+            self.grants.setCellWidget(row_index, 3, revoke)
 
         # Update history
         rows = state.recent_history()
@@ -383,6 +406,13 @@ class Companion:
         self.overlay.clear_guidance()
         self.window.refresh()
 
+    def revoke_command_grant(self, token):
+        try:
+            state.revoke_command_grant(token)
+            self.window.refresh()
+        except Exception as error:
+            QMessageBox.warning(self.window, "Could not revoke grant", str(error))
+
     def _record_guidance_click(self, x, y, button, modifiers, occurred_at):
         session = state.guidance_session_status(self.guidance_observer_session)
         if not session.get("active"):
@@ -474,6 +504,10 @@ class Companion:
             return
         pending = state.pending_requests()
         if not pending:
+            return
+        # Let ChatGPT's confirmation/approval call complete before showing the
+        # local-client fallback dialog for a newly requested folder session.
+        if pending[0]["kind"] == "project_session" and time.time() - pending[0]["created_at"] < 15:
             return
         self.pending_dialog = True
         dialog = ApprovalDialog(pending[0], self.window)
