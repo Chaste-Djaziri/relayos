@@ -77,6 +77,7 @@ def _db():
 def _expire(connection, now):
     connection.execute("UPDATE requests SET status = 'expired', decided_at = ? WHERE status = 'pending' AND created_at < ?", (now, now - TTL))
     connection.execute("UPDATE project_sessions SET status = 'expired' WHERE status = 'active' AND expires_at <= ?", (now,))
+    connection.execute("UPDATE guidance_sessions SET status = 'expired' WHERE status = 'active' AND expires_at <= ?", (now,))
     connection.execute("DELETE FROM desktop_jobs WHERE created_at < ?", (now - JOB_TTL,))
 
 
@@ -303,7 +304,8 @@ def touch_guidance_capture(token):
 def queue_guidance_click(token, display_id, x, y, button="left", modifiers=None, occurred_at=None):
     with _db() as connection:
         connection.execute("BEGIN IMMEDIATE")
-        if not guidance_session_status(token).get("active"):
+        active = connection.execute("SELECT 1 FROM guidance_sessions WHERE token = ? AND status = 'active' AND expires_at > ?", (token, time.time())).fetchone()
+        if active is None:
             connection.rollback()
             return False
         connection.execute("INSERT INTO guidance_click_events (session_token, display_id, x, y, button, modifiers_json, occurred_at) VALUES (?, ?, ?, ?, ?, ?, ?)", (token, int(display_id), float(x), float(y), button, json.dumps(modifiers or []), occurred_at or time.time()))
