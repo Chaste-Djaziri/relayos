@@ -49,8 +49,11 @@ class GuidanceOverlay(QWidget):
 
         # Animation timer (approx 60 FPS)
         self.anim_timer = QTimer(self)
-        self.anim_timer.setInterval(16)
+        # Sample twice per display frame so pointer movement stays fluid even when
+        # the desktop compositor has a slightly uneven 60 Hz cadence.
+        self.anim_timer.setInterval(8)
         self.anim_timer.timeout.connect(self._on_tick)
+        self._last_tick_time = time.monotonic()
 
         # Timeout timer for auto-dismiss
         self.timeout_timer = QTimer(self)
@@ -165,6 +168,8 @@ class GuidanceOverlay(QWidget):
             return
 
         now = time.monotonic()
+        dt = min(0.05, max(0.001, now - self._last_tick_time))
+        self._last_tick_time = now
         self.pulse_phase += 0.08
 
         geo = self.geometry()
@@ -195,9 +200,12 @@ class GuidanceOverlay(QWidget):
             trailing_target = cur_local + QPointF(16, 16)
             dx = trailing_target.x() - self.current_cursor_pt.x()
             dy = trailing_target.y() - self.current_cursor_pt.y()
+            # Exponential smoothing is independent of timer jitter: the marker
+            # has the same feel at 60 Hz, 120 Hz, or during a brief busy frame.
+            follow_alpha = 1.0 - math.exp(-30.0 * dt)
             self.current_cursor_pt = QPointF(
-                self.current_cursor_pt.x() + dx * 0.65,
-                self.current_cursor_pt.y() + dy * 0.65,
+                self.current_cursor_pt.x() + dx * follow_alpha,
+                self.current_cursor_pt.y() + dy * follow_alpha,
             )
 
         self.update()
