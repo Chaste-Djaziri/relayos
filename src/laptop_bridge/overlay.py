@@ -323,45 +323,21 @@ class GuidanceOverlay(QWidget):
         cx = self.current_cursor_pt.x()
         cy = self.current_cursor_pt.y()
 
-        # Build distinct arrow path
+        # Simple green triangular guide marker, matching the companion visual
+        # language. The marker is separate from the instructional bubble.
         path = QPainterPath()
-        path.moveTo(cx, cy)
-        path.lineTo(cx, cy + 22)
-        path.lineTo(cx + 6, cy + 17)
-        path.lineTo(cx + 12, cy + 26)
-        path.lineTo(cx + 16, cy + 24)
-        path.lineTo(cx + 10, cy + 15)
-        path.lineTo(cx + 17, cy + 15)
+        path.moveTo(cx, cy - 16)
+        path.lineTo(cx + 16, cy + 14)
+        path.lineTo(cx - 14, cy + 7)
         path.closeSubpath()
 
-        # Outer halo glow
-        painter.setPen(QPen(QColor(6, 182, 212, 120), 4))
-        painter.setBrush(Qt.BrushStyle.NoBrush)
+        # Soft shadow keeps the marker visible over light and dark apps.
+        shadow = QPainterPath(path)
+        shadow.translate(2, 3)
+        painter.setPen(QPen(QColor(0, 0, 0, 110), 3))
+        painter.setBrush(QBrush(QColor(0, 0, 0, 80)))
+        painter.drawPath(shadow)
+
+        painter.setPen(QPen(QColor(20, 110, 45, 230), 1.5))
+        painter.setBrush(QBrush(QColor(52, 199, 89, 255)))
         painter.drawPath(path)
-
-        # Main cursor body (electric cyan / deep dark outline)
-        painter.setPen(QPen(QColor(15, 23, 42, 240), 2))
-        painter.setBrush(QBrush(QColor(6, 182, 212, 255)))
-        painter.drawPath(path)
-
-        # Small "Laptop Bridge" badge attached to guide cursor
-        badge_font = QFont("Helvetica Neue", 8, QFont.Weight.Bold)
-        painter.setFont(badge_font)
-        badge_text = "Laptop Bridge"
-        metrics = QFontMetrics(badge_font)
-        badge_w = metrics.horizontalAdvance(badge_text) + 10
-        badge_h = 16
-        badge_x = cx + 18
-        badge_y = cy + 12
-
-        badge_rect = QRectF(badge_x, badge_y, badge_w, badge_h)
-        painter.setPen(QPen(QColor(56, 189, 248, 180), 1))
-        painter.setBrush(QBrush(QColor(15, 23, 42, 220)))
-        painter.drawRoundedRect(badge_rect, 4.0, 4.0)
-
-        painter.setPen(QColor(56, 189, 248, 255))
-        painter.drawText(
-            badge_rect,
-            Qt.AlignmentFlag.AlignCenter,
-            badge_text,
-        )
