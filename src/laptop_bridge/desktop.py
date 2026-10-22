@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QProcess, QTimer, Qt
+from PySide6.QtCore import QLockFile, QProcess, QTimer, Qt
 from PySide6.QtGui import QAction, QFont, QIcon
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from . import capture, state
+from .config import STATE_DIR
 from .overlay import GuidanceOverlay
 
 
@@ -462,6 +463,13 @@ def main():
     app.setQuitOnLastWindowClosed(False)
     if not QSystemTrayIcon.isSystemTrayAvailable():
         raise SystemExit("Laptop Bridge requires a system tray")
+    STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    lock = QLockFile(str(STATE_DIR / "desktop-instance.lock"))
+    lock.setStaleLockTime(30_000)
+    if not lock.tryLock(100):
+        # Finder/open repeatedly invokes the bundle; keep one tray companion.
+        return
     companion = Companion(app)
     app.companion = companion
+    app.instance_lock = lock
     raise SystemExit(app.exec())
