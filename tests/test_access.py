@@ -8,7 +8,7 @@ def test_allowed(tmp_path):
     folder.mkdir()
     file = folder / "test.txt"
     file.write_text("hi")
-    assert authorized_path(str(file), {"allowed_folders": [str(folder)]}) == file
+    assert authorized_path(str(file), {"allowed_folders": [str(folder)]}) == file.resolve()
 
 def test_rejected(tmp_path):
     folder = tmp_path / "safe"
