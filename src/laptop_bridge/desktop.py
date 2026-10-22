@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QLockFile, QProcess, QTimer, Qt
-from PySide6.QtGui import QAction, QFont, QIcon
+from PySide6.QtGui import QAction, QFont, QIcon, QGuiApplication
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
     QHBoxLayout, QHeaderView, QLabel, QMainWindow, QMenu, QMessageBox,
@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 from . import capture, state
 from .config import STATE_DIR
 from .overlay import GuidanceOverlay
+from .input_observer import ClickObserver
 
 
 class ApprovalDialog(QDialog):
@@ -232,6 +233,8 @@ class Companion:
     def __init__(self, app):
         self.app = app
         self.overlay = GuidanceOverlay()
+        self.click_observer = ClickObserver(self._record_guidance_click)
+        self.guidance_observer_session = None
         self.window = StatusWindow(self)
         self.server = QProcess(self.window)
         self.tunnel = QProcess(self.window)
@@ -380,6 +383,17 @@ class Companion:
         self.overlay.clear_guidance()
         self.window.refresh()
 
+    def _record_guidance_click(self, x, y, button, modifiers, occurred_at):
+        session = state.guidance_session_status(self.guidance_observer_session)
+        if not session.get("active"):
+            return
+        display_id = 0
+        for index, screen in enumerate(QGuiApplication.screens()):
+            if screen.geometry().contains(int(x), int(y)):
+                display_id = index
+                break
+        state.queue_guidance_click(self.guidance_observer_session, display_id, x, y, button, modifiers, occurred_at)
+
     def poll(self):
         try:
             running = self.server.state() == QProcess.ProcessState.Running
@@ -400,6 +414,12 @@ class Companion:
             self.guidance_session_action.setText(f"Screen sharing: active ({remaining // 60}m left)")
         else:
             self.guidance_session_action.setText("Screen sharing: inactive")
+            if self.guidance_observer_session:
+                self.click_observer.stop()
+                self.guidance_observer_session = None
+        if guidance.get("active") and self.guidance_observer_session != guidance.get("session_id"):
+            if self.click_observer.start():
+                self.guidance_observer_session = guidance.get("session_id")
 
         sessions = state.active_project_sessions()
         if sessions:
