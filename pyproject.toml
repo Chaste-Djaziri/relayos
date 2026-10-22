@@ -18,4 +18,4 @@ laptop-bridge-desktop = "laptop_bridge.desktop:main"
 where = ["src"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-qt>=4.5"]
+dev = ["pytest>=8", "pytest-qt>=4.5", "pyinstaller>=6.11"]
