@@ -49,9 +49,9 @@ class GuidanceOverlay(QWidget):
 
         # Animation timer (approx 60 FPS)
         self.anim_timer = QTimer(self)
-        # Sample twice per display frame so pointer movement stays fluid even when
-        # the desktop compositor has a slightly uneven 60 Hz cadence.
-        self.anim_timer.setInterval(8)
+        # Match the compositor's normal cadence; repainting a full-screen
+        # transparent window more often than this increases CPU load noticeably.
+        self.anim_timer.setInterval(16)
         self.anim_timer.timeout.connect(self._on_tick)
         self._last_tick_time = time.monotonic()
 
@@ -167,6 +167,7 @@ class GuidanceOverlay(QWidget):
             self.anim_timer.stop()
             return
 
+        old_cursor_pt = QPointF(self.current_cursor_pt)
         now = time.monotonic()
         dt = min(0.05, max(0.001, now - self._last_tick_time))
         self._last_tick_time = now
@@ -208,7 +209,15 @@ class GuidanceOverlay(QWidget):
                 self.current_cursor_pt.y() + dy * follow_alpha,
             )
 
-        self.update()
+        # Repaint both the old and new marker bounds, avoiding a full-screen
+        # transparent-window repaint on every pointer sample.
+        radius = 24.0
+        dirty = QRectF(old_cursor_pt.x() - radius, old_cursor_pt.y() - radius,
+                       radius * 2.0, radius * 2.0)
+        dirty = dirty.united(QRectF(self.current_cursor_pt.x() - radius,
+                                    self.current_cursor_pt.y() - radius,
+                                    radius * 2.0, radius * 2.0))
+        self.update(dirty.toRect())
 
     def paintEvent(self, event):
         if not self.is_active:
