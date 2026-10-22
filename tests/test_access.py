@@ -17,3 +17,17 @@ def test_rejected(tmp_path):
     other.write_text("secret")
     with pytest.raises(PermissionError):
         authorized_path(str(other), {"allowed_folders": [str(folder)]})
+
+
+def test_list_processes():
+    from laptop_bridge.server import list_processes
+    procs = list_processes(limit=10, sort_by="cpu")
+    assert isinstance(procs, list)
+    assert len(procs) > 0
+    first = procs[0]
+    assert "pid" in first
+    assert "name" in first
+    assert "cpu_percent" in first
+    assert "memory_percent" in first
+    assert "memory_mb" in first
+
