@@ -430,9 +430,9 @@ class Companion:
         try:
             if self.server.state() != QProcess.ProcessState.NotRunning:
                 self.server.terminate()
-                self.server.waitForFinished(3000)
-                if self.server.state() != QProcess.ProcessState.NotRunning:
+                if not self.server.waitForFinished(2000):
                     self.server.kill()
+                    self.server.waitForFinished(1000)
         except RuntimeError:
             pass
         self.app.quit()
