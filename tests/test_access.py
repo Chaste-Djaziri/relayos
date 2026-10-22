@@ -1,7 +1,7 @@
 # Path: tests/test_access.py
 from pathlib import Path
 import pytest
-from laptop_bridge.config import authorized_path
+from laptop_bridge.config import DEFAULT, authorized_path
 
 def test_allowed(tmp_path):
     folder = tmp_path / "safe"
@@ -17,6 +17,14 @@ def test_rejected(tmp_path):
     other.write_text("secret")
     with pytest.raises(PermissionError):
         authorized_path(str(other), {"allowed_folders": [str(folder)]})
+
+
+def test_no_directory_is_authorized_by_default(tmp_path):
+    private = tmp_path / "private.txt"
+    private.write_text("secret")
+    assert DEFAULT["allowed_folders"] == []
+    with pytest.raises(PermissionError):
+        authorized_path(str(private), DEFAULT)
 
 
 def test_list_processes():
