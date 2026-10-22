@@ -35,6 +35,36 @@ def request_screen_recording_permission() -> bool:
     return False
 
 
+def has_accessibility_permission() -> bool:
+    """Check whether macOS Accessibility access is available to the app."""
+    if __import__("sys").platform != "darwin":
+        return True
+    try:
+        app_services = ctypes.util.find_library("ApplicationServices")
+        if not app_services:
+            return False
+        services = ctypes.cdll.LoadLibrary(app_services)
+        services.AXIsProcessTrusted.restype = ctypes.c_bool
+        return bool(services.AXIsProcessTrusted())
+    except Exception:
+        return False
+
+
+def open_permission_settings(kind="screen"):
+    """Open the relevant macOS Privacy & Security pane."""
+    import subprocess
+    url = (
+        "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
+        if kind == "screen"
+        else "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+    )
+    try:
+        subprocess.Popen(["/usr/bin/open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        return False
+    return True
+
+
 def get_frontmost_app_pid() -> int | None:
     """Query AppKit for the PID of the frontmost application."""
     try:
