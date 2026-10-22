@@ -174,15 +174,53 @@ def test_run_project_command_security_and_caps(project_dir):
         with pytest.raises(PermissionError, match="Privilege escalation"):
             server.run_project_command(session_id, evil)
 
-    # Valid command execution
-    cmd_res = server.run_project_command(session_id, ["echo", "test-bridge"])
+    # Commands require an exact one-use ChatGPT approval before execution.
+    argv = ["echo", "test-bridge"]
+    with pytest.raises(PermissionError, match="Command approval required"):
+        server.run_project_command(session_id, argv)
+    permission = server.authorize_project_command(session_id, argv)
+    cmd_res = server.run_project_command(session_id, argv, authorization_token=permission["authorization_token"])
     assert cmd_res["exit_code"] == 0
     assert "test-bridge" in cmd_res["stdout"]
 
     # Output capping at 8192 chars
     long_output_cmd = ["python3", "-c", "print('x' * 10000)"]
-    cap_res = server.run_project_command(session_id, long_output_cmd)
+    permission = server.authorize_project_command(session_id, long_output_cmd)
+    cap_res = server.run_project_command(session_id, long_output_cmd, authorization_token=permission["authorization_token"])
     assert len(cap_res["stdout"]) <= 8192
+
+
+def test_one_use_command_grant_is_exact_and_single_use(project_dir):
+    res = server.propose_project_session(str(project_dir))
+    state.approve(res["request_id"])
+    session_id = server.project_session_status(res["request_id"])["session_id"]
+    argv = ["echo", "approved"]
+    authorization = server.authorize_project_command(session_id, argv)
+    token = authorization["authorization_token"]
+
+    with pytest.raises(PermissionError, match="mismatched"):
+        server.run_project_command(session_id, ["echo", "different"], authorization_token=token)
+    assert server.run_project_command(session_id, argv, authorization_token=token)["exit_code"] == 0
+    with pytest.raises(PermissionError, match="already-used"):
+        server.run_project_command(session_id, argv, authorization_token=token)
+
+
+def test_persistent_command_grant_allows_arguments_in_project_and_can_be_revoked(project_dir):
+    res = server.propose_project_session(str(project_dir))
+    state.approve(res["request_id"])
+    session_id = server.project_session_status(res["request_id"])["session_id"]
+
+    grant = server.authorize_project_command(session_id, ["echo", "first"], grant="always")
+    assert grant["authorization_token"] is None
+    assert server.run_project_command(session_id, ["echo", "build"])["exit_code"] == 0
+    assert server.run_project_command(session_id, ["echo", "another argument"])["exit_code"] == 0
+    saved = server.list_saved_command_grants()
+    assert len(saved) == 1
+    assert saved[0]["project_root"] == str(project_dir.resolve())
+
+    server.revoke_saved_command_grant(saved[0]["token"])
+    with pytest.raises(PermissionError, match="Command approval required"):
+        server.run_project_command(session_id, ["echo", "after revoke"])
 
 
 def test_concurrent_project_operations(project_dir):
