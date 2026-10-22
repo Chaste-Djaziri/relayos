@@ -1,6 +1,6 @@
-# Laptop Bridge — v0.3 macOS Visual Guidance & Project Coding Sessions
+# Laptop Bridge — v0.4 Native macOS App
 
-**Status: local prototype.** macOS-first, Python 3.11+. The PySide6 menu-bar companion starts and supervises the local MCP server, displays per-action and project-session approval dialogs, renders a transparent click-through instructional overlay with a trailing guide cursor, manages ScreenCaptureKit display capture on explicit request, retains metadata-only history for 30 days, and offers an emergency stop.
+**Status: local macOS app prototype.** Python 3.11+. The click-launched PySide6 app starts and supervises the local MCP server, exposes ChatGPT-facing action metadata, renders a transparent click-through overlay with a smooth triangular guide cursor, captures the active display only on request, retains metadata-only history for 30 days, and offers an emergency stop.
 
 No mouse/keyboard injection or unrestricted computer control is configured or permitted. It is not safe to expose the HTTP port publicly without a production authentication layer.
 
@@ -28,15 +28,18 @@ laptop-bridge-desktop
 
 The desktop companion starts the Streamable HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`. Its menu shows server status, overlay status, active coding sessions, folder picker for sessions, guidance controls, local history/settings window, server restart, and an emergency stop.
 
+To create a Finder-launchable app, run `./scripts/build_macos_app.sh` and open `dist/Laptop Bridge.app`.
+
 ## macOS Screen Recording Permissions
 
 Screen capture requires the user to grant macOS Screen Recording permission to Laptop Bridge (or your terminal / Python environment during development):
 
-1. On first `screen_snapshot` request or via the companion status window **Request Permission** button, macOS displays a permission prompt.
+1. On first `screen_snapshot` request, macOS may display a permission prompt.
 2. If needed, grant permission in **System Settings > Privacy & Security > Screen Recording** and ensure Laptop Bridge is toggled on.
-3. `screen_snapshot` captures only the display containing the focused app (falling back to the display containing the pointer).
-4. Captures occur **only after an explicit MCP tool invocation**; there is no background, continuous, or unprompted recording.
-5. Screenshot image bytes are transient, returned directly to the MCP caller, immediately deleted from local state, and never saved in SQLite history.
+3. Grant **System Settings > Privacy & Security > Accessibility** access to Laptop Bridge for cross-app overlay behavior and pointer observation. No clicks or keystrokes are injected.
+4. `screen_snapshot` captures only the display containing the focused app (falling back to the display containing the pointer).
+5. Captures occur **only after an explicit MCP tool invocation**; there is no background, continuous, or unprompted recording.
+6. Screenshot image bytes are transient, returned directly to the MCP caller, immediately deleted from local state, and never saved in SQLite history.
 
 ## Visual Guidance Overlay
 
@@ -49,6 +52,12 @@ Laptop Bridge provides an always-on-top, click-through PySide6 instructional ove
 - **Click-Through**: Uses `Qt.WindowType.WindowTransparentForInput` and `WA_TransparentForMouseEvents` so the user can interact freely with apps beneath the overlay.
 - **Timeout and Clear**: Guidance can specify a timeout in seconds or remain visible until explicitly cleared via `clear_guidance` or the companion tray menu.
 - **Emergency Stop**: Immediately clears all visible guidance overlays across all displays.
+
+The write and command tools expose MCP annotations so ChatGPT can request confirmation in chat. Clients without MCP elicitation support fall back to the local companion dialog.
+
+## Follow-ups and reminders
+
+`record_follow_up_request`, `list_pending_follow_ups`, and `complete_follow_up` retain only a title, schedule, expiration, project-session reference, and metadata. After recording one, ask ChatGPT to schedule a reminder or recurring task using the returned ID. The MCP server cannot create a ChatGPT heartbeat autonomously for every account; scheduling remains a ChatGPT/workspace feature.
 
 ## 60-Minute Project Coding Sessions
 
@@ -87,6 +96,9 @@ For coding tasks, users can grant scoped, time-limited access to specific projec
 | `write_project_file` | Write a file within the active project session root. |
 | `apply_project_patch` | Apply unified diff patch inside project session with `git apply`. |
 | `run_project_command` | Execute non-interactive argv command inside project root. |
+| `record_follow_up_request` | Record an unfinished-task reminder for ChatGPT to schedule or revisit. |
+| `list_pending_follow_ups` | List pending unfinished-task reminders. |
+| `complete_follow_up` | Mark an unfinished-task reminder complete. |
 
 ## Run checks and tests
 
@@ -97,11 +109,11 @@ pytest -v
 
 ## macOS app bundle (developer testing)
 
-After installing the development dependencies, build and test an unsigned local macOS app bundle:
+Build and test an unsigned local macOS app bundle:
 
 ```sh
-pyinstaller --windowed --name "Laptop Bridge" --paths src -m laptop_bridge.desktop
+./scripts/build_macos_app.sh
 open "dist/Laptop Bridge.app"
 ```
 
-Signing and notarization are deferred for future releases.
+For a Developer ID build, set `LAPTOP_BRIDGE_SIGNING_IDENTITY`. To notarize, also set `LAPTOP_BRIDGE_NOTARY_PROFILE` to an `xcrun notarytool` keychain profile. The script verifies signed bundles and staples notarization when configured.
