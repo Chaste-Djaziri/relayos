@@ -13,36 +13,45 @@ PROJECT_SESSION_TTL = 60 * 60
 JOB_TTL = 30
 
 
+_INITIALIZED_DBS = set()
+
+
 @contextmanager
 def _db():
     STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
-    connection = sqlite3.connect(DATABASE_FILE, timeout=5, isolation_level=None)
+    connection = sqlite3.connect(DATABASE_FILE, timeout=10, isolation_level=None)
     connection.row_factory = sqlite3.Row
     try:
-        connection.execute("PRAGMA journal_mode=WAL")
         connection.execute("PRAGMA busy_timeout=5000")
-        connection.executescript("""
-            CREATE TABLE IF NOT EXISTS requests (
-                token TEXT PRIMARY KEY, kind TEXT NOT NULL, target TEXT NOT NULL,
-                argv_json TEXT NOT NULL, created_at REAL NOT NULL, status TEXT NOT NULL,
-                decided_at REAL, consumed_at REAL
-            );
-            CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-            CREATE TABLE IF NOT EXISTS action_history (
-                id INTEGER PRIMARY KEY, recorded_at REAL NOT NULL, kind TEXT NOT NULL,
-                target TEXT NOT NULL, decision TEXT NOT NULL, exit_code INTEGER, duration_ms INTEGER
-            );
-            CREATE TABLE IF NOT EXISTS project_sessions (
-                token TEXT PRIMARY KEY, root TEXT NOT NULL, created_at REAL NOT NULL,
-                expires_at REAL NOT NULL, status TEXT NOT NULL, decided_at REAL,
-                revoked_at REAL
-            );
-            CREATE TABLE IF NOT EXISTS desktop_jobs (
-                token TEXT PRIMARY KEY, kind TEXT NOT NULL, payload_json TEXT NOT NULL,
-                created_at REAL NOT NULL, status TEXT NOT NULL, result_json TEXT,
-                result_blob BLOB, completed_at REAL
-            );
-        """)
+        db_path = str(DATABASE_FILE)
+        if db_path not in _INITIALIZED_DBS:
+            try:
+                connection.execute("PRAGMA journal_mode=WAL")
+            except sqlite3.OperationalError:
+                pass
+            connection.executescript("""
+                CREATE TABLE IF NOT EXISTS requests (
+                    token TEXT PRIMARY KEY, kind TEXT NOT NULL, target TEXT NOT NULL,
+                    argv_json TEXT NOT NULL, created_at REAL NOT NULL, status TEXT NOT NULL,
+                    decided_at REAL, consumed_at REAL
+                );
+                CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS action_history (
+                    id INTEGER PRIMARY KEY, recorded_at REAL NOT NULL, kind TEXT NOT NULL,
+                    target TEXT NOT NULL, decision TEXT NOT NULL, exit_code INTEGER, duration_ms INTEGER
+                );
+                CREATE TABLE IF NOT EXISTS project_sessions (
+                    token TEXT PRIMARY KEY, root TEXT NOT NULL, created_at REAL NOT NULL,
+                    expires_at REAL NOT NULL, status TEXT NOT NULL, decided_at REAL,
+                    revoked_at REAL
+                );
+                CREATE TABLE IF NOT EXISTS desktop_jobs (
+                    token TEXT PRIMARY KEY, kind TEXT NOT NULL, payload_json TEXT NOT NULL,
+                    created_at REAL NOT NULL, status TEXT NOT NULL, result_json TEXT,
+                    result_blob BLOB, completed_at REAL
+                );
+            """)
+            _INITIALIZED_DBS.add(db_path)
         yield connection
     finally:
         connection.close()
