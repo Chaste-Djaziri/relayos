@@ -30,7 +30,8 @@ def test_deny_and_expiry_are_terminal(monkeypatch):
     with pytest.raises(PermissionError):
         state.consume(token)
     token = create_request()
-    monkeypatch.setattr(state.time, "time", lambda: time.time() + state.TTL + 1)
+    current_time = time.time()
+    monkeypatch.setattr(state.time, "time", lambda: current_time + state.TTL + 1)
     assert state.pending_requests() == []
 
 
