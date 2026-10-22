@@ -217,7 +217,14 @@ class GuidanceOverlay(QWidget):
         dirty = dirty.united(QRectF(self.current_cursor_pt.x() - radius,
                                     self.current_cursor_pt.y() - radius,
                                     radius * 2.0, radius * 2.0))
-        self.update(dirty.toRect())
+        # The bubble follows the triangle and can move across a large area;
+        # invalidate the whole transparent surface in that mode so old rounded
+        # corners and text cannot remain as trails. Triangle-only guidance keeps
+        # the cheaper small-region repaint path.
+        if self.label or self.message:
+            self.update()
+        else:
+            self.update(dirty.toRect())
 
     def paintEvent(self, event):
         if not self.is_active:
