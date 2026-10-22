@@ -79,12 +79,21 @@ class StatusWindow(QMainWindow):
 
         perm_layout = QHBoxLayout()
         self.perm_label = QLabel()
-        self.perm_button = QPushButton("Request Permission")
-        self.perm_button.clicked.connect(self._request_permission)
+        self.perm_button = QPushButton("Open Screen Recording Settings")
+        self.perm_button.clicked.connect(lambda: capture.open_permission_settings("screen"))
         perm_layout.addWidget(self.perm_label)
         perm_layout.addWidget(self.perm_button)
         perm_layout.addStretch()
         status_box.addLayout(perm_layout)
+
+        access_layout = QHBoxLayout()
+        self.access_label = QLabel()
+        self.access_button = QPushButton("Open Accessibility Settings")
+        self.access_button.clicked.connect(lambda: capture.open_permission_settings("accessibility"))
+        access_layout.addWidget(self.access_label)
+        access_layout.addWidget(self.access_button)
+        access_layout.addStretch()
+        status_box.addLayout(access_layout)
 
         # Display sharing / guidance indicator
         self.display_sharing_label = QLabel()
@@ -142,10 +151,6 @@ class StatusWindow(QMainWindow):
 
         self.setCentralWidget(content)
 
-    def _request_permission(self):
-        capture.request_screen_recording_permission()
-        self.refresh()
-
     def refresh(self):
         process = getattr(self.companion, "server", None)
         try:
@@ -164,6 +169,16 @@ class StatusWindow(QMainWindow):
             self.perm_label.setText("Screen Recording: Permission Required")
             self.perm_label.setStyleSheet("color: #d97706;")
             self.perm_button.setVisible(True)
+
+        has_access = capture.has_accessibility_permission()
+        if has_access:
+            self.access_label.setText("Accessibility: Granted")
+            self.access_label.setStyleSheet("color: #16a34a;")
+            self.access_button.setVisible(False)
+        else:
+            self.access_label.setText("Accessibility: Permission Required")
+            self.access_label.setStyleSheet("color: #d97706;")
+            self.access_button.setVisible(True)
 
         if self.companion.overlay.is_guidance_active():
             self.display_sharing_label.setText(
