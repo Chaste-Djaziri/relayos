@@ -147,8 +147,11 @@ class StatusWindow(QMainWindow):
         self.refresh()
 
     def refresh(self):
-        process = self.companion.server
-        running = process.state() == QProcess.ProcessState.Running
+        process = getattr(self.companion, "server", None)
+        try:
+            running = process is not None and process.state() == QProcess.ProcessState.Running
+        except RuntimeError:
+            running = False
         detail = "Server: Running at http://127.0.0.1:8765/mcp" if running else "Server: Stopped"
         self.status.setText(detail)
 
@@ -211,13 +214,12 @@ class StatusWindow(QMainWindow):
 class Companion:
     def __init__(self, app):
         self.app = app
-        self.server = QProcess()
+        self.overlay = GuidanceOverlay()
+        self.window = StatusWindow(self)
+        self.server = QProcess(self.window)
         self.server.finished.connect(self._server_stopped)
         self.restart_requested = False
         self.pending_dialog = False
-
-        self.overlay = GuidanceOverlay()
-        self.window = StatusWindow(self)
 
         self.tray = QSystemTrayIcon(QIcon.fromTheme("computer"), app)
         menu = QMenu()
@@ -282,7 +284,10 @@ class Companion:
 
     def _server_stopped(self):
         self.status_action.setText("Server: stopped")
-        self.window.refresh()
+        try:
+            self.window.refresh()
+        except RuntimeError:
+            pass
         if self.restart_requested:
             self.restart_requested = False
             self.start_server()
@@ -338,7 +343,10 @@ class Companion:
         self.window.refresh()
 
     def poll(self):
-        running = self.server.state() == QProcess.ProcessState.Running
+        try:
+            running = self.server.state() == QProcess.ProcessState.Running
+        except RuntimeError:
+            running = False
         self.status_action.setText("Server: running" if running else "Server: stopped")
 
         if self.overlay.is_guidance_active():
@@ -354,7 +362,10 @@ class Companion:
         else:
             self.session_status_action.setText("Active session: none")
 
-        self.window.refresh()
+        try:
+            self.window.refresh()
+        except RuntimeError:
+            pass
 
         # Handle queued desktop jobs
         for job in state.claim_desktop_jobs():
@@ -410,12 +421,20 @@ class Companion:
         self.window.activateWindow()
 
     def quit(self):
+        self.poller.stop()
         self.overlay.clear_guidance()
-        if self.server.state() != QProcess.ProcessState.NotRunning:
-            self.server.terminate()
-            self.server.waitForFinished(3000)
+        try:
+            self.server.finished.disconnect()
+        except Exception:
+            pass
+        try:
             if self.server.state() != QProcess.ProcessState.NotRunning:
-                self.server.kill()
+                self.server.terminate()
+                self.server.waitForFinished(3000)
+                if self.server.state() != QProcess.ProcessState.NotRunning:
+                    self.server.kill()
+        except RuntimeError:
+            pass
         self.app.quit()
 
 
