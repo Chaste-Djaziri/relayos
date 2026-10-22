@@ -1,5 +1,6 @@
 """Transaction-safe local state for approvals and metadata-only auditing."""
 import json
+import hashlib
 import secrets
 import sqlite3
 import time
@@ -67,7 +68,15 @@ def _db():
                 button TEXT NOT NULL, modifiers_json TEXT NOT NULL,
                 occurred_at REAL NOT NULL, consumed_at REAL
             );
+            CREATE TABLE IF NOT EXISTS command_grants (
+                token TEXT PRIMARY KEY, project_root TEXT NOT NULL,
+                executable TEXT NOT NULL, argv_digest TEXT,
+                working_directory TEXT, grant_type TEXT NOT NULL,
+                created_at REAL NOT NULL, expires_at REAL,
+                revoked_at REAL
+            );
             """)
+            connection.execute("CREATE INDEX IF NOT EXISTS command_grants_lookup ON command_grants(project_root, executable, grant_type, revoked_at)")
             _INITIALIZED_DBS.add(db_path)
         yield connection
     finally:
@@ -232,6 +241,90 @@ def active_project_sessions():
         ).fetchall()
         connection.commit()
     return [{"session_id": row["token"], "root": row["root"], "created_at": row["created_at"], "expires_at": row["expires_at"]} for row in rows]
+
+
+def _command_digest(argv, cwd):
+    payload = json.dumps([argv, cwd], ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def grant_project_command(project_root, executable, argv, cwd, grant_type="once"):
+    """Save a one-use exact invocation or a persistent executable/project grant."""
+    if grant_type not in {"once", "always"}:
+        raise ValueError("grant_type must be 'once' or 'always'")
+    if emergency_stop():
+        raise PermissionError("Emergency stop is enabled")
+    token = secrets.token_urlsafe(24)
+    now = time.time()
+    argv_digest = _command_digest(argv, cwd) if grant_type == "once" else None
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        if emergency_stop(connection):
+            connection.rollback()
+            raise PermissionError("Emergency stop is enabled")
+        if grant_type == "always":
+            connection.execute(
+                "UPDATE command_grants SET revoked_at = ? WHERE project_root = ? AND executable = ? AND grant_type = 'always' AND revoked_at IS NULL",
+                (now, project_root, executable),
+            )
+        connection.execute(
+            "INSERT INTO command_grants (token, project_root, executable, argv_digest, working_directory, grant_type, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (token, project_root, executable, argv_digest, cwd if grant_type == "once" else None, grant_type, now, now + 300 if grant_type == "once" else None),
+        )
+        _record(connection, "command_grant", f"{project_root}:{executable}", "approved_once" if grant_type == "once" else "approved_always")
+        connection.commit()
+    return token
+
+
+def consume_project_command_grant(project_root, executable, argv, cwd, grant_token=None):
+    """Atomically consume an exact one-use grant or validate a saved executable grant."""
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        if emergency_stop(connection):
+            connection.rollback()
+            raise PermissionError("Emergency stop is enabled")
+        now = time.time()
+        if grant_token:
+            row = connection.execute(
+                "SELECT token FROM command_grants WHERE token = ? AND project_root = ? AND executable = ? AND argv_digest = ? AND working_directory = ? AND grant_type = 'once' AND revoked_at IS NULL AND expires_at > ?",
+                (grant_token, project_root, executable, _command_digest(argv, cwd), cwd, now),
+            ).fetchone()
+            if row is None:
+                connection.rollback()
+                raise PermissionError("Missing, expired, mismatched, or already-used command approval")
+            connection.execute("DELETE FROM command_grants WHERE token = ?", (grant_token,))
+            connection.commit()
+            return "approved_once"
+        row = connection.execute(
+            "SELECT token FROM command_grants WHERE project_root = ? AND executable = ? AND grant_type = 'always' AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1",
+            (project_root, executable),
+        ).fetchone()
+        if row is None:
+            connection.rollback()
+            raise PermissionError("Command approval required; request an exact one-time or persistent project command grant first")
+        connection.commit()
+        return "approved_always"
+
+
+def saved_command_grants():
+    with _db() as connection:
+        rows = connection.execute(
+            "SELECT token, project_root, executable, created_at FROM command_grants WHERE grant_type = 'always' AND revoked_at IS NULL ORDER BY created_at DESC"
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def revoke_command_grant(token):
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        cursor = connection.execute(
+            "UPDATE command_grants SET revoked_at = ? WHERE token = ? AND grant_type = 'always' AND revoked_at IS NULL",
+            (time.time(), token),
+        )
+        if cursor.rowcount != 1:
+            connection.rollback()
+            raise ValueError("Saved command grant not found or already revoked")
+        connection.commit()
 
 
 def queue_desktop_job(kind, payload):
