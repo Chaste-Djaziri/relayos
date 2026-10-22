@@ -42,6 +42,13 @@ if [ -n "${SIGNING_IDENTITY}" ]; then
     echo "Signed app created. Set LAPTOP_BRIDGE_NOTARY_PROFILE to notarize it."
   fi
 else
-  echo "Unsigned developer app created at ${APP_PATH}."
+  # PyInstaller ad-hoc signs the bundle before we add privacy usage strings.
+  # Re-sign after the plist edits so macOS TCC can validate the app identity
+  # and honor the user's Files & Folders / Full Disk Access grants.
+  codesign --deep --force --sign - \
+    --entitlements packaging/macos.entitlements \
+    "${APP_PATH}"
+  codesign --verify --deep --strict --verbose=2 "${APP_PATH}"
+  echo "Ad-hoc signed developer app created at ${APP_PATH}."
   echo "Set LAPTOP_BRIDGE_SIGNING_IDENTITY for a Developer ID build."
 fi
