@@ -294,13 +294,13 @@ class GuidanceOverlay(QWidget):
         bubble_w = content_width + padding_x * 2
         bubble_h = padding_y * 2 + metrics_title.height() + (metrics_body.height() + 4 if self.message else 0)
 
-        # Position bubble next to the target ring
-        bx = self.target_pt.x() + 32
-        by = self.target_pt.y() - bubble_h / 2
+        # Keep the bubble attached to the moving triangle itself.
+        bx = self.current_cursor_pt.x() + 24
+        by = self.current_cursor_pt.y() - bubble_h / 2
 
         # Clamp inside window geometry
         if bx + bubble_w > self.width() - 10:
-            bx = self.target_pt.x() - bubble_w - 32
+            bx = self.current_cursor_pt.x() - bubble_w - 24
         if by < 10:
             by = 10
         if by + bubble_h > self.height() - 10:
