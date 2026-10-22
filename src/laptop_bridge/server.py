@@ -30,6 +30,48 @@ def system_status() -> dict:
         "battery_charging": battery.power_plugged if battery else None,
     }
 
+
+@mcp.tool()
+def list_processes(limit: int = 50, sort_by: str = "cpu") -> list[dict]:
+    """List running system processes ranked by CPU consumption or memory usage.
+
+    Args:
+        limit: Maximum number of processes to return (default 50, maximum 200).
+        sort_by: Metric to rank processes by: 'cpu' (default) or 'memory'.
+    """
+    limit = max(1, min(limit, 200))
+    procs = []
+    for p in psutil.process_iter(["pid", "name"]):
+        try:
+            p.cpu_percent()
+            procs.append(p)
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+
+    time.sleep(0.1)
+    results = []
+    for p in procs:
+        try:
+            cpu = p.cpu_percent()
+            mem_pct = p.memory_percent()
+            mem_info = p.memory_info()
+            results.append({
+                "pid": p.pid,
+                "name": p.name(),
+                "cpu_percent": round(cpu, 1),
+                "memory_percent": round(mem_pct, 2),
+                "memory_mb": round(mem_info.rss / (1024 * 1024), 1),
+            })
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+
+    if sort_by == "memory":
+        results.sort(key=lambda x: (x["memory_percent"], x["cpu_percent"]), reverse=True)
+    else:
+        results.sort(key=lambda x: (x["cpu_percent"], x["memory_percent"]), reverse=True)
+
+    return results[:limit]
+
 @mcp.tool()
 def list_files(folder: str) -> list[dict]:
     """List the first 100 direct children of an approved folder."""
