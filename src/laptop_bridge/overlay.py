@@ -145,6 +145,8 @@ class GuidanceOverlay(QWidget):
                 msg_send_bool(nswindow, sel_fn(b"setIgnoresMouseEvents:"), True)
                 # Appear on all macOS Spaces without entering window cycle
                 msg_send_long(nswindow, sel_fn(b"setCollectionBehavior:"), 1 | 16 | 64)
+                # Force window to the front above active applications without taking focus
+                msg_send(nswindow, sel_fn(b"orderFrontRegardless"))
         except Exception:
             pass
 
