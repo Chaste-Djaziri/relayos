@@ -226,7 +226,10 @@ class GuidanceOverlay(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # The guide is intentionally only a simple secondary triangle cursor.
+        # Keep the marker simple, while restoring the instructional callout that
+        # tells the user what the current step is.
+        self._draw_target_ring(painter)
+        self._draw_bubble(painter)
         self._draw_guide_cursor(painter)
 
     def _draw_target_ring(self, painter: QPainter):
