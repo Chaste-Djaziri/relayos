@@ -50,6 +50,11 @@ def _db():
                     created_at REAL NOT NULL, status TEXT NOT NULL, result_json TEXT,
                     result_blob BLOB, completed_at REAL
                 );
+            CREATE TABLE IF NOT EXISTS follow_ups (
+                token TEXT PRIMARY KEY, title TEXT NOT NULL, status TEXT NOT NULL,
+                check_at REAL NOT NULL, expires_at REAL, project_session TEXT,
+                metadata_json TEXT NOT NULL, created_at REAL NOT NULL, completed_at REAL
+            );
             """)
             _INITIALIZED_DBS.add(db_path)
         yield connection
@@ -265,3 +270,43 @@ def desktop_job_result(job_id, consume_blob=False):
             return result, blob
         connection.commit()
     return result
+
+
+def create_follow_up(title, check_at, expires_at=None, project_session_id=None, metadata=None):
+    if not title or len(title) > 240:
+        raise ValueError("Follow-up title must be 1-240 characters")
+    token = secrets.token_urlsafe(18)
+    now = time.time()
+    with _db() as connection:
+        connection.execute(
+            "INSERT INTO follow_ups (token, title, status, check_at, expires_at, project_session, metadata_json, created_at) VALUES (?, ?, 'pending', ?, ?, ?, ?, ?)",
+            (token, title, float(check_at), float(expires_at) if expires_at is not None else None, project_session_id, json.dumps(metadata or {}), now),
+        )
+    return token
+
+
+def pending_follow_ups(include_future=True):
+    now = time.time()
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        connection.execute("UPDATE follow_ups SET status = 'expired' WHERE status = 'pending' AND expires_at IS NOT NULL AND expires_at <= ?", (now,))
+        query = "SELECT token, title, status, check_at, expires_at, project_session, metadata_json, created_at FROM follow_ups WHERE status = 'pending'"
+        params = () if include_future else (now,)
+        if not include_future:
+            query += " AND check_at <= ?"
+        query += " ORDER BY check_at"
+        rows = connection.execute(query, params).fetchall()
+        connection.commit()
+    return [
+        {"follow_up_id": row["token"], "title": row["title"], "status": row["status"], "check_at": row["check_at"], "expires_at": row["expires_at"], "project_session": row["project_session"], "metadata": json.loads(row["metadata_json"]), "created_at": row["created_at"]}
+        for row in rows
+    ]
+
+
+def complete_follow_up(token):
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        updated = connection.execute("UPDATE follow_ups SET status = 'completed', completed_at = ? WHERE token = ? AND status = 'pending'", (time.time(), token)).rowcount
+        connection.commit()
+    if not updated:
+        raise PermissionError("Unknown or already completed follow-up")
