@@ -292,9 +292,12 @@ class Companion:
     def start_server(self):
         if self.server.state() != QProcess.ProcessState.NotRunning:
             return
-        venv_python = Path(sys.prefix) / "bin" / "python"
-        executable = str(venv_python) if venv_python.exists() else sys.executable
-        self.server.start(executable, ["-m", "laptop_bridge.server"])
+        if getattr(sys, "frozen", False):
+            self.server.start(sys.executable, ["--server"])
+        else:
+            venv_python = Path(sys.prefix) / "bin" / "python"
+            executable = str(venv_python) if venv_python.exists() else sys.executable
+            self.server.start(executable, ["-m", "laptop_bridge.server"])
         self.status_action.setText("Server: starting")
 
     def start_tunnel(self):
