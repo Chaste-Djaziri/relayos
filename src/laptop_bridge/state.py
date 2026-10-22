@@ -139,8 +139,11 @@ def _decide(token, status):
         connection.execute("BEGIN IMMEDIATE")
         now = time.time()
         _expire(connection, now)
-        row = connection.execute("SELECT kind, target FROM requests WHERE token = ? AND status = 'pending'", (token,)).fetchone()
-        if row is None:
+        row = connection.execute("SELECT kind, target, status FROM requests WHERE token = ?", (token,)).fetchone()
+        if row is not None and status == "approved" and row["status"] == "approved":
+            connection.commit()
+            return
+        if row is None or row["status"] != "pending":
             connection.rollback()
             raise PermissionError("Unknown, expired, or already decided request")
         connection.execute("UPDATE requests SET status = ?, decided_at = ? WHERE token = ?", (status, now, token))
