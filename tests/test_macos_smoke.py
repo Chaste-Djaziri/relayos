@@ -84,7 +84,9 @@ def test_macos_end_to_end_smoke(tmp_path, qapp, monkeypatch):
     assert "return 42" in server.read_project_file(session_id, "app.py")
 
     # 5. Non-interactive command execution
-    cmd_out = server.run_project_command(session_id, ["python3", "-c", "import app; print(app.run())"])
+    argv = ["python3", "-c", "import app; print(app.run())"]
+    authorization = server.authorize_project_command(session_id, argv)
+    cmd_out = server.run_project_command(session_id, argv, authorization_token=authorization["authorization_token"])
     assert cmd_out["exit_code"] == 0
     assert cmd_out["stdout"].strip() == "42"
 
