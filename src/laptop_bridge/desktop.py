@@ -1,5 +1,6 @@
 """PySide6 macOS menu-bar companion for local Laptop Bridge approvals, guidance overlay, and coding sessions."""
 import json
+import os
 import sys
 import time
 from datetime import datetime
@@ -233,6 +234,7 @@ class Companion:
         self.overlay = GuidanceOverlay()
         self.window = StatusWindow(self)
         self.server = QProcess(self.window)
+        self.tunnel = QProcess(self.window)
         self.server.finished.connect(self._server_stopped)
         self.restart_requested = False
         self.pending_dialog = False
@@ -294,6 +296,15 @@ class Companion:
         executable = str(venv_python) if venv_python.exists() else sys.executable
         self.server.start(executable, ["-m", "laptop_bridge.server"])
         self.status_action.setText("Server: starting")
+
+    def start_tunnel(self):
+        """Start the configured Secure MCP Tunnel after the local server is ready."""
+        if self.tunnel.state() != QProcess.ProcessState.NotRunning:
+            return
+        script = os.getenv("LAPTOP_BRIDGE_TUNNEL_SCRIPT", str(Path.home() / ".config/laptop-bridge/start-openai-tunnel.zsh"))
+        if not Path(script).is_file():
+            return
+        self.tunnel.start("/bin/zsh", [script])
 
     def restart_server(self):
         if self.server.state() == QProcess.ProcessState.NotRunning:
@@ -368,6 +379,8 @@ class Companion:
         except RuntimeError:
             running = False
         self.status_action.setText("Server: running" if running else "Server: stopped")
+        if running and self.tunnel.state() == QProcess.ProcessState.NotRunning:
+            self.start_tunnel()
 
         if self.overlay.is_guidance_active():
             self.overlay_status_action.setText(f"Overlay: active (Display {self.overlay.target_display_id})")
@@ -446,6 +459,14 @@ class Companion:
         try:
             self.server.finished.disconnect()
         except Exception:
+            pass
+        try:
+            if self.tunnel.state() != QProcess.ProcessState.NotRunning:
+                self.tunnel.terminate()
+                if not self.tunnel.waitForFinished(1500):
+                    self.tunnel.kill()
+                    self.tunnel.waitForFinished(500)
+        except RuntimeError:
             pass
         try:
             if self.server.state() != QProcess.ProcessState.NotRunning:
