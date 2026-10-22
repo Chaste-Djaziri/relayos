@@ -19,6 +19,9 @@ def create_request():
 def test_approval_is_single_use():
     token = create_request()
     state.approve(token)
+    # A ChatGPT approval may race the companion's fallback approval; both
+    # surfaces can agree on the same pending request without duplicating it.
+    state.approve(token)
     assert state.consume(token)["details"]["target"] == "version"
     with pytest.raises(PermissionError):
         state.consume(token)
