@@ -41,6 +41,12 @@ Screen capture requires the user to grant macOS Screen Recording permission to L
 5. Captures occur **only after an explicit MCP tool invocation**; there is no background, continuous, or unprompted recording.
 6. Screenshot image bytes are transient, returned directly to the MCP caller, immediately deleted from local state, and never saved in SQLite history.
 
+## Continuous Guidance Sessions
+
+For a multi-step walkthrough, ChatGPT must first call `start_guidance_session` (default maximum: 15 minutes). The companion shows a persistent “Screen sharing active” tray indicator. Frames are still captured only when ChatGPT calls `refresh_guidance_screen`; there is no background video stream. Call `stop_guidance_session` when finished, or the session expires automatically.
+
+During an active session, `show_guidance` can place the click-through triangle and optional bubble for each step. `get_guidance_events` returns passive click metadata (display, coordinates, button, modifiers, and timestamp) so ChatGPT can confirm that the user acted. No keyboard contents, typed text, clipboard data, clicks, or commands are injected or replayed. Screen images and click events are transient session data and are not retained in history.
+
 ## Visual Guidance Overlay
 
 Laptop Bridge provides an always-on-top, click-through PySide6 instructional overlay:
@@ -87,6 +93,11 @@ For coding tasks, users can grant scoped, time-limited access to specific projec
 | `propose_action` | Request human approval for allowlisted app or command. |
 | `execute_approved_action` | Run a single-use approved action within 5 minutes. |
 | `screen_snapshot` | On-demand capture of the active display with metadata and image content. |
+| `start_guidance_session` | Start an explicit, bounded visual guidance session. |
+| `guidance_session_status` | Read the active guidance session and expiry. |
+| `refresh_guidance_screen` | Capture one current display frame for an active session. |
+| `get_guidance_events` | Poll passive click metadata from an active session. |
+| `stop_guidance_session` | Stop sharing and clear the guidance session. |
 | `show_guidance` | Render click-through visual overlay and guide cursor on target display. |
 | `clear_guidance` | Remove visible guidance overlays immediately. |
 | `propose_project_session` | Request human approval for a 60-minute project coding session. |
