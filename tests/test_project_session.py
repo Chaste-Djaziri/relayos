@@ -29,7 +29,7 @@ def project_dir(tmp_path):
 def test_project_session_approval_and_activation(project_dir):
     res = server.propose_project_session(str(project_dir))
     req_id = res["request_id"]
-    assert "Approve this selected project locally" in res["message"]
+    assert "Confirm this folder-access request in ChatGPT" in res["message"]
 
     # Before approval, status activation fails
     with pytest.raises(PermissionError):
