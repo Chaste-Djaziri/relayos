@@ -271,18 +271,56 @@ def screen_snapshot() -> list:
 
 
 @mcp.tool()
-def show_guidance(display_id: int, x: float, y: float, label: str = "Laptop Bridge", message: str = "", timeout_seconds: int | None = 15) -> dict:
-    """Show a click-through visual guide on the selected display; it never controls input."""
+def show_guidance(
+    display_id: int = 0,
+    x: float = 200.0,
+    y: float = 200.0,
+    label: str = "Laptop Bridge",
+    message: str = "",
+    text: str = "",
+    timeout_seconds: int | None = 15,
+) -> dict:
+    """Show a click-through visual guide on the selected display; it never controls input.
+
+    Args:
+        display_id: Index of the display to show the guide on (default: 0).
+        x: Horizontal coordinate on the display (default: 200).
+        y: Vertical coordinate on the display (default: 200).
+        label: Short title text for the guidance bubble (default: 'Laptop Bridge').
+        message: Detailed instructional text for the bubble.
+        text: Optional alias for message text.
+        timeout_seconds: Seconds until overlay auto-dismisses (1 to 300, or None for persistent).
+    """
+    msg = message or text
     if timeout_seconds is not None and not 1 <= timeout_seconds <= 300:
         raise ValueError("timeout_seconds must be between 1 and 300, or omitted for persistent guidance")
-    job_id = queue_desktop_job("show_guidance", {"display_id": display_id, "x": x, "y": y, "label": label[:120], "message": message[:1000], "timeout_seconds": timeout_seconds})
-    return {"job_id": job_id, "message": "Guidance queued for the local companion"}
+    job_id = queue_desktop_job(
+        "show_guidance",
+        {
+            "display_id": display_id,
+            "x": x,
+            "y": y,
+            "label": label[:120],
+            "message": msg[:1000],
+            "timeout_seconds": timeout_seconds,
+        },
+    )
+    try:
+        _wait_for_desktop_job(job_id, timeout=3)
+    except TimeoutError:
+        pass
+    return {"job_id": job_id, "message": "Guidance displayed on the local companion"}
 
 
 @mcp.tool()
 def clear_guidance() -> dict:
     """Remove visible Laptop Bridge guidance overlays immediately."""
-    return {"job_id": queue_desktop_job("clear_guidance", {}), "message": "Guidance clear queued"}
+    job_id = queue_desktop_job("clear_guidance", {})
+    try:
+        _wait_for_desktop_job(job_id, timeout=3)
+    except TimeoutError:
+        pass
+    return {"job_id": job_id, "message": "Guidance cleared"}
 
 def main():
     load_config()
