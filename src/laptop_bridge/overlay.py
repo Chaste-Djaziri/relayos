@@ -192,7 +192,11 @@ class GuidanceOverlay(QWidget):
 
         elif self.state == self.STATE_PAUSE:
             self.current_cursor_pt = QPointF(self.target_pt)
-            if now - self.pause_start_time >= 0.4:
+            # Hold the visual marker on the requested target until the user
+            # brings the real cursor close to it. This keeps the click
+            # destination visible instead of making the guide drift away.
+            distance = math.hypot(cur_local.x() - self.target_pt.x(), cur_local.y() - self.target_pt.y())
+            if now - self.pause_start_time >= 0.4 and distance <= 32.0:
                 self.state = self.STATE_TRAILING
 
         elif self.state == self.STATE_TRAILING:
@@ -228,7 +232,6 @@ class GuidanceOverlay(QWidget):
 
         # Keep the marker simple, while restoring the instructional callout that
         # tells the user what the current step is.
-        self._draw_target_ring(painter)
         self._draw_bubble(painter)
         self._draw_guide_cursor(painter)
 
