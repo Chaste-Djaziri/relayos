@@ -250,6 +250,10 @@ class Companion:
         self.overlay_status_action.setEnabled(False)
         menu.addAction(self.overlay_status_action)
 
+        self.guidance_session_action = QAction("Screen sharing: inactive", menu)
+        self.guidance_session_action.setEnabled(False)
+        menu.addAction(self.guidance_session_action)
+
         self.session_status_action = QAction("Active session: none", menu)
         self.session_status_action.setEnabled(False)
         menu.addAction(self.session_status_action)
@@ -390,6 +394,13 @@ class Companion:
         else:
             self.overlay_status_action.setText("Overlay: inactive")
 
+        guidance = state.guidance_session_status()
+        if guidance.get("active"):
+            remaining = max(0, int(guidance["expires_at"] - time.time()))
+            self.guidance_session_action.setText(f"Screen sharing: active ({remaining // 60}m left)")
+        else:
+            self.guidance_session_action.setText("Screen sharing: inactive")
+
         sessions = state.active_project_sessions()
         if sessions:
             remaining = max(0, int(sessions[0]["expires_at"] - time.time()))
@@ -412,6 +423,8 @@ class Companion:
             if kind == "screen_snapshot":
                 try:
                     metadata, png_bytes = capture.capture_snapshot(payload.get("display_id"))
+                    if payload.get("session_id"):
+                        state.touch_guidance_capture(payload["session_id"])
                     state.complete_desktop_job(job_id, result=metadata, blob=png_bytes)
                 except Exception as error:
                     state.complete_desktop_job(job_id, result={"error": str(error)})
@@ -431,6 +444,10 @@ class Companion:
             elif kind == "clear_guidance":
                 self.overlay.clear_guidance()
                 state.complete_desktop_job(job_id, result={"status": "cleared"})
+            elif kind == "stop_guidance_session":
+                self.overlay.clear_guidance()
+                state.stop_guidance_session(payload.get("session_id"))
+                state.complete_desktop_job(job_id, result={"status": "stopped"})
 
         # Handle pending approval requests
         if self.pending_dialog or state.emergency_stop():
