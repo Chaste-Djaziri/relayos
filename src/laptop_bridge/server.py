@@ -262,11 +262,13 @@ def run_project_command(session_id: str, argv: list[str], cwd: str = ".") -> dic
 @mcp.tool()
 def screen_snapshot() -> list:
     """Capture the active display once through the visible local companion; no screenshot is retained."""
+    started = time.monotonic()
     job_id = queue_desktop_job("screen_snapshot", {})
     _wait_for_desktop_job(job_id)
     result, blob = desktop_job_result(job_id, consume_blob=True)
     if not blob:
         raise RuntimeError(result.get("error", "Screen capture failed"))
+    record_result("screen_snapshot", f"display:{result.get('display_id', 0)}", duration_ms=int((time.monotonic() - started) * 1000))
     return [result, ImageContent(data=base64.b64encode(blob).decode("ascii"), mime_type="image/png")]
 
 
@@ -309,6 +311,7 @@ def show_guidance(
         _wait_for_desktop_job(job_id, timeout=3)
     except TimeoutError:
         pass
+    record_result("show_guidance", f"display:{display_id} ({x:.0f},{y:.0f})")
     return {"job_id": job_id, "message": "Guidance displayed on the local companion"}
 
 
