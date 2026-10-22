@@ -191,12 +191,13 @@ class GuidanceOverlay(QWidget):
 
         elif self.state == self.STATE_TRAILING:
             # Trailing mode: follow user's real cursor with smooth lag and offset
-            trailing_target = cur_local + QPointF(18, 18)
+            # Keep the secondary marker slightly separated from the real cursor.
+            trailing_target = cur_local + QPointF(16, 16)
             dx = trailing_target.x() - self.current_cursor_pt.x()
             dy = trailing_target.y() - self.current_cursor_pt.y()
             self.current_cursor_pt = QPointF(
-                self.current_cursor_pt.x() + dx * 0.45,
-                self.current_cursor_pt.y() + dy * 0.45,
+                self.current_cursor_pt.x() + dx * 0.65,
+                self.current_cursor_pt.y() + dy * 0.65,
             )
 
         self.update()
@@ -320,8 +321,8 @@ class GuidanceOverlay(QWidget):
         # Simple green triangular guide marker, matching the companion visual
         # language. The marker is separate from the instructional bubble.
         path = QPainterPath()
-        # Equilateral triangle: side length 22px, centered on the cursor.
-        side = 22.0
+        # Small equilateral triangle: side length 14px, centered on the guide position.
+        side = 14.0
         height = side * math.sqrt(3.0) / 2.0
         path.moveTo(cx, cy - (2.0 * height / 3.0))
         path.lineTo(cx + side / 2.0, cy + height / 3.0)
