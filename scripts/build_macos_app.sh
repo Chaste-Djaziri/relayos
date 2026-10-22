@@ -5,10 +5,16 @@ APP_NAME="Laptop Bridge"
 DIST_DIR="${DIST_DIR:-dist}"
 SIGNING_IDENTITY="${LAPTOP_BRIDGE_SIGNING_IDENTITY:-}"
 NOTARY_PROFILE="${LAPTOP_BRIDGE_NOTARY_PROFILE:-}"
+PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python)}"
 
-python -m pip install -e '.[dev]'
+if [ -z "${PYTHON_BIN}" ]; then
+  echo "Python 3.11+ is required; set PYTHON_BIN to the active interpreter." >&2
+  exit 1
+fi
+
+"${PYTHON_BIN}" -m pip install -e '.[dev]'
 rm -rf "build/${APP_NAME}" "${DIST_DIR}/${APP_NAME}.app"
-pyinstaller --noconfirm --clean --windowed \
+"${PYTHON_BIN}" -m PyInstaller --noconfirm --clean --windowed \
   --name "${APP_NAME}" \
   --paths src \
   --osx-bundle-identifier "rw.shangazi.laptop-bridge" \
