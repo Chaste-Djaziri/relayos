@@ -223,6 +223,32 @@ def test_persistent_command_grant_allows_arguments_in_project_and_can_be_revoked
         server.run_project_command(session_id, ["echo", "after revoke"])
 
 
+def test_saved_command_grant_is_project_scoped_and_emergency_stop_blocks_it(project_dir, tmp_path):
+    other_root = tmp_path / "other_project"
+    other_root.mkdir()
+    first = server.propose_project_session(str(project_dir))
+    state.approve(first["request_id"])
+    first_session = server.project_session_status(first["request_id"])["session_id"]
+    server.authorize_project_command(first_session, ["echo", "allowed"], grant="always")
+
+    second = server.propose_project_session(str(other_root))
+    state.approve(second["request_id"])
+    second_session = server.project_session_status(second["request_id"])["session_id"]
+    with pytest.raises(PermissionError, match="Command approval required"):
+        server.run_project_command(second_session, ["echo", "not allowed"])
+
+    state.set_emergency_stop(True)
+    with pytest.raises(PermissionError, match="Emergency stop"):
+        server.run_project_command(first_session, ["echo", "blocked"])
+
+
+def test_permission_expansion_tools_have_destructive_annotations():
+    tools = {tool.name: tool for tool in server.mcp._tool_manager.list_tools()}
+    for name in ("propose_project_session", "approve_project_session", "authorize_project_command", "run_project_command", "write_project_file", "apply_project_patch"):
+        assert tools[name].annotations is not None
+        assert tools[name].annotations.destructive_hint is True
+
+
 def test_concurrent_project_operations(project_dir):
     res = server.propose_project_session(str(project_dir))
     state.approve(res["request_id"])
