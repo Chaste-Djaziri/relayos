@@ -5,7 +5,7 @@ from pathlib import Path
 
 STATE_DIR = Path(os.getenv("LAPTOP_BRIDGE_STATE", str(Path.home() / ".laptop-bridge"))).expanduser().resolve()
 CONFIG_FILE = STATE_DIR / "config.json"
-PENDING_FILE = STATE_DIR / "requests.json"
+DATABASE_FILE = STATE_DIR / "state.sqlite3"
 
 DEFAULT = {
     "allowed_folders": [str(Path.home() / "Documents")],
