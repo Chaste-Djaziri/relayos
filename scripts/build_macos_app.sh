@@ -5,7 +5,11 @@ APP_NAME="Laptop Bridge"
 DIST_DIR="${DIST_DIR:-dist}"
 SIGNING_IDENTITY="${LAPTOP_BRIDGE_SIGNING_IDENTITY:-}"
 NOTARY_PROFILE="${LAPTOP_BRIDGE_NOTARY_PROFILE:-}"
-PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python)}"
+if [ -z "${PYTHON_BIN:-}" ] && [ -x ".venv/bin/python" ]; then
+  PYTHON_BIN=".venv/bin/python"
+else
+  PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python)}"
+fi
 
 if [ -z "${PYTHON_BIN}" ]; then
   echo "Python 3.11+ is required; set PYTHON_BIN to the active interpreter." >&2
