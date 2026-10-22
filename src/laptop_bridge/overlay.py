@@ -129,30 +129,22 @@ class GuidanceOverlay(QWidget):
                 return
             objc = ctypes.cdll.LoadLibrary(objc_path)
 
-            msg_send = objc.objc_msgSend
-            msg_send.restype = ctypes.c_void_p
-            msg_send.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-
+            sel_fn = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_char_p)(("sel_registerName", objc))
+            msg_send = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)(("objc_msgSend", objc))
             msg_send_bool = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool)(("objc_msgSend", objc))
             msg_send_long = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long)(("objc_msgSend", objc))
 
-            sel_window = objc.sel_registerName(b"window")
-            sel_set_hides = objc.sel_registerName(b"setHidesOnDeactivate:")
-            sel_set_level = objc.sel_registerName(b"setLevel:")
-            sel_set_ignores = objc.sel_registerName(b"setIgnoresMouseEvents:")
-            sel_set_behavior = objc.sel_registerName(b"setCollectionBehavior:")
-
             win_id = int(self.winId())
-            nswindow = msg_send(ctypes.c_void_p(win_id), sel_window)
+            nswindow = msg_send(win_id, sel_fn(b"window"))
             if nswindow:
                 # Keep overlay visible even when companion loses focus to other apps
-                msg_send_bool(nswindow, sel_set_hides, False)
+                msg_send_bool(nswindow, sel_fn(b"setHidesOnDeactivate:"), False)
                 # Level 25 = kCGStatusWindowLevel (floats above all regular windows)
-                msg_send_long(nswindow, sel_set_level, 25)
+                msg_send_long(nswindow, sel_fn(b"setLevel:"), 25)
                 # Native OS click-through
-                msg_send_bool(nswindow, sel_set_ignores, True)
+                msg_send_bool(nswindow, sel_fn(b"setIgnoresMouseEvents:"), True)
                 # Appear on all macOS Spaces without entering window cycle
-                msg_send_long(nswindow, sel_set_behavior, 1 | 16 | 64)
+                msg_send_long(nswindow, sel_fn(b"setCollectionBehavior:"), 1 | 16 | 64)
         except Exception:
             pass
 
