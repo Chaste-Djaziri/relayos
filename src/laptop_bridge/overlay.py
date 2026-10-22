@@ -195,8 +195,8 @@ class GuidanceOverlay(QWidget):
             dx = trailing_target.x() - self.current_cursor_pt.x()
             dy = trailing_target.y() - self.current_cursor_pt.y()
             self.current_cursor_pt = QPointF(
-                self.current_cursor_pt.x() + dx * 0.28,
-                self.current_cursor_pt.y() + dy * 0.28,
+                self.current_cursor_pt.x() + dx * 0.45,
+                self.current_cursor_pt.y() + dy * 0.45,
             )
 
         self.update()
@@ -325,13 +325,7 @@ class GuidanceOverlay(QWidget):
         path.lineTo(cx - 14, cy + 7)
         path.closeSubpath()
 
-        # Soft shadow keeps the marker visible over light and dark apps.
-        shadow = QPainterPath(path)
-        shadow.translate(2, 3)
-        painter.setPen(QPen(QColor(0, 0, 0, 110), 3))
-        painter.setBrush(QBrush(QColor(0, 0, 0, 80)))
-        painter.drawPath(shadow)
-
-        painter.setPen(QPen(QColor(20, 110, 45, 230), 1.5))
+        # Flat single-color marker: no shadow, badge, or 3D duplicate edge.
+        painter.setPen(QPen(QColor(20, 110, 45, 255), 1.0))
         painter.setBrush(QBrush(QColor(52, 199, 89, 255)))
         painter.drawPath(path)
