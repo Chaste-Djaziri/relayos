@@ -20,6 +20,7 @@ fi
 rm -rf "build/${APP_NAME}" "${DIST_DIR}/${APP_NAME}.app"
 "${PYTHON_BIN}" -m PyInstaller --noconfirm --clean --windowed \
   --name "${APP_NAME}" \
+  --specpath "${SPEC_DIR:-build}" \
   --paths src \
   --osx-bundle-identifier "rw.shangazi.laptop-bridge" \
   --hidden-import AppKit \
