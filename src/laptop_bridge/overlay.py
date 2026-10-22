@@ -114,7 +114,47 @@ class GuidanceOverlay(QWidget):
             self.anim_timer.start()
 
         self.show()
+        self._setup_macos_window()
+        self.raise_()
         self.update()
+
+    def _setup_macos_window(self):
+        """Configure macOS native NSWindow to remain visible across all spaces and apps."""
+        try:
+            import ctypes
+            import ctypes.util
+
+            objc_path = ctypes.util.find_library("objc")
+            if not objc_path:
+                return
+            objc = ctypes.cdll.LoadLibrary(objc_path)
+
+            msg_send = objc.objc_msgSend
+            msg_send.restype = ctypes.c_void_p
+            msg_send.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+
+            msg_send_bool = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool)(("objc_msgSend", objc))
+            msg_send_long = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long)(("objc_msgSend", objc))
+
+            sel_window = objc.sel_registerName(b"window")
+            sel_set_hides = objc.sel_registerName(b"setHidesOnDeactivate:")
+            sel_set_level = objc.sel_registerName(b"setLevel:")
+            sel_set_ignores = objc.sel_registerName(b"setIgnoresMouseEvents:")
+            sel_set_behavior = objc.sel_registerName(b"setCollectionBehavior:")
+
+            win_id = int(self.winId())
+            nswindow = msg_send(ctypes.c_void_p(win_id), sel_window)
+            if nswindow:
+                # Keep overlay visible even when companion loses focus to other apps
+                msg_send_bool(nswindow, sel_set_hides, False)
+                # Level 25 = kCGStatusWindowLevel (floats above all regular windows)
+                msg_send_long(nswindow, sel_set_level, 25)
+                # Native OS click-through
+                msg_send_bool(nswindow, sel_set_ignores, True)
+                # Appear on all macOS Spaces without entering window cycle
+                msg_send_long(nswindow, sel_set_behavior, 1 | 16 | 64)
+        except Exception:
+            pass
 
     def clear_guidance(self):
         """Immediately hide and clear the guidance overlay."""
