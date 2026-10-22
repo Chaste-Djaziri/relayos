@@ -59,17 +59,17 @@ Laptop Bridge provides an always-on-top, click-through PySide6 instructional ove
 - **Timeout and Clear**: Guidance can specify a timeout in seconds or remain visible until explicitly cleared via `clear_guidance` or the companion tray menu.
 - **Emergency Stop**: Immediately clears all visible guidance overlays across all displays.
 
-The write and command tools expose MCP annotations so ChatGPT can request confirmation in chat. Clients without MCP elicitation support fall back to the local companion dialog.
+Permission-expanding tools are marked as write/destructive MCP actions so ChatGPT can apply its native confirmation flow when the connected app's action controls require it. MCP annotations are hints, not a server-verifiable record of a confirmation click; configure ChatGPT to require confirmation for these actions. Clients without an in-chat confirmation flow can use the companion approval fallback. macOS Screen Recording, Accessibility, and Files & Folders / Full Disk Access permissions must still be granted in macOS Settings.
 
 ## Follow-ups and reminders
 
 `record_follow_up_request`, `list_pending_follow_ups`, and `complete_follow_up` retain only a title, schedule, expiration, project-session reference, and metadata. After recording one, ask ChatGPT to schedule a reminder or recurring task using the returned ID. The MCP server cannot create a ChatGPT heartbeat autonomously for every account; scheduling remains a ChatGPT/workspace feature.
 
-## 60-Minute Project Coding Sessions
+## 60-Minute Project Coding Sessions and Command Grants
 
 For coding tasks, users can grant scoped, time-limited access to specific project directories:
 
-- **Folder Picker & Approval**: The companion provides a local folder picker and approval dialog explaining the exact permissions. Sessions expire automatically after 60 minutes.
+- **Folder Request & Approval**: `propose_project_session(project_path)` requests access to one exact folder for 60 minutes. ChatGPT should confirm the permission-expanding request in chat; use the companion's folder picker/dialog as a fallback. Call `approve_project_session(request_id)` in ChatGPT to approve and activate, or `project_session_status(request_id)` after approving through the companion. A separate folder session is required for another directory.
 - **MCP Coding Tools**:
   - `propose_project_session(project_path)`: Request approval for an existing project folder.
   - `project_session_status(request_id)`: Activate an approved project session and obtain its session ID.
@@ -77,10 +77,14 @@ For coding tasks, users can grant scoped, time-limited access to specific projec
   - `read_project_file(session_id, path)`: Read UTF-8 text file up to 1 MiB.
   - `write_project_file(session_id, path, content)`: Create or update UTF-8 file up to 1 MiB.
   - `apply_project_patch(session_id, patch)`: Apply unified diffs via `/usr/bin/git apply` without shell interpolation.
-  - `run_project_command(session_id, argv, cwd)`: Run non-interactive commands with `shell=False`, 120s timeout, DEVNULL stdin, and 8192-byte output cap.
+  - `authorize_project_command(session_id, argv, cwd, grant)`: Confirm exact argv once (`grant="once"`) or save an executable grant for this project (`grant="always"`).
+  - `run_project_command(session_id, argv, cwd, authorization_token)`: Run an approved non-interactive command with `shell=False`, 120s timeout, DEVNULL stdin, and 8192-byte output cap.
+  - `list_saved_command_grants()` / `revoke_saved_command_grant(grant_id)`: Review and revoke persistent command grants in ChatGPT; they are also listed in companion settings.
 - **Security Boundaries**:
   - All paths and working directories are validated against the resolved project root. Path traversal (`..`) and symlink escapes pointing outside the root are strictly rejected with `PermissionError`.
   - Privilege escalation (`sudo`, `su`, `doas`) is blocked.
+  - A one-use command grant matches the resolved executable, exact argv, and exact working directory. An "always" grant matches a resolved executable within one project, with any arguments, until revoked (for example, it permits `npm run build` and other npm arguments).
+  - Commands run as the logged-in macOS user and are not OS-sandboxed. Even with a project-scoped grant, an executable or npm script may access any files/macOS resources available to Laptop Bridge; inspect the executable and project before choosing "always".
   - Activating Emergency Stop immediately terminates active project sessions and cancels all pending/running operations.
 
 ## MCP Tools Reference
@@ -101,12 +105,16 @@ For coding tasks, users can grant scoped, time-limited access to specific projec
 | `show_guidance` | Render click-through visual overlay and guide cursor on target display. |
 | `clear_guidance` | Remove visible guidance overlays immediately. |
 | `propose_project_session` | Request human approval for a 60-minute project coding session. |
+| `approve_project_session` | Approve and activate a pending folder session from ChatGPT. |
 | `project_session_status` | Activate approved coding session and return session token. |
 | `list_project_files` | List files within the active project session root. |
 | `read_project_file` | Read a file within the active project session root. |
 | `write_project_file` | Write a file within the active project session root. |
 | `apply_project_patch` | Apply unified diff patch inside project session with `git apply`. |
-| `run_project_command` | Execute non-interactive argv command inside project root. |
+| `authorize_project_command` | Approve an exact command once or save an executable grant for the project. |
+| `run_project_command` | Execute argv only with a valid one-use or persistent command grant. |
+| `list_saved_command_grants` | List persistent project-scoped executable grants. |
+| `revoke_saved_command_grant` | Revoke a persistent executable grant. |
 | `record_follow_up_request` | Record an unfinished-task reminder for ChatGPT to schedule or revisit. |
 | `list_pending_follow_ups` | List pending unfinished-task reminders. |
 | `complete_follow_up` | Mark an unfinished-task reminder complete. |
