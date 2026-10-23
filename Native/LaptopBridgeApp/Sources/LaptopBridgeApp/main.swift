@@ -442,7 +442,7 @@ struct QuickPanel: View {
     @Environment(\ .openWindow) private var openWindow
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack { Image("relayos-black", bundle: .module).resizable().scaledToFit().frame(width: 24, height: 24); VStack(alignment: .leading) { Text("RelayOS").font(.headline); Text(model.running ? "Running locally" : "Server stopped").font(.caption).foregroundStyle(.secondary) }; Spacer() }
+            HStack { Image(systemName: "computermouse.fill").font(.title2).foregroundStyle(.blue).frame(width: 24, height: 24); VStack(alignment: .leading) { Text("RelayOS").font(.headline); Text(model.running ? "Running locally" : "Server stopped").font(.caption).foregroundStyle(.secondary) }; Spacer() }
             if model.endpoint == "Not configured" {
                 GroupBox("First-run setup") {
                     VStack(alignment: .leading, spacing: 8) {
@@ -502,7 +502,7 @@ struct FreshSetupView: View {
     @State private var tokenInput = ""
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
-            Image("relayos-black", bundle: .module).resizable().scaledToFit().frame(width: 72, height: 72)
+            Image(systemName: "computermouse.fill").font(.system(size: 56)).foregroundStyle(.blue).frame(width: 72, height: 72)
             Text("Set up RelayOS").font(.largeTitle.bold())
             Text("Create a private HTTPS MCP endpoint for ChatGPT, Gemini, and other MCP clients.").foregroundStyle(.secondary)
             HStack(spacing: 16) {
