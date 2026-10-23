@@ -82,7 +82,7 @@ final class BridgeModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.shutdownServices() }
+            Task { @MainActor [weak self] in self?.shutdownServices() }
         }
         startServices()
         let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
@@ -154,7 +154,7 @@ final class BridgeModel: ObservableObject {
         // the Swift edge proxy is introduced incrementally.
         environment["LAPTOP_BRIDGE_MCP_PORT"] = "8765"
         process.environment = environment
-        process.terminationHandler = { [weak self] _ in Task { @MainActor in self?.running = false; self?.server = nil } }
+        process.terminationHandler = { [weak self] _ in Task { @MainActor [weak self] in self?.running = false; self?.server = nil } }
         try? process.run()
         server = process
         running = process.isRunning
@@ -192,9 +192,9 @@ final class BridgeModel: ObservableObject {
             let data = handle.availableData
             guard let text = String(data: data, encoding: .utf8), let range = text.range(of: "https://[^\\s]+\\.ngrok-free\\.dev[^\\s]*", options: .regularExpression) else { return }
             let url = String(text[range]).trimmingCharacters(in: CharacterSet(charactersIn: "\\\"'`,"))
-            Task { @MainActor in self?.adoptNgrokEndpoint(url) }
+            Task { @MainActor [weak self] in self?.adoptNgrokEndpoint(url) }
         }
-        process.terminationHandler = { [weak self] _ in Task { @MainActor in self?.tunnelRunning = false; self?.tunnel = nil } }
+        process.terminationHandler = { [weak self] _ in Task { @MainActor [weak self] in self?.tunnelRunning = false; self?.tunnel = nil } }
         try? process.run(); tunnel = process; tunnelRunning = process.isRunning
         // The agent may emit no stdout when launched from a GUI. Ask its
         // local inspector API for the assigned free hostname as a fallback.
@@ -206,7 +206,7 @@ final class BridgeModel: ObservableObject {
         URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
             guard let data, let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let tunnels = object["tunnels"] as? [[String: Any]], let publicURL = tunnels.compactMap({ $0["public_url"] as? String }).first else { return }
-            Task { @MainActor in self?.adoptNgrokEndpoint(publicURL) }
+            Task { @MainActor [weak self] in self?.adoptNgrokEndpoint(publicURL) }
         }.resume()
     }
 
@@ -247,7 +247,7 @@ final class BridgeModel: ObservableObject {
         ngrokInstallState = "Installing ngrok…"
         let process = Process(); process.executableURL = URL(fileURLWithPath: brew); process.arguments = ["install", "ngrok/ngrok/ngrok"]
         process.terminationHandler = { [weak self] process in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 self?.ngrokInstallState = process.terminationStatus == 0 ? "ngrok installed successfully." : "ngrok installation failed. Try again or use Terminal."
             }
         }
@@ -312,7 +312,7 @@ final class BridgeModel: ObservableObject {
             guard let data = try? pipe.fileHandleForReading.readToEnd(),
                   let items = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
             let names = items.compactMap { $0["client_name"] as? String }
-            DispatchQueue.main.async { self?.connectedClients = names }
+            DispatchQueue.main.async { [weak self] in self?.connectedClients = names }
         }
     }
 
@@ -324,7 +324,7 @@ final class BridgeModel: ObservableObject {
             process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
             process.standardOutput = pipe; try? process.run(); process.waitUntilExit()
             guard let data = try? pipe.fileHandleForReading.readToEnd(), let grants = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
-            DispatchQueue.main.async { self?.permissionGrants = grants }
+            DispatchQueue.main.async { [weak self] in self?.permissionGrants = grants }
         }
     }
 
