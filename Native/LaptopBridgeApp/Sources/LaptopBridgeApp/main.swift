@@ -128,7 +128,9 @@ final class BridgeModel: ObservableObject {
               let item = items.first,
               let requestID = item["request_id"] as? String else { return }
         visibleApprovalID = requestID
+        NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
+        alert.window.level = .floating
         alert.messageText = "Approve Gemini connection?"
         alert.informativeText = "A Gemini client is requesting access to Laptop Bridge. Approve only if you initiated this connection."
         alert.addButton(withTitle: "Approve")
