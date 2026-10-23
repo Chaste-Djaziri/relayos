@@ -323,10 +323,19 @@ def pending_oauth_authorizations():
         connection.execute("BEGIN IMMEDIATE")
         _expire_oauth(connection, time.time())
         rows = connection.execute(
-            "SELECT token, client_id, redirect_uri, scopes_json, created_at FROM oauth_authorizations WHERE status = 'pending' ORDER BY created_at"
+            "SELECT a.token, a.client_id, a.redirect_uri, a.scopes_json, a.created_at, c.metadata_json "
+            "FROM oauth_authorizations a LEFT JOIN oauth_clients c ON c.client_id = a.client_id "
+            "WHERE a.status = 'pending' ORDER BY a.created_at"
         ).fetchall()
         connection.commit()
-    return [{"request_id": row["token"], "client_id": row["client_id"], "redirect_uri": row["redirect_uri"], "scopes": json.loads(row["scopes_json"]), "created_at": row["created_at"]} for row in rows]
+    result = []
+    for row in rows:
+        metadata = json.loads(row["metadata_json"] or "{}")
+        result.append({"request_id": row["token"], "client_id": row["client_id"],
+                       "client_name": metadata.get("client_name") or metadata.get("client_uri"),
+                       "redirect_uri": row["redirect_uri"], "scopes": json.loads(row["scopes_json"]),
+                       "created_at": row["created_at"]})
+    return result
 
 
 def decide_oauth_authorization(request_id, approved):
