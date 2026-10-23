@@ -7,20 +7,22 @@ struct LaptopBridgeApp: App {
     @StateObject private var model = BridgeModel()
 
     var body: some Scene {
-        Window("Laptop Bridge", id: "main") {
+        Window("RelayOS", id: "main") {
             DesktopWindowView(model: model)
                 .frame(minWidth: 820, minHeight: 560)
                 .onAppear {
                     NSApp.setActivationPolicy(.regular)
                     NSApp.activate(ignoringOtherApps: true)
                     DispatchQueue.main.async {
-                        NSApp.windows.first(where: { $0.title == "Laptop Bridge" })?.makeKeyAndOrderFront(nil)
+                        NSApp.windows.first(where: { $0.title == "RelayOS" })?.makeKeyAndOrderFront(nil)
                     }
                 }
         }
-        MenuBarExtra("Laptop Bridge", systemImage: "link.circle.fill") {
+        MenuBarExtra {
             QuickPanel(model: model)
                 .frame(width: 360)
+        } label: {
+            Image("relayos-black", bundle: .module).resizable().scaledToFit().frame(width: 18, height: 18).accessibilityLabel("RelayOS")
         }
         .menuBarExtraStyle(.window)
 
@@ -235,7 +237,7 @@ final class BridgeModel: ObservableObject {
         let alert = NSAlert()
         alert.window.level = .floating
         alert.messageText = "Approve MCP connection?"
-        alert.informativeText = "An MCP client is requesting access to Laptop Bridge. Approve only if you initiated this connection."
+        alert.informativeText = "An MCP client is requesting access to RelayOS. Approve only if you initiated this connection."
         alert.addButton(withTitle: "Approve")
         alert.addButton(withTitle: "Deny")
         let decision = alert.runModal() == .alertFirstButtonReturn ? "approve" : "deny"
@@ -324,7 +326,7 @@ final class BridgeModel: ObservableObject {
     }
 
     private func presentPermission(requestID: String, item: [String: Any], python: String) {
-        NSApp.setActivationPolicy(.regular); NSApp.activate(ignoringOtherApps: true); NSApp.windows.first(where: { $0.title == "Laptop Bridge" })?.makeKeyAndOrderFront(nil)
+        NSApp.setActivationPolicy(.regular); NSApp.activate(ignoringOtherApps: true); NSApp.windows.first(where: { $0.title == "RelayOS" })?.makeKeyAndOrderFront(nil)
         let alert = NSAlert(); alert.window.level = .floating; alert.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         let kind = item["kind"] as? String ?? "operation"; let target = item["target"] as? String ?? "requested resource"
         alert.messageText = "Approve \(kind)?"; alert.informativeText = "The MCP client requests access to \(target). Choose how long this permission should remain active."
@@ -338,12 +340,12 @@ final class BridgeModel: ObservableObject {
         visibleApprovalID = requestID
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.windows.first(where: { $0.title == "Laptop Bridge" })?.makeKeyAndOrderFront(nil)
+        NSApp.windows.first(where: { $0.title == "RelayOS" })?.makeKeyAndOrderFront(nil)
         let alert = NSAlert()
         alert.window.level = .floating
         alert.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         alert.messageText = "Approve (clientName) connection?"
-        alert.informativeText = "(clientName) is requesting access to Laptop Bridge. Approve only if you initiated this connection."
+        alert.informativeText = "\(clientName) is requesting access to RelayOS. Approve only if you initiated this connection."
         alert.addButton(withTitle: "Approve")
         alert.addButton(withTitle: "Deny")
         let decision = alert.runModal() == .alertFirstButtonReturn ? "approve" : "deny"
@@ -394,7 +396,7 @@ struct QuickPanel: View {
     @Environment(\ .openWindow) private var openWindow
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack { Image(systemName: "link.circle.fill").foregroundStyle(.blue).font(.title2); VStack(alignment: .leading) { Text("Laptop Bridge").font(.headline); Text(model.running ? "Running locally" : "Server stopped").font(.caption).foregroundStyle(.secondary) }; Spacer() }
+            HStack { Image("relayos-black", bundle: .module).resizable().scaledToFit().frame(width: 24, height: 24); VStack(alignment: .leading) { Text("RelayOS").font(.headline); Text(model.running ? "Running locally" : "Server stopped").font(.caption).foregroundStyle(.secondary) }; Spacer() }
             if model.endpoint == "Not configured" {
                 GroupBox("First-run setup") {
                     VStack(alignment: .leading, spacing: 8) {
@@ -445,8 +447,8 @@ struct FreshSetupView: View {
     @State private var tokenInput = ""
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
-            Image(systemName: "link.circle.fill").font(.system(size: 42)).foregroundStyle(.blue)
-            Text("Set up Laptop Bridge").font(.largeTitle.bold())
+            Image("relayos-black", bundle: .module).resizable().scaledToFit().frame(width: 72, height: 72)
+            Text("Set up RelayOS").font(.largeTitle.bold())
             Text("Create a private HTTPS MCP endpoint for ChatGPT, Gemini, and other MCP clients.").foregroundStyle(.secondary)
             HStack(spacing: 16) {
                 Link("Get authtoken", destination: URL(string: "https://dashboard.ngrok.com/get-started/your-authtoken")!)
