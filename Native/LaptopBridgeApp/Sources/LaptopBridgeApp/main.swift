@@ -50,6 +50,7 @@ final class BridgeModel: ObservableObject {
     private var tunnel: Process?
     private var approvalTimer: DispatchSourceTimer?
     private var visibleApprovalID: String?
+    private var handledApprovalIDs: [String: Date] = [:]
 
     init() {
         let home = FileManager.default.homeDirectoryForCurrentUser
@@ -257,6 +258,9 @@ final class BridgeModel: ObservableObject {
         let clientName = (item["client_name"] as? String) ?? "MCP client"
         DispatchQueue.main.async { [weak self] in
             guard let self, self.visibleApprovalID == nil else { return }
+            self.handledApprovalIDs = self.handledApprovalIDs.filter { Date().timeIntervalSince($0.value) < 300 }
+            guard self.handledApprovalIDs[requestID] == nil else { return }
+            self.handledApprovalIDs[requestID] = Date()
             self.presentApproval(requestID: requestID, clientName: clientName, python: python)
         }
     }
