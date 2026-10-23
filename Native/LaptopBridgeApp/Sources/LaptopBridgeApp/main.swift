@@ -250,8 +250,11 @@ struct QuickPanel: View {
                 GroupBox("First-run setup") {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Create your public MCP endpoint with ngrok.").font(.subheadline)
-                        SecureField("ngrok authtoken", text: $model.ngrokToken)
-                        TextField("Reserved domain (example.ngrok.app)", text: $model.ngrokDomainValue)
+                        HStack {
+                            SecureField("ngrok authtoken", text: $model.ngrokToken).textFieldStyle(.roundedBorder)
+                            Button("Paste token") { if let value = NSPasteboard.general.string(forType: .string) { model.ngrokToken = value.trimmingCharacters(in: .whitespacesAndNewlines) } }
+                        }
+                        TextField("Reserved domain (example.ngrok.app)", text: $model.ngrokDomainValue).textFieldStyle(.roundedBorder)
                         HStack { Button("Install ngrok with Homebrew") { model.installNgrok() }; Button("Save and connect") { model.configureNgrok() }.buttonStyle(.borderedProminent) }
                     }
                 }
@@ -297,8 +300,17 @@ struct FreshSetupView: View {
             Text("1. Install ngrok. 2. Sign in to ngrok and copy your authtoken. 3. Reserve a domain and paste both values below.").font(.caption).foregroundStyle(.secondary)
             Form {
                 Section("ngrok connection") {
-                    SecureField("ngrok authtoken", text: $model.ngrokToken)
+                    HStack {
+                        SecureField("ngrok authtoken", text: $model.ngrokToken)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(minHeight: 30)
+                        Button("Paste token") {
+                            if let value = NSPasteboard.general.string(forType: .string) { model.ngrokToken = value.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        }
+                    }
                     TextField("Reserved domain (example.ngrok.app)", text: $model.ngrokDomainValue)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(minHeight: 30)
                     Text("Reserve a domain in the ngrok dashboard. Your token is stored only in macOS Keychain.").font(.caption).foregroundStyle(.secondary)
                     if model.ngrokInstallState == "Installing ngrok…" { ProgressView("Installing ngrok…") }
                     else if !model.ngrokInstallState.isEmpty { Text(model.ngrokInstallState).font(.caption).foregroundStyle(model.ngrokInstallState.contains("successfully") || model.ngrokInstallState.contains("already") ? .green : .red) }
