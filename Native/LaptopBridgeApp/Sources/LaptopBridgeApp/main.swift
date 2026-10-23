@@ -115,7 +115,7 @@ final class BridgeModel: ObservableObject {
         // An empty domain uses ngrok's free generated HTTPS hostname. A
         // reserved domain is only passed when explicitly configured.
         let domain = ngrokDomain()
-        process.arguments = domain.map { ["http", "127.0.0.1:8765", "--url", "https://\($0)"] } ?? ["http", "127.0.0.1:8765"]
+        process.arguments = domain.map { ["http", "127.0.0.1:8765", "--url", "https://\($0)"] } ?? ["http", "127.0.0.1:8765", "--pooling-enabled"]
         var environment = ProcessInfo.processInfo.environment
         environment["NGROK_AUTHTOKEN"] = token
         process.environment = environment
