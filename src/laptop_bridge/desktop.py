@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QApplication, QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
     QPlainTextEdit, QPushButton, QSystemTrayIcon, QTableWidget, QTableWidgetItem,
-    QTabWidget, QVBoxLayout, QWidget, QWizard, QWizardPage, QGroupBox,
+    QTabWidget, QVBoxLayout, QWidget, QWizard, QWizardPage, QGroupBox, QDialog,
 )
 
 from . import capture, state
@@ -135,6 +135,64 @@ class OnboardingWizard(QWizard):
             self.setEnabled(True)
             return
         super().accept()
+
+
+class QuickPanel(QDialog):
+    """Compact menu-bar surface; detailed controls remain in Settings."""
+    def __init__(self, companion):
+        super().__init__(companion.window)
+        self.companion = companion
+        self.setWindowTitle("Laptop Bridge")
+        self.setFixedSize(390, 520)
+        self.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        self.setStyleSheet("""
+            QDialog { background: #171b25; color: #f8fafc; border: 1px solid #3b4354; border-radius: 18px; }
+            QLabel#muted { color: #94a3b8; }
+            QGroupBox { background: #222735; border: 1px solid #343c4d; border-radius: 14px; margin-top: 10px; padding: 12px; }
+            QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 5px; color: #cbd5e1; }
+            QPushButton { background: #303849; border: 1px solid #465168; border-radius: 9px; padding: 8px 12px; color: #f8fafc; }
+            QPushButton:hover { background: #3b82f6; }
+        """)
+        root = QVBoxLayout(self); root.setContentsMargins(18, 18, 18, 18); root.setSpacing(12)
+        brand = QHBoxLayout()
+        logo = QLabel("◉"); logo.setStyleSheet("font-size: 26px; color: #60a5fa;")
+        brand.addWidget(logo)
+        title_box = QVBoxLayout(); title = QLabel("Laptop Bridge"); title.setStyleSheet("font-size: 18px; font-weight: 700;")
+        self.status = QLabel("Checking status…"); self.status.setObjectName("muted")
+        title_box.addWidget(title); title_box.addWidget(self.status); brand.addLayout(title_box); brand.addStretch(); root.addLayout(brand)
+        self.endpoint = QLabel(); self.endpoint.setObjectName("muted"); self.endpoint.setWordWrap(True); root.addWidget(self.endpoint)
+        connections = QGroupBox("Connections")
+        cl = QVBoxLayout(connections)
+        for name in ("ChatGPT", "Gemini"):
+            row = QHBoxLayout(); label = QLabel(name); label.setStyleSheet("font-weight: 600;"); row.addWidget(label); row.addStretch()
+            state_label = QLabel("OAuth ready"); state_label.setObjectName("muted"); row.addWidget(state_label)
+            if name == "Gemini":
+                self.gemini_state = state_label
+            cl.addLayout(row)
+        connect = QPushButton("Copy MCP endpoint")
+        connect.clicked.connect(self.copy_endpoint)
+        cl.addWidget(connect); root.addWidget(connections)
+        stop = QCheckBox("Emergency stop")
+        stop.setStyleSheet("color: #fca5a5; font-weight: 600;")
+        stop.toggled.connect(companion.set_emergency_stop); self.stop = stop; root.addWidget(stop)
+        root.addStretch()
+        buttons = QHBoxLayout(); settings = QPushButton("⚙  Settings"); settings.clicked.connect(self.open_settings); quit_btn = QPushButton("Quit"); quit_btn.clicked.connect(companion.quit); buttons.addWidget(settings); buttons.addWidget(quit_btn); root.addLayout(buttons)
+
+    def copy_endpoint(self):
+        endpoint = f"{load_config().get('public_base_url', '').rstrip('/')}/mcp"
+        QApplication.clipboard().setText(endpoint)
+        self.endpoint.setText(f"Copied: {endpoint}")
+
+    def open_settings(self):
+        self.close(); self.companion.show_window()
+
+    def refresh(self):
+        config = load_config(); public = config.get("public_base_url", "").rstrip("/")
+        running = self.companion.server.state() == QProcess.ProcessState.Running
+        self.status.setText("Running locally" if running else "Server stopped")
+        self.endpoint.setText(f"{public}/mcp" if public else "Setup required")
+        self.stop.blockSignals(True); self.stop.setChecked(state.emergency_stop()); self.stop.blockSignals(False)
+        grants = state.active_oauth_grants(); self.gemini_state.setText(f"Connected · {len(grants)} grant" if grants else "OAuth ready")
 
 
 class StatusWindow(QMainWindow):
@@ -436,6 +494,7 @@ class Companion:
         self.click_observer = ClickObserver(self._record_guidance_click)
         self.guidance_observer_session = None
         self.window = StatusWindow(self)
+        self.quick_panel = QuickPanel(self)
         self.server = QProcess(self.window)
         self.tunnel = QProcess(self.window)
         self.server.finished.connect(self._server_stopped)
@@ -481,9 +540,7 @@ class Companion:
         menu.addAction("Quit", self.quit)
 
         self.tray.setContextMenu(menu)
-        self.tray.activated.connect(
-            lambda reason: self.show_window() if reason == QSystemTrayIcon.ActivationReason.Trigger else None
-        )
+        self.tray.activated.connect(self._tray_activated)
         self.tray.show()
 
         # Responsive polling for pending requests and desktop jobs (200ms)
@@ -731,6 +788,15 @@ class Companion:
         self.window.show()
         self.window.raise_()
         self.window.activateWindow()
+
+    def _tray_activated(self, reason):
+        if reason != QSystemTrayIcon.ActivationReason.Trigger:
+            return
+        self.quick_panel.refresh()
+        self.quick_panel.adjustSize()
+        self.quick_panel.show()
+        self.quick_panel.raise_()
+        self.quick_panel.activateWindow()
 
     def quit(self):
         self.poller.stop()
