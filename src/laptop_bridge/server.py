@@ -123,14 +123,30 @@ async def oauth_approval(request: Request):
 @mcp.tool()
 def system_status() -> dict:
     """Read OS, hostname, processor utilization, memory, and battery."""
-    mem = psutil.virtual_memory()
-    battery = psutil.sensors_battery()
+    # Sensor APIs are optional on macOS, inside PyInstaller, and on some
+    # virtualized/remote hosts. A status request must remain useful even when
+    # one individual sensor is unavailable.
+    try:
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+    except Exception:
+        cpu_percent = None
+    try:
+        mem_percent = psutil.virtual_memory().percent
+    except Exception:
+        mem_percent = None
+    try:
+        battery = psutil.sensors_battery()
+        battery_percent = battery.percent if battery else None
+        battery_charging = battery.power_plugged if battery else None
+    except Exception:
+        battery_percent = None
+        battery_charging = None
     return {
         "hostname": platform.node(), "os": platform.platform(),
-        "cpu_percent": psutil.cpu_percent(interval=0.1),
-        "ram_used_percent": mem.percent,
-        "battery_percent": battery.percent if battery else None,
-        "battery_charging": battery.power_plugged if battery else None,
+        "cpu_percent": cpu_percent,
+        "ram_used_percent": mem_percent,
+        "battery_percent": battery_percent,
+        "battery_charging": battery_charging,
     }
 
 
