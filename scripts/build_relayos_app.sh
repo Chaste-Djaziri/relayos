@@ -39,14 +39,14 @@ cp Native/LaptopBridgeApp/.build/arm64-apple-macosx/release/LaptopBridgeApp "$AP
 # imports directly; collecting the entire optional MCP CLI would require the
 # unrelated `typer` extra and would make the desktop bundle unnecessarily
 # large.
-"$PYTHON_BIN" -m PyInstaller --noconfirm --clean --onefile --windowed \
+"$PYTHON_BIN" -m PyInstaller --noconfirm --clean --onefile \
   --name RelayOSMCPServer \
   --distpath "$STAGE_DIR" --workpath "$STAGE_DIR/build" --specpath "$STAGE_DIR" \
   --paths src --hidden-import mcp.server --hidden-import mcp.server.auth \
   --hidden-import mcp.server.transport_security packaging/relayos_server_entry.py
 cp "$STAGE_DIR/RelayOSMCPServer" "$APP_PATH/Contents/Resources/Runtime/RelayOSMCPServer"
 
-"$PYTHON_BIN" -m PyInstaller --noconfirm --clean --onefile --windowed \
+"$PYTHON_BIN" -m PyInstaller --noconfirm --clean --onefile \
   --name RelayOSApprovals \
   --distpath "$STAGE_DIR" --workpath "$STAGE_DIR/approvals-build" --specpath "$STAGE_DIR" \
   --paths src packaging/relayos_approvals_entry.py
