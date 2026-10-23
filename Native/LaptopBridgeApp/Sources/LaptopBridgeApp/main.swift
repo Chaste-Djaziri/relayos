@@ -262,9 +262,12 @@ final class BridgeModel: ObservableObject {
 
     private func presentApproval(requestID: String, python: String) {
         visibleApprovalID = requestID
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        NSApp.windows.first(where: { $0.title == "Laptop Bridge" })?.makeKeyAndOrderFront(nil)
         let alert = NSAlert()
         alert.window.level = .floating
+        alert.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         alert.messageText = "Approve MCP connection?"
         alert.informativeText = "An MCP client is requesting access to Laptop Bridge. Approve only if you initiated this connection."
         alert.addButton(withTitle: "Approve")
