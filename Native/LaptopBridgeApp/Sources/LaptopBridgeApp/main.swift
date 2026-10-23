@@ -111,6 +111,11 @@ final class BridgeModel: ObservableObject {
         var environment = ProcessInfo.processInfo.environment
         environment["NGROK_AUTHTOKEN"] = token
         process.environment = environment
+        // Detach the agent from the terminal that launched the menu-bar app;
+        // otherwise ngrok can receive job-control signals and become stopped.
+        process.standardInput = Pipe()
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
         process.terminationHandler = { [weak self] _ in Task { @MainActor in self?.tunnelRunning = false; self?.tunnel = nil } }
         try? process.run(); tunnel = process; tunnelRunning = process.isRunning
     }
