@@ -52,7 +52,7 @@ def test_local_approval_issues_single_use_code_and_rotating_tokens():
 
 def test_google_callback_and_single_scope_are_required():
     provider = LocalApprovalOAuthProvider("https://gemini-bridge.shangazi.rw")
-    bad = OAuthClientInformationFull(client_id="bad", redirect_uris=["https://example.com/callback"], token_endpoint_auth_method="none")
+    bad = OAuthClientInformationFull(client_id="bad", redirect_uris=["http://example.com/callback"], token_endpoint_auth_method="none")
     with pytest.raises(Exception):
         run(provider.register_client(bad))
     registered = client()
