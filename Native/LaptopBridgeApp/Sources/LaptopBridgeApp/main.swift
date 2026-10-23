@@ -84,6 +84,11 @@ final class BridgeModel: ObservableObject {
         let python = candidates.first { FileManager.default.isExecutableFile(atPath: $0) } ?? "/usr/bin/python3"
         process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-m", "laptop_bridge.server"]
+        // The packaged app is launched from Finder/menu bar, so its current
+        // directory is not the repository. Set it explicitly so Python can
+        // resolve the laptop_bridge package and its resources.
+        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Documents/GitHub/laptop-bridge")
         var environment = ProcessInfo.processInfo.environment
         // Keep the current public Python OAuth/MCP listener reachable while
         // the Swift edge proxy is introduced incrementally.
