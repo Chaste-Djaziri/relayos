@@ -254,13 +254,14 @@ final class BridgeModel: ObservableObject {
               let items = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
               let item = items.first,
               let requestID = item["request_id"] as? String else { return }
+        let clientName = (item["client_name"] as? String) ?? "MCP client"
         DispatchQueue.main.async { [weak self] in
             guard let self, self.visibleApprovalID == nil else { return }
-            self.presentApproval(requestID: requestID, python: python)
+            self.presentApproval(requestID: requestID, clientName: clientName, python: python)
         }
     }
 
-    private func presentApproval(requestID: String, python: String) {
+    private func presentApproval(requestID: String, clientName: String, python: String) {
         visibleApprovalID = requestID
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
@@ -268,8 +269,8 @@ final class BridgeModel: ObservableObject {
         let alert = NSAlert()
         alert.window.level = .floating
         alert.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        alert.messageText = "Approve MCP connection?"
-        alert.informativeText = "An MCP client is requesting access to Laptop Bridge. Approve only if you initiated this connection."
+        alert.messageText = "Approve (clientName) connection?"
+        alert.informativeText = "(clientName) is requesting access to Laptop Bridge. Approve only if you initiated this connection."
         alert.addButton(withTitle: "Approve")
         alert.addButton(withTitle: "Deny")
         let decision = alert.runModal() == .alertFirstButtonReturn ? "approve" : "deny"
