@@ -34,12 +34,17 @@ final class BridgeModel: ObservableObject {
     private let configURL: URL
     private var server: Process?
     private var tunnel: Process?
+    private var approvalTimer: Timer?
+    private var visibleApprovalID: String?
 
     init() {
         let home = FileManager.default.homeDirectoryForCurrentUser
         configURL = home.appendingPathComponent(".laptop-bridge/config.json")
         loadConfig()
         startServices()
+        approvalTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.checkOAuthApprovals() }
+        }
     }
 
     func loadConfig() {
@@ -108,6 +113,32 @@ final class BridgeModel: ObservableObject {
 
     func copyEndpoint() { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(endpoint, forType: .string) }
     func setEmergencyStop(_ value: Bool) { emergencyStop = value }
+
+    func checkOAuthApprovals() {
+        guard visibleApprovalID == nil else { return }
+        let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
+        guard FileManager.default.isExecutableFile(atPath: python) else { return }
+        let process = Process(); let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: python)
+        process.arguments = ["-m", "laptop_bridge.approvals", "list-oauth"]
+        process.standardOutput = pipe
+        try? process.run(); process.waitUntilExit()
+        guard let data = try? pipe.fileHandleForReading.readToEnd(),
+              let items = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+              let item = items.first,
+              let requestID = item["request_id"] as? String else { return }
+        visibleApprovalID = requestID
+        let alert = NSAlert()
+        alert.messageText = "Approve Gemini connection?"
+        alert.informativeText = "A Gemini client is requesting access to Laptop Bridge. Approve only if you initiated this connection."
+        alert.addButton(withTitle: "Approve")
+        alert.addButton(withTitle: "Deny")
+        let decision = alert.runModal() == .alertFirstButtonReturn ? "approve" : "deny"
+        let decisionProcess = Process(); decisionProcess.executableURL = URL(fileURLWithPath: python)
+        decisionProcess.arguments = ["-m", "laptop_bridge.approvals", "decide-oauth", requestID, decision]
+        try? decisionProcess.run(); decisionProcess.waitUntilExit()
+        visibleApprovalID = nil
+    }
 }
 
 enum Keychain {
