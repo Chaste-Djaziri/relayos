@@ -437,22 +437,45 @@ struct ConnectionRow: View {
 
 struct SettingsView: View {
     @ObservedObject var model: BridgeModel
+    @State private var selected: SettingsTab = .general
     var body: some View {
         NavigationSplitView {
-            List { Label("General", systemImage: "gearshape"); Label("Connections", systemImage: "link"); Label("Features", systemImage: "square.grid.2x2"); Label("ngrok", systemImage: "globe"); Label("Security", systemImage: "lock"); Label("Activity", systemImage: "clock.arrow.circlepath") }.listStyle(.sidebar)
+            List(selection: $selected) {
+                Section("Essentials") {
+                    Label("General", systemImage: "gearshape").tag(SettingsTab.general)
+                    Label("MCP connections", systemImage: "link").tag(SettingsTab.connections)
+                    Label("Tools & permissions", systemImage: "square.grid.2x2").tag(SettingsTab.tools)
+                }
+                Section("Management") {
+                    Label("ngrok", systemImage: "globe").tag(SettingsTab.ngrok)
+                    Label("Security", systemImage: "lock").tag(SettingsTab.security)
+                    Label("Activity", systemImage: "clock.arrow.circlepath").tag(SettingsTab.activity)
+                }
+            }.listStyle(.sidebar)
         } detail: {
             Form {
-                Section("General") { LabeledContent("MCP endpoint", value: model.endpoint); LabeledContent("Local server", value: model.running ? "Running" : "Stopped"); Button("Restart services") { model.restartServices() } }
-                Section("Connected AI clients") {
-                    if model.connectedClients.isEmpty { Text("No connected AI clients").foregroundStyle(.secondary) }
-                    ForEach(Array(model.connectedClients.enumerated()), id: \.offset) { _, name in
-                        LabeledContent(name, value: "Connected").foregroundStyle(.green)
+                switch selected {
+                case .general:
+                    Section("General") { LabeledContent("MCP endpoint", value: model.endpoint); LabeledContent("Local server", value: model.running ? "Running" : "Stopped"); Button("Restart services") { model.restartServices() } }
+                case .connections:
+                    Section("Connected AI clients") {
+                        if model.connectedClients.isEmpty { Text("No connected AI clients").foregroundStyle(.secondary) }
+                        ForEach(Array(model.connectedClients.enumerated()), id: \.offset) { _, name in LabeledContent(name, value: "Connected").foregroundStyle(.green) }
+                        Button("Copy MCP endpoint") { model.copyEndpoint() }
                     }
-                    Button("Copy MCP endpoint") { model.copyEndpoint() }
+                case .tools:
+                    Section("Available tools") { Toggle("Project tools", isOn: $model.projectTools); Button("Save tool settings") { model.saveCapabilities() } }
+                    Section("Permissions") { LabeledContent("Screen recording", value: "Managed by macOS"); Button("Open Privacy & Security") { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!) } }
+                case .ngrok:
+                    Section("ngrok transport") { LabeledContent("Status", value: model.tunnelRunning ? "Connected" : "Stopped"); LabeledContent("Endpoint", value: model.endpoint); Button("Reconnect") { model.restartServices() } }
+                case .security:
+                    Section("Security") { Toggle("Emergency stop", isOn: $model.emergencyStop).tint(.red); Text("Emergency stop blocks active sessions and revokes active OAuth access.").font(.caption).foregroundStyle(.secondary) }
+                case .activity:
+                    Section("Activity") { Text("Connection and tool activity is kept as local metadata only.").foregroundStyle(.secondary) }
                 }
-                Section("Features") { Toggle("Screen guidance", isOn: $model.screenGuidance); Toggle("Project tools", isOn: $model.projectTools); Button("Save feature settings") { model.saveCapabilities() } }
-                Section("Security") { Toggle("Emergency stop", isOn: $model.emergencyStop).tint(.red); Text("Emergency stop blocks active sessions and revokes active OAuth access.").font(.caption).foregroundStyle(.secondary) }
             }.formStyle(.grouped).padding()
         }
     }
 }
+
+enum SettingsTab: Hashable { case general, connections, tools, ngrok, security, activity }
