@@ -2,9 +2,14 @@ import SwiftUI
 import AppKit
 import Security
 
+final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+}
+
 @main
 struct LaptopBridgeApp: App {
     @StateObject private var model = BridgeModel()
+    @NSApplicationDelegateAdaptor(RelayOSApplicationDelegate.self) private var appDelegate
 
     init() {
         // Use a native macOS glyph for both surfaces. Status-item images are
@@ -66,11 +71,19 @@ final class BridgeModel: ObservableObject {
     private var approvalTimer: DispatchSourceTimer?
     private var visibleApprovalID: String?
     private var handledApprovalIDs: [String: Date] = [:]
+    private var terminationObserver: NSObjectProtocol?
 
     init() {
         let home = FileManager.default.homeDirectoryForCurrentUser
         configURL = home.appendingPathComponent(".laptop-bridge/config.json")
         loadConfig()
+        terminationObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.shutdownServices() }
+        }
         startServices()
         let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
         timer.schedule(deadline: .now() + 1, repeating: 1)
@@ -79,6 +92,21 @@ final class BridgeModel: ObservableObject {
         approvalTimer = timer
         refreshConnectedClients()
         refreshPermissionGrants()
+    }
+
+    deinit {
+        if let terminationObserver { NotificationCenter.default.removeObserver(terminationObserver) }
+    }
+
+    func shutdownServices() {
+        approvalTimer?.cancel()
+        approvalTimer = nil
+        tunnel?.terminate()
+        server?.terminate()
+        tunnel = nil
+        server = nil
+        running = false
+        tunnelRunning = false
     }
 
     func loadConfig() {
@@ -435,7 +463,16 @@ struct QuickPanel: View {
             }
             Text(model.endpoint).font(.caption).textSelection(.enabled).foregroundStyle(.secondary)
             Toggle("Emergency stop", isOn: $model.emergencyStop).tint(.red)
-            HStack { Button("Settings") { openWindow(id: "main") }.buttonStyle(.bordered); Spacer(); Button("Restart") { model.restartServices() }.buttonStyle(.bordered) }
+            HStack {
+                Button("Open RelayOS") {
+                    openWindow(id: "main")
+                    NSApp.activate(ignoringOtherApps: true)
+                }.buttonStyle(.bordered)
+                Button("Settings") { openWindow(id: "main") }.buttonStyle(.bordered)
+                Spacer()
+                Button("Restart") { model.restartServices() }.buttonStyle(.bordered)
+                Button("Quit RelayOS") { model.shutdownServices(); NSApp.terminate(nil) }.buttonStyle(.bordered)
+            }
         }.padding(18)
     }
 }
