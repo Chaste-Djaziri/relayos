@@ -49,7 +49,9 @@ def load_config():
     # Existing installations predate public-endpoint support.  Keep their
     # behavior unchanged until they opt in by setting this value.
     config.setdefault("public_base_url", "")
-    config.setdefault("setup_complete", False)
+    # A configured public endpoint is sufficient to treat older installs as
+    # onboarded; users can still reopen the setup wizard from the companion.
+    config.setdefault("setup_complete", bool(config.get("public_base_url")))
     config.setdefault("capabilities", dict(DEFAULT["capabilities"]))
     config.setdefault("cloudflare", dict(DEFAULT["cloudflare"]))
     config.setdefault("connection_modes", dict(DEFAULT["connection_modes"]))
