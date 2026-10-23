@@ -342,7 +342,7 @@ def decide_oauth_authorization(request_id, approved):
             "UPDATE oauth_authorizations SET status = ?, decided_at = ? WHERE token = ?",
             ("approved" if approved else "denied", now, request_id),
         )
-        _record(connection, "oauth_authorization", "Gemini MCP", "approved" if approved else "denied")
+        _record(connection, "oauth_authorization", "MCP client", "approved" if approved else "denied")
         connection.commit()
 
 
