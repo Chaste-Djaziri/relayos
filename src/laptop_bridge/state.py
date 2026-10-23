@@ -49,7 +49,7 @@ def _db():
                 CREATE TABLE IF NOT EXISTS project_sessions (
                     token TEXT PRIMARY KEY, root TEXT NOT NULL, created_at REAL NOT NULL,
                     expires_at REAL NOT NULL, status TEXT NOT NULL, decided_at REAL,
-                    revoked_at REAL
+                revoked_at REAL, request_id TEXT
                 );
                 CREATE TABLE IF NOT EXISTS desktop_jobs (
                     token TEXT PRIMARY KEY, kind TEXT NOT NULL, payload_json TEXT NOT NULL,
@@ -107,6 +107,10 @@ def _db():
             connection.execute("CREATE INDEX IF NOT EXISTS command_grants_lookup ON command_grants(project_root, executable, grant_type, revoked_at)")
             connection.execute("CREATE INDEX IF NOT EXISTS oauth_tokens_lookup ON oauth_tokens(token_digest, token_type, revoked_at)")
             _INITIALIZED_DBS.add(db_path)
+            try:
+                connection.execute("ALTER TABLE project_sessions ADD COLUMN request_id TEXT")
+            except sqlite3.OperationalError:
+                pass
         yield connection
     finally:
         connection.close()
@@ -176,6 +180,8 @@ def decide_request(token, duration="once"):
     if duration == "persistent" and row["kind"] == "project_session":
         grant_folder(row["target"], "persistent")
     _decide(token, "approved")
+    if row["kind"] == "project_session":
+        activate_project_session(token)
     return True
 
 
@@ -242,7 +248,14 @@ def create_project_session_request(root):
 
 def activate_project_session(request_id):
     """Atomically consume an approved project-session request and create its session."""
-    item = consume(request_id)
+    try:
+        item = consume(request_id)
+    except PermissionError:
+        with _db() as connection:
+            existing = connection.execute("SELECT token, root, created_at, expires_at FROM project_sessions WHERE request_id = ? AND status = 'active' AND expires_at > ?", (request_id, time.time())).fetchone()
+        if existing:
+            return {"session_id": existing["token"], "root": existing["root"], "created_at": existing["created_at"], "expires_at": existing["expires_at"]}
+        raise
     if item["kind"] != "project_session":
         raise PermissionError("Request is not a project-session approval")
     token = secrets.token_urlsafe(18)
@@ -253,8 +266,8 @@ def activate_project_session(request_id):
             connection.rollback()
             raise PermissionError("Emergency stop is enabled")
         connection.execute(
-            "INSERT INTO project_sessions (token, root, created_at, expires_at, status, decided_at) VALUES (?, ?, ?, ?, 'active', ?)",
-            (token, item["details"]["target"], now, now + PROJECT_SESSION_TTL, now),
+            "INSERT INTO project_sessions (token, root, created_at, expires_at, status, decided_at, request_id) VALUES (?, ?, ?, ?, 'active', ?, ?)",
+            (token, item["details"]["target"], now, now + PROJECT_SESSION_TTL, now, request_id),
         )
         _record(connection, "project_session", item["details"]["target"], "approved")
         connection.commit()
