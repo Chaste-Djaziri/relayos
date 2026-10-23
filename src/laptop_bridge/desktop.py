@@ -83,7 +83,7 @@ class OnboardingWizard(QWizard):
 
         welcome = QWizardPage(); welcome.setTitle("Your private bridge")
         wl = QVBoxLayout(welcome)
-        wl.addWidget(QLabel("Laptop Bridge runs a local MCP server and gives you a private HTTPS link for ChatGPT, Gemini, and other MCP clients.\n\nNo shared keys are shipped: this setup creates your own ngrok endpoint and stores secrets in macOS Keychain."))
+        wl.addWidget(QLabel("RelayOS runs a local MCP server and gives you a private HTTPS link for ChatGPT, Claude, Gemini, and other MCP clients.\n\nNo shared keys are shipped: this setup creates your own ngrok endpoint and stores secrets in macOS Keychain."))
         self.addPage(welcome)
 
         cf = QWizardPage(); cf.setTitle("Connect ngrok")
@@ -113,7 +113,7 @@ class OnboardingWizard(QWizard):
         vl = QVBoxLayout(connect)
         self.endpoint_preview = QLabel("Your MCP endpoint will appear here")
         self.endpoint_preview.setStyleSheet("font-weight: bold; color: #2563eb;")
-        vl.addWidget(QLabel("ChatGPT and Gemini use OAuth. After setup, paste the endpoint below into each app; the first connection will ask you to approve it on this Mac."))
+        vl.addWidget(QLabel("ChatGPT, Claude, and Gemini use OAuth. After setup, paste the endpoint below into each app; the first connection will ask you to approve it on this Mac."))
         vl.addWidget(self.endpoint_preview); vl.addStretch(); self.addPage(connect)
         self.hostname.textChanged.connect(lambda value: self.endpoint_preview.setText(f"https://{value.strip().strip('/')}/mcp" if value.strip() else "Your MCP endpoint will appear here"))
 
