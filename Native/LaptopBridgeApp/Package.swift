@@ -10,5 +10,6 @@ let package = Package(
     targets: [
         .executableTarget(name: "LaptopBridgeApp", resources: [.process("Assets")]),
         .testTarget(name: "LaptopBridgeAppTests", dependencies: ["LaptopBridgeApp"])
-    ]
+    ],
+    swiftLanguageVersions: [.v5]
 )
