@@ -141,8 +141,16 @@ def system_status() -> dict:
     except Exception:
         battery_percent = None
         battery_charging = None
+    try:
+        hostname = platform.node()
+    except Exception:
+        hostname = "unknown"
+    try:
+        operating_system = platform.platform()
+    except Exception:
+        operating_system = platform.system() or "unknown"
     return {
-        "hostname": platform.node(), "os": platform.platform(),
+        "hostname": hostname, "os": operating_system,
         "cpu_percent": cpu_percent,
         "ram_used_percent": mem_percent,
         "battery_percent": battery_percent,
