@@ -35,12 +35,15 @@ swift build -c release --package-path Native/LaptopBridgeApp
 cp Native/LaptopBridgeApp/.build/arm64-apple-macosx/release/LaptopBridgeApp "$APP_PATH/Contents/MacOS/RelayOS" 2>/dev/null || \
   cp Native/LaptopBridgeApp/.build/out/Products/Release/LaptopBridgeApp "$APP_PATH/Contents/MacOS/RelayOS"
 
-# Build only the MCP server entrypoint. PyInstaller collects the MCP SDK and
-# the laptop_bridge package into an embedded helper that Swift can supervise.
+# Build only the MCP server entrypoint. PyInstaller follows the server's
+# imports directly; collecting the entire optional MCP CLI would require the
+# unrelated `typer` extra and would make the desktop bundle unnecessarily
+# large.
 "$PYTHON_BIN" -m PyInstaller --noconfirm --clean --windowed \
   --name RelayOSMCPServer \
   --distpath "$STAGE_DIR" --workpath "$STAGE_DIR/build" --specpath "$STAGE_DIR" \
-  --paths src --collect-all mcp src/laptop_bridge/server.py
+  --paths src --hidden-import mcp.server --hidden-import mcp.server.auth \
+  --hidden-import mcp.server.transport_security src/laptop_bridge/server.py
 cp -R "$STAGE_DIR/RelayOSMCPServer" "$APP_PATH/Contents/Resources/Runtime/"
 
 cp Native/LaptopBridgeApp/Sources/LaptopBridgeApp/Assets/relayos-white.png "$APP_PATH/Contents/Resources/relayos-white.png"
