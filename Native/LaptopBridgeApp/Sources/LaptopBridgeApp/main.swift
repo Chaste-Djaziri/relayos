@@ -64,7 +64,9 @@ final class BridgeModel: ObservableObject {
         process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-m", "laptop_bridge.server"]
         var environment = ProcessInfo.processInfo.environment
-        environment["LAPTOP_BRIDGE_MCP_PORT"] = "8766"
+        // Keep the current public Python OAuth/MCP listener reachable while
+        // the Swift edge proxy is introduced incrementally.
+        environment["LAPTOP_BRIDGE_MCP_PORT"] = "8765"
         process.environment = environment
         process.terminationHandler = { [weak self] _ in Task { @MainActor in self?.running = false; self?.server = nil } }
         try? process.run()
@@ -80,11 +82,16 @@ final class BridgeModel: ObservableObject {
     }
 
     func startTunnelIfConfigured() {
-        guard Keychain.read(account: "cloudflare_tunnel_token") != nil else { return }
         let executable = ["/opt/homebrew/bin/cloudflared", "/usr/local/bin/cloudflared"].first { FileManager.default.isExecutableFile(atPath: $0) }
         guard let executable else { return }
         let process = Process(); process.executableURL = URL(fileURLWithPath: executable)
-        process.arguments = ["tunnel", "run", "--token", Keychain.read(account: "cloudflare_tunnel_token")!]
+        if let token = Keychain.read(account: "cloudflare_tunnel_token") {
+            process.arguments = ["tunnel", "run", "--token", token]
+        } else {
+            let config = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".cloudflared/config.yml").path
+            guard FileManager.default.fileExists(atPath: config) else { return }
+            process.arguments = ["--config", config, "tunnel", "run"]
+        }
         process.terminationHandler = { [weak self] _ in Task { @MainActor in self?.tunnelRunning = false; self?.tunnel = nil } }
         try? process.run(); tunnel = process; tunnelRunning = process.isRunning
     }
