@@ -10,7 +10,13 @@ struct LaptopBridgeApp: App {
         Window("Laptop Bridge", id: "main") {
             DesktopWindowView(model: model)
                 .frame(minWidth: 820, minHeight: 560)
-                .onAppear { NSApp.activate(ignoringOtherApps: true) }
+                .onAppear {
+                    NSApp.setActivationPolicy(.regular)
+                    NSApp.activate(ignoringOtherApps: true)
+                    DispatchQueue.main.async {
+                        NSApp.windows.first(where: { $0.title == "Laptop Bridge" })?.makeKeyAndOrderFront(nil)
+                    }
+                }
         }
         MenuBarExtra("Laptop Bridge", systemImage: "link.circle.fill") {
             QuickPanel(model: model)
