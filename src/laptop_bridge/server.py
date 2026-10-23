@@ -109,7 +109,7 @@ async def oauth_approval(request: Request):
         status = "consumed"
     if status == "pending":
         return HTMLResponse("""<!doctype html><title>Approve Laptop Bridge</title><meta http-equiv=refresh content=2><main><h1>Waiting for approval</h1><p>Approve this MCP connection in the Laptop Bridge menu-bar app on your Mac.</p></main>""", headers={"Cache-Control": "no-store"})
-    message = "The request was denied." if status == "denied" else "The request expired or was already used. Start the Gemini connection again."
+    message = "The request was denied." if status == "denied" else "The request expired or was already used. Start the MCP connection again."
     return HTMLResponse(f"<!doctype html><title>Laptop Bridge</title><main><h1>Connection unavailable</h1><p>{message}</p></main>", status_code=403, headers={"Cache-Control": "no-store"})
 
 @mcp.tool()
