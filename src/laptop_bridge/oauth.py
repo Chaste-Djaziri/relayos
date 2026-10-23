@@ -100,6 +100,10 @@ class LocalApprovalOAuthProvider:
             return None
         return AccessToken(token=token, client_id=row["client_id"], scopes=json.loads(row["scopes_json"]), expires_at=int(row["expires_at"]), resource=row["resource"])
 
+    async def verify_token(self, token: str):
+        """Implement the MCP token-verifier protocol for the resource server."""
+        return await self.load_access_token(token)
+
     async def revoke_token(self, token):
         row = state.oauth_load_token(token.token, "access") or state.oauth_load_token(token.token, "refresh")
         if row:
