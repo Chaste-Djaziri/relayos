@@ -12,9 +12,10 @@ from . import state
 SCOPE = "mcp"
 
 
-def _google_redirect(url: str) -> bool:
+def _safe_redirect(url: str) -> bool:
+    """Gemini's callback hostname is product-managed and may change by region."""
     parsed = urlparse(url)
-    return parsed.scheme == "https" and parsed.hostname == "oauth-redirect.googleusercontent.com"
+    return parsed.scheme == "https" and bool(parsed.hostname) and parsed.username is None and parsed.password is None
 
 
 class LocalApprovalOAuthProvider:
@@ -29,8 +30,8 @@ class LocalApprovalOAuthProvider:
 
     async def register_client(self, client_info):
         redirects = [str(url) for url in client_info.redirect_uris or []]
-        if not redirects or not all(_google_redirect(url) for url in redirects):
-            raise RegistrationError("invalid_redirect_uri", "Only Gemini's HTTPS Google callback URL is allowed")
+        if not redirects or not all(_safe_redirect(url) for url in redirects):
+            raise RegistrationError("invalid_redirect_uri", "Only HTTPS callback URLs are allowed")
         if client_info.scope not in (None, SCOPE):
             raise RegistrationError("invalid_client_metadata", "Only the mcp scope is supported")
         if not {"authorization_code", "refresh_token"}.issuperset(set(client_info.grant_types)):
@@ -43,8 +44,8 @@ class LocalApprovalOAuthProvider:
         state.oauth_register_client(client_info.client_id, client_info.model_dump(mode="json"))
 
     async def authorize(self, client, params: AuthorizationParams):
-        if not _google_redirect(str(params.redirect_uri)):
-            raise AuthorizeError("unauthorized_client", "The redirect URI is not a Gemini callback")
+        if not _safe_redirect(str(params.redirect_uri)):
+            raise AuthorizeError("unauthorized_client", "The redirect URI must use HTTPS")
         if params.resource not in (None, f"{self.public_base_url}/mcp"):
             raise AuthorizeError("invalid_target", "The resource must be this MCP endpoint")
         scopes = params.scopes or [SCOPE]
