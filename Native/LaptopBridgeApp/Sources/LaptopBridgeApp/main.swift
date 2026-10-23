@@ -119,6 +119,13 @@ final class BridgeModel: ObservableObject {
         }
     }
 
+    private nonisolated func approvalExecutable() -> String? {
+        if let bundled = Bundle.main.resourceURL?.appendingPathComponent("Runtime/RelayOSApprovals").path,
+           FileManager.default.isExecutableFile(atPath: bundled) { return bundled }
+        let development = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
+        return FileManager.default.isExecutableFile(atPath: development) ? development : nil
+    }
+
     func startServices() {
         guard server == nil else { return }
         let process = Process()
@@ -266,8 +273,7 @@ final class BridgeModel: ObservableObject {
 
     func checkOAuthApprovals() {
         guard visibleApprovalID == nil else { return }
-        let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
-        guard FileManager.default.isExecutableFile(atPath: python) else { return }
+        guard let python = approvalExecutable() else { return }
         let process = Process(); let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-m", "laptop_bridge.approvals", "list-oauth"]
@@ -295,8 +301,7 @@ final class BridgeModel: ObservableObject {
     }
 
     nonisolated private func refreshConnectedClients() {
-        let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
-        guard FileManager.default.isExecutableFile(atPath: python) else { return }
+        guard let python = approvalExecutable() else { return }
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let process = Process(); let pipe = Pipe()
             process.executableURL = URL(fileURLWithPath: python)
@@ -312,8 +317,7 @@ final class BridgeModel: ObservableObject {
     }
 
     nonisolated private func refreshPermissionGrants() {
-        let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
-        guard FileManager.default.isExecutableFile(atPath: python) else { return }
+        guard let python = approvalExecutable() else { return }
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let process = Process(); let pipe = Pipe(); process.executableURL = URL(fileURLWithPath: python)
             process.arguments = ["-m", "laptop_bridge.approvals", "list-permissions"]
@@ -325,7 +329,7 @@ final class BridgeModel: ObservableObject {
     }
 
     func revokePermission(_ id: String) {
-        let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
+        guard let python = approvalExecutable() else { return }
         let process = Process(); process.executableURL = URL(fileURLWithPath: python); process.arguments = ["-m", "laptop_bridge.approvals", "revoke-permission", id]
         process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
         try? process.run(); process.waitUntilExit(); refreshPermissionGrants()
@@ -335,8 +339,7 @@ final class BridgeModel: ObservableObject {
         refreshConnectedClients()
         refreshPermissionGrants()
         checkPendingPermissionRequests()
-        let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
-        guard FileManager.default.isExecutableFile(atPath: python) else { return }
+        guard let python = approvalExecutable() else { return }
         let process = Process(); let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-m", "laptop_bridge.approvals", "list-oauth"]
@@ -358,8 +361,7 @@ final class BridgeModel: ObservableObject {
     }
 
     nonisolated private func checkPendingPermissionRequests() {
-        let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
-        guard FileManager.default.isExecutableFile(atPath: python) else { return }
+        guard let python = approvalExecutable() else { return }
         let process = Process(); let pipe = Pipe(); process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-m", "laptop_bridge.approvals", "list-pending-json"]
         process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
