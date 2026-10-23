@@ -30,6 +30,8 @@ final class BridgeModel: ObservableObject {
     @Published var chatGPTConnected = false
     @Published var screenGuidance = false
     @Published var projectTools = false
+    @Published var ngrokToken = ""
+    @Published var ngrokDomainValue = ""
 
     private let configURL: URL
     private var server: Process?
@@ -119,6 +121,28 @@ final class BridgeModel: ObservableObject {
     func copyEndpoint() { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(endpoint, forType: .string) }
     func setEmergencyStop(_ value: Bool) { emergencyStop = value }
 
+    func installNgrok() {
+        let brew = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"].first { FileManager.default.isExecutableFile(atPath: $0) }
+        guard let brew else { return }
+        let process = Process(); process.executableURL = URL(fileURLWithPath: brew); process.arguments = ["install", "ngrok/ngrok/ngrok"]; try? process.run()
+    }
+
+    func configureNgrok() {
+        let domain = ngrokDomainValue.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "https://", with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard !ngrokToken.isEmpty, domain.contains("."), !domain.contains("/") else { return }
+        Keychain.write(account: "ngrok_authtoken", value: ngrokToken)
+        var json = (try? JSONSerialization.jsonObject(with: (try? Data(contentsOf: configURL)) ?? Data())) as? [String: Any] ?? [:]
+        json["public_base_url"] = "https://\(domain)"
+        json["active_transport"] = "ngrok"
+        json["setup_complete"] = true
+        json["ngrok"] = ["enabled": true, "domain": domain, "region": "", "config_path": "", "agent_version": ""]
+        try? FileManager.default.createDirectory(at: configURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if let data = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]) { try? data.write(to: configURL, options: .atomic) }
+        endpoint = "https://\(domain)/mcp"
+        ngrokToken = ""
+        restartServices()
+    }
+
     func checkOAuthApprovals() {
         guard visibleApprovalID == nil else { return }
         let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
@@ -190,6 +214,13 @@ enum Keychain {
         guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess, let data = result as? Data else { return nil }
         return String(data: data, encoding: .utf8)
     }
+    static func write(account: String, value: String) {
+        let data = Data(value.utf8)
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account]
+        SecItemDelete(query as CFDictionary)
+        var add = query; add[kSecValueData as String] = data
+        SecItemAdd(add as CFDictionary, nil)
+    }
 }
 
 struct QuickPanel: View {
@@ -197,6 +228,16 @@ struct QuickPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack { Image(systemName: "link.circle.fill").foregroundStyle(.blue).font(.title2); VStack(alignment: .leading) { Text("Laptop Bridge").font(.headline); Text(model.running ? "Running locally" : "Server stopped").font(.caption).foregroundStyle(.secondary) }; Spacer() }
+            if model.endpoint == "Not configured" {
+                GroupBox("First-run setup") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Create your public MCP endpoint with ngrok.").font(.subheadline)
+                        SecureField("ngrok authtoken", text: $model.ngrokToken)
+                        TextField("Reserved domain (example.ngrok.app)", text: $model.ngrokDomainValue)
+                        HStack { Button("Install ngrok with Homebrew") { model.installNgrok() }; Button("Save and connect") { model.configureNgrok() }.buttonStyle(.borderedProminent) }
+                    }
+                }
+            }
             GroupBox("Connections") {
                 VStack(alignment: .leading, spacing: 10) {
                     ConnectionRow(name: "ChatGPT", connected: model.chatGPTConnected)
