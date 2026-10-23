@@ -294,7 +294,10 @@ enum Keychain {
 enum TokenStore {
     private static var url: URL { FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".laptop-bridge/ngrok.token") }
     static func read() -> String? {
-        if let data = try? Data(contentsOf: url), let value = String(data: data, encoding: .utf8), !value.isEmpty { return value }
+        if let data = try? Data(contentsOf: url), let value = String(data: data, encoding: .utf8) {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
+        }
         return Keychain.read(account: "ngrok_authtoken")
     }
     static func write(_ value: String) {
