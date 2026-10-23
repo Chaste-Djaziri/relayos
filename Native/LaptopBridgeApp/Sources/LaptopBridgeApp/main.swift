@@ -441,16 +441,12 @@ struct SettingsView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $selected) {
-                Section("Essentials") {
-                    Label("General", systemImage: "gearshape").tag(SettingsTab.general)
-                    Label("MCP connections", systemImage: "link").tag(SettingsTab.connections)
-                    Label("Tools & permissions", systemImage: "square.grid.2x2").tag(SettingsTab.tools)
-                }
-                Section("Management") {
-                    Label("ngrok", systemImage: "globe").tag(SettingsTab.ngrok)
-                    Label("Security", systemImage: "lock").tag(SettingsTab.security)
-                    Label("Activity", systemImage: "clock.arrow.circlepath").tag(SettingsTab.activity)
-                }
+                Label("General", systemImage: "gearshape").tag(SettingsTab.general)
+                Label("MCP connections", systemImage: "link").tag(SettingsTab.connections)
+                Label("Tools & permissions", systemImage: "square.grid.2x2").tag(SettingsTab.tools)
+                Label("ngrok", systemImage: "globe").tag(SettingsTab.ngrok)
+                Label("Security", systemImage: "lock").tag(SettingsTab.security)
+                Label("Activity", systemImage: "clock.arrow.circlepath").tag(SettingsTab.activity)
             }.listStyle(.sidebar)
         } detail: {
             Form {
