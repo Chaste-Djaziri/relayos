@@ -30,6 +30,7 @@ command -v pyinstaller >/dev/null 2>&1 || "$PYTHON_BIN" -m PyInstaller --version
 
 rm -rf "$STAGE_DIR" "$APP_PATH"
 mkdir -p "$STAGE_DIR/runtime" "$APP_PATH/Contents/MacOS" "$APP_PATH/Contents/Resources"
+mkdir -p "$APP_PATH/Contents/Resources/Runtime"
 
 swift build -c release --package-path Native/LaptopBridgeApp
 cp Native/LaptopBridgeApp/.build/arm64-apple-macosx/release/LaptopBridgeApp "$APP_PATH/Contents/MacOS/RelayOS" 2>/dev/null || \
