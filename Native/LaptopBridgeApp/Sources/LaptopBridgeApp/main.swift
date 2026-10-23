@@ -506,7 +506,7 @@ struct FreshSetupView: View {
         VStack(alignment: .leading, spacing: 22) {
             Image(systemName: "computermouse.fill").font(.system(size: 56)).foregroundStyle(.blue).frame(width: 72, height: 72)
             Text("Set up RelayOS").font(.largeTitle.bold())
-            Text("Create a private HTTPS MCP endpoint for ChatGPT, Gemini, and other MCP clients.").foregroundStyle(.secondary)
+            Text("Create a private HTTPS MCP endpoint for ChatGPT, Claude, Gemini, and other MCP clients.").foregroundStyle(.secondary)
             HStack(spacing: 16) {
                 Link("Get authtoken", destination: URL(string: "https://dashboard.ngrok.com/get-started/your-authtoken")!)
             }.font(.callout)
