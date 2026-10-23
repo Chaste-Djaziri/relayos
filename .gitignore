@@ -1,9 +1,29 @@
 # Path: .gitignore
+# Python environments and caches
 .venv/
 __pycache__/
 .pytest_cache/
-*.pyc
-.env
+*.py[cod]
 *.egg-info/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Build and packaging output
 dist/
 build/
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# Editors and temporary files
+*.swp
+*.swo
+*~
