@@ -354,7 +354,6 @@ struct DesktopWindowView: View {
 struct FreshSetupView: View {
     @ObservedObject var model: BridgeModel
     @State private var tokenInput = ""
-    @State private var domainInput = ""
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             Image(systemName: "link.circle.fill").font(.system(size: 42)).foregroundStyle(.blue)
@@ -362,9 +361,8 @@ struct FreshSetupView: View {
             Text("Create a private HTTPS MCP endpoint for ChatGPT, Gemini, and other MCP clients.").foregroundStyle(.secondary)
             HStack(spacing: 16) {
                 Link("Get authtoken", destination: URL(string: "https://dashboard.ngrok.com/get-started/your-authtoken")!)
-                Link("Reserve a domain", destination: URL(string: "https://dashboard.ngrok.com/domains")!)
             }.font(.callout)
-            Text("1. Install ngrok. 2. Sign in to ngrok and copy your authtoken. 3. Reserve a domain and paste both values below.").font(.caption).foregroundStyle(.secondary)
+            Text("1. Install ngrok. 2. Sign in to ngrok and copy your authtoken. ngrok assigns a free stable dev domain automatically.").font(.caption).foregroundStyle(.secondary)
             Form {
                 Section("ngrok connection") {
                     HStack {
@@ -375,10 +373,7 @@ struct FreshSetupView: View {
                             if let value = NSPasteboard.general.string(forType: .string) { tokenInput = value.trimmingCharacters(in: .whitespacesAndNewlines) }
                         }
                     }
-                    TextField("Reserved domain (example.ngrok.app)", text: $domainInput)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(minHeight: 30)
-                    Text("Reserve a domain in the ngrok dashboard. Your token is stored only in macOS Keychain.").font(.caption).foregroundStyle(.secondary)
+                    Text("Your free ngrok dev domain will appear automatically after connection. The token is stored locally.").font(.caption).foregroundStyle(.secondary)
                     if model.ngrokInstallState == "Installing ngrok…" { ProgressView("Installing ngrok…") }
                     else if !model.ngrokInstallState.isEmpty { Text(model.ngrokInstallState).font(.caption).foregroundStyle(model.ngrokInstallState.contains("successfully") || model.ngrokInstallState.contains("already") ? .green : .red) }
                 }
@@ -386,7 +381,7 @@ struct FreshSetupView: View {
                     HStack {
                         Button("Install ngrok with Homebrew") { model.installNgrok() }
                         Spacer()
-                        Button("Save and connect") { model.ngrokToken = tokenInput; model.ngrokDomainValue = domainInput; model.configureNgrok() }.buttonStyle(.borderedProminent)
+                        Button("Save and connect") { model.ngrokToken = tokenInput; model.ngrokDomainValue = ""; model.configureNgrok() }.buttonStyle(.borderedProminent)
                     }
                 }
             }.formStyle(.grouped)
