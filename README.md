@@ -1,6 +1,6 @@
 # Laptop Bridge — v0.4 Native macOS App
 
-**Status: local macOS app prototype.** Python 3.11+. The click-launched PySide6 app starts and supervises the local MCP server, exposes ChatGPT-facing action metadata, renders a transparent click-through overlay with a smooth triangular guide cursor, captures the active display only on request, retains metadata-only history for 30 days, and offers an emergency stop.
+**Status: macOS app.** Python 3.11+. On first launch, the companion walks you through Cloudflare provisioning, capability choices, and client connections. Each installation gets its own HTTPS endpoint and secrets stay in macOS Keychain; no project credentials are shipped.
 
 No mouse/keyboard injection or unrestricted computer control is configured or permitted. It is not safe to expose the HTTP port publicly without a production authentication layer.
 
@@ -28,16 +28,24 @@ laptop-bridge-desktop
 
 The desktop companion starts the Streamable HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`. Its menu shows server status, overlay status, active coding sessions, folder picker for sessions, guidance controls, local history/settings window, server restart, and an emergency stop.
 
-## Gemini custom app connection
+## First-run setup and client connections
+
+Open **Set up or reconfigure…** from the menu-bar companion. Enter a Cloudflare API token scoped to Tunnel Edit, DNS Edit, and Zone Read, plus a hostname in a zone you control. Laptop Bridge creates the named tunnel, DNS record, and loopback ingress for you. Secrets are stored in macOS Keychain; non-secret configuration is kept in `~/.laptop-bridge/config.json`.
+
+The wizard starts with system status only. Screen guidance and project tools are opt-in because they require additional macOS permissions and explicit approval.
+
+ChatGPT and Gemini both use the public OAuth endpoint shown in the dashboard. Paste the endpoint ending in `/mcp` into the client's custom MCP connection dialog; the first connection opens a local approval dialog. No client ID or secret is normally required.
+
+### Gemini custom app connection
 
 Gemini requires a public HTTPS Streamable HTTP endpoint. Laptop Bridge keeps its server loopback-only and uses a named Cloudflare Tunnel to expose it. Configure a dedicated hostname (for this installation, `gemini-bridge.shangazi.rw`) rather than changing the existing ChatGPT/Cloudflare Access hostname.
 
-1. Add an ingress entry for `gemini-bridge.shangazi.rw` in `~/.cloudflared/config.yml` that forwards to `http://127.0.0.1:8765` and create the corresponding tunnel DNS route.
+1. The setup wizard creates the ingress and DNS route automatically. Manual Cloudflare setup is only needed for existing tunnels.
 2. Do not attach Cloudflare Access to this new hostname: Gemini must reach Laptop Bridge's own OAuth metadata, authorization, token, and `/mcp` endpoints. Keep any Access policy on `bridge.shangazi.rw` unchanged.
 3. Set `public_base_url` in `~/.laptop-bridge/config.json` to `https://gemini-bridge.shangazi.rw`, then restart Laptop Bridge. The companion starts `cloudflared --config ~/.cloudflared/config.yml tunnel run` once the local server is ready.
 4. In Gemini Connected Apps, enter `https://gemini-bridge.shangazi.rw/mcp`. Dynamic Client Registration supplies the credentials automatically. Approve the connection in the visible Laptop Bridge companion dialog.
 
-The public endpoint accepts only bearer tokens issued after the local approval. Authorization requests only accept Gemini's `oauth-redirect.googleusercontent.com` callback, enforce PKCE and the single `mcp` scope, issue one-hour access tokens, rotate refresh tokens, and expire the connection after 30 days. Use **Disconnect** in the companion's Gemini Connections section, or Emergency Stop, to revoke it immediately.
+The public endpoint accepts only bearer tokens issued after local approval. Authorization requests require an HTTPS callback, enforce PKCE and the single `mcp` scope, issue one-hour access tokens, rotate refresh tokens, and expire the connection after 30 days. Use **Disconnect** in the companion's Gemini Connections section, or Emergency Stop, to revoke it immediately.
 
 To create a Finder-launchable app, run `./scripts/build_macos_app.sh` and open `dist/Laptop Bridge.app`.
 
