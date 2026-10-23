@@ -254,7 +254,7 @@ final class BridgeModel: ObservableObject {
               let items = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
               let item = items.first,
               let requestID = item["request_id"] as? String else { return }
-        Task { @MainActor [weak self] in
+        DispatchQueue.main.async { [weak self] in
             guard let self, self.visibleApprovalID == nil else { return }
             self.presentApproval(requestID: requestID, python: python)
         }
