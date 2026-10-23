@@ -123,7 +123,7 @@ final class BridgeModel: ObservableObject {
         guard server == nil else { return }
         let process = Process()
         let bundledHelper = Bundle.main.resourceURL?
-            .appendingPathComponent("Runtime/RelayOSMCPServer/RelayOSMCPServer")
+            .appendingPathComponent("Runtime/RelayOSMCPServer")
             .path
         let candidates = [
             bundledHelper,
