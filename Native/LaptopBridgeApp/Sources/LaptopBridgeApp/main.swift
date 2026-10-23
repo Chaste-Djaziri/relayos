@@ -286,6 +286,7 @@ final class BridgeModel: ObservableObject {
     nonisolated func checkOAuthApprovalsInBackground() {
         refreshConnectedClients()
         refreshPermissionGrants()
+        checkPendingPermissionRequests()
         let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
         guard FileManager.default.isExecutableFile(atPath: python) else { return }
         let process = Process(); let pipe = Pipe()
@@ -306,6 +307,31 @@ final class BridgeModel: ObservableObject {
             self.handledApprovalIDs[requestID] = Date()
             self.presentApproval(requestID: requestID, clientName: clientName, python: python)
         }
+    }
+
+    nonisolated private func checkPendingPermissionRequests() {
+        let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
+        guard FileManager.default.isExecutableFile(atPath: python) else { return }
+        let process = Process(); let pipe = Pipe(); process.executableURL = URL(fileURLWithPath: python)
+        process.arguments = ["-m", "laptop_bridge.approvals", "list-pending-json"]
+        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+        process.standardOutput = pipe; try? process.run(); process.waitUntilExit()
+        guard let data = try? pipe.fileHandleForReading.readToEnd(), let items = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]], let item = items.first, let id = item["request_id"] as? String else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.visibleApprovalID == nil, self.handledApprovalIDs[id] == nil else { return }
+            self.handledApprovalIDs[id] = Date(); self.presentPermission(requestID: id, item: item, python: python)
+        }
+    }
+
+    private func presentPermission(requestID: String, item: [String: Any], python: String) {
+        NSApp.setActivationPolicy(.regular); NSApp.activate(ignoringOtherApps: true); NSApp.windows.first(where: { $0.title == "Laptop Bridge" })?.makeKeyAndOrderFront(nil)
+        let alert = NSAlert(); alert.window.level = .floating; alert.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        let kind = item["kind"] as? String ?? "operation"; let target = item["target"] as? String ?? "requested resource"
+        alert.messageText = "Approve (kind)?"; alert.informativeText = "The MCP client requests access to (target). Choose how long this permission should remain active."
+        alert.addButton(withTitle: "Always allow"); alert.addButton(withTitle: "For this session"); alert.addButton(withTitle: "Once"); alert.addButton(withTitle: "Deny")
+        let response = alert.runModal(); let duration = response == .alertFirstButtonReturn ? "persistent" : response == .alertSecondButtonReturn ? "session" : response == .alertThirdButtonReturn ? "once" : nil
+        if let duration { let process = Process(); process.executableURL = URL(fileURLWithPath: python); process.arguments = ["-m", "laptop_bridge.approvals", "decide-request", requestID, duration]; process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge"); try? process.run(); process.waitUntilExit() } else { let process = Process(); process.executableURL = URL(fileURLWithPath: python); process.arguments = ["-m", "laptop_bridge.approvals", "decide-request", requestID, "once"]; process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge"); try? process.run(); process.waitUntilExit() }
+        visibleApprovalID = nil
     }
 
     private func presentApproval(requestID: String, clientName: String, python: String) {
