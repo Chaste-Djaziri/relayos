@@ -34,7 +34,7 @@ final class BridgeModel: ObservableObject {
     private let configURL: URL
     private var server: Process?
     private var tunnel: Process?
-    private var approvalTimer: Timer?
+    private var approvalTimer: DispatchSourceTimer?
     private var visibleApprovalID: String?
 
     init() {
@@ -42,9 +42,11 @@ final class BridgeModel: ObservableObject {
         configURL = home.appendingPathComponent(".laptop-bridge/config.json")
         loadConfig()
         startServices()
-        approvalTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.checkOAuthApprovals() }
-        }
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
+        timer.schedule(deadline: .now() + 1, repeating: 1)
+        timer.setEventHandler { [weak self] in self?.checkOAuthApprovalsInBackground() }
+        timer.resume()
+        approvalTimer = timer
     }
 
     func loadConfig() {
@@ -139,6 +141,40 @@ final class BridgeModel: ObservableObject {
         let decisionProcess = Process(); decisionProcess.executableURL = URL(fileURLWithPath: python)
         decisionProcess.arguments = ["-m", "laptop_bridge.approvals", "decide-oauth", requestID, decision]
         try? decisionProcess.run(); decisionProcess.waitUntilExit()
+        visibleApprovalID = nil
+    }
+
+    nonisolated func checkOAuthApprovalsInBackground() {
+        let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
+        guard FileManager.default.isExecutableFile(atPath: python) else { return }
+        let process = Process(); let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: python)
+        process.arguments = ["-m", "laptop_bridge.approvals", "list-oauth"]
+        process.standardOutput = pipe
+        try? process.run(); process.waitUntilExit()
+        guard let data = try? pipe.fileHandleForReading.readToEnd(),
+              let items = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+              let item = items.first,
+              let requestID = item["request_id"] as? String else { return }
+        Task { @MainActor [weak self] in
+            guard let self, self.visibleApprovalID == nil else { return }
+            self.presentApproval(requestID: requestID, python: python)
+        }
+    }
+
+    private func presentApproval(requestID: String, python: String) {
+        visibleApprovalID = requestID
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.window.level = .floating
+        alert.messageText = "Approve Gemini connection?"
+        alert.informativeText = "A Gemini client is requesting access to Laptop Bridge. Approve only if you initiated this connection."
+        alert.addButton(withTitle: "Approve")
+        alert.addButton(withTitle: "Deny")
+        let decision = alert.runModal() == .alertFirstButtonReturn ? "approve" : "deny"
+        let process = Process(); process.executableURL = URL(fileURLWithPath: python)
+        process.arguments = ["-m", "laptop_bridge.approvals", "decide-oauth", requestID, decision]
+        try? process.run(); process.waitUntilExit()
         visibleApprovalID = nil
     }
 }
