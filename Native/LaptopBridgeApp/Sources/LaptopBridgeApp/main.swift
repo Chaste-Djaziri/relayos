@@ -55,8 +55,14 @@ final class BridgeModel: ObservableObject {
     func startServices() {
         guard server == nil else { return }
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["python3", "-m", "laptop_bridge.server"]
+        let candidates = [
+            FileManager.default.currentDirectoryPath + "/.venv/bin/python",
+            FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python",
+            "/usr/bin/python3",
+        ]
+        let python = candidates.first { FileManager.default.isExecutableFile(atPath: $0) } ?? "/usr/bin/python3"
+        process.executableURL = URL(fileURLWithPath: python)
+        process.arguments = ["-m", "laptop_bridge.server"]
         var environment = ProcessInfo.processInfo.environment
         environment["LAPTOP_BRIDGE_MCP_PORT"] = "8766"
         process.environment = environment
