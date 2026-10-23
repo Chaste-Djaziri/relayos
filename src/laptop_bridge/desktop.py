@@ -42,6 +42,17 @@ class ApprovalDialog(QDialog):
             )
             info.setWordWrap(True)
             layout.addRow("Permission scope", info)
+        elif request["kind"] == "oauth_authorization":
+            self.setWindowTitle("Laptop Bridge: Gemini Connection Approval")
+            kind_label = QLabel("Gemini MCP Connection")
+            kind_label.setStyleSheet("font-weight: bold; color: #0284c7;")
+            layout.addRow("Action", kind_label)
+            layout.addRow("OAuth client", QLabel(request["client_id"]))
+            layout.addRow("Google callback", QLabel(request["redirect_uri"]))
+            layout.addRow("Scope", QLabel(", ".join(request["scopes"])))
+            info = QLabel("Approving lets this Gemini client call Laptop Bridge until the connection is revoked or its 30-day authorization expires.")
+            info.setWordWrap(True)
+            layout.addRow("Permission scope", info)
         else:
             layout.addRow("Action", QLabel(request["kind"]))
             layout.addRow("Configured target", QLabel(request["target"]))
@@ -50,10 +61,8 @@ class ApprovalDialog(QDialog):
             argv.setMinimumHeight(90)
             layout.addRow("Exact command", argv)
 
-        layout.addRow(
-            "Expires",
-            QLabel(datetime.fromtimestamp(request["created_at"] + state.TTL).strftime("%Y-%m-%d %H:%M:%S")),
-        )
+        ttl = state.OAUTH_APPROVAL_TTL if request["kind"] == "oauth_authorization" else state.TTL
+        layout.addRow("Expires", QLabel(datetime.fromtimestamp(request["created_at"] + ttl).strftime("%Y-%m-%d %H:%M:%S")))
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Approve")
@@ -331,13 +340,13 @@ class Companion:
         self.status_action.setText("Server: starting")
 
     def start_tunnel(self):
-        """Start the configured Secure MCP Tunnel after the local server is ready."""
+        """Start the named Cloudflare tunnel after the local server is ready."""
         if self.tunnel.state() != QProcess.ProcessState.NotRunning:
             return
-        script = os.getenv("LAPTOP_BRIDGE_TUNNEL_SCRIPT", str(Path.home() / ".config/laptop-bridge/start-openai-tunnel.zsh"))
-        if not Path(script).is_file():
+        config = os.getenv("LAPTOP_BRIDGE_CLOUDFLARE_CONFIG", str(Path.home() / ".cloudflared/config.yml"))
+        if not Path(config).is_file():
             return
-        self.tunnel.start("/bin/zsh", [script])
+        self.tunnel.start("cloudflared", ["--config", config, "tunnel", "run"])
 
     def restart_server(self):
         if self.server.state() == QProcess.ProcessState.NotRunning:
@@ -502,8 +511,19 @@ class Companion:
         # Handle pending approval requests
         if self.pending_dialog or state.emergency_stop():
             return
+        oauth_pending = state.pending_oauth_authorizations()
         pending = state.pending_requests()
-        if not pending:
+        if not oauth_pending and not pending:
+            return
+        if oauth_pending:
+            self.pending_dialog = True
+            dialog = ApprovalDialog({"kind": "oauth_authorization", **oauth_pending[0]}, self.window)
+            try:
+                state.decide_oauth_authorization(oauth_pending[0]["request_id"], dialog.exec() == QDialog.DialogCode.Accepted)
+            except PermissionError as error:
+                QMessageBox.warning(self.window, "Approval unavailable", str(error))
+            finally:
+                self.pending_dialog = False
             return
         # Let ChatGPT's confirmation/approval call complete before showing the
         # local-client fallback dialog for a newly requested folder session.
