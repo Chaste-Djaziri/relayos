@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import platform
+import re
 import shutil
 import socket
 import subprocess
@@ -136,6 +137,21 @@ def system_status() -> dict:
         mem_percent = None
     battery_percent = None
     battery_charging = None
+    if platform.system() == "Darwin":
+        try:
+            battery_output = subprocess.run(
+                ["/usr/bin/pmset", "-g", "batt"],
+                capture_output=True,
+                text=True,
+                timeout=1.0,
+                check=False,
+            ).stdout
+            percent_match = re.search(r"(\d+)%", battery_output)
+            if percent_match:
+                battery_percent = int(percent_match.group(1))
+                battery_charging = "charging" in battery_output.lower() and "discharging" not in battery_output.lower()
+        except (OSError, subprocess.SubprocessError, ValueError):
+            pass
     try:
         hostname = socket.gethostname()
     except Exception:
