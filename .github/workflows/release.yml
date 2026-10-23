@@ -1,0 +1,36 @@
+name: RelayOS release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+      - name: Build RelayOS DMG
+        run: ./scripts/build_macos_dmg.sh
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RelayOS-macOS
+          path: dist/RelayOS.dmg
+          if-no-files-found: error
+      - name: Publish GitHub release asset
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/RelayOS.dmg
+          generate_release_notes: true
