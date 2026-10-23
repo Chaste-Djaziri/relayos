@@ -83,7 +83,7 @@ class OnboardingWizard(QWizard):
 
         welcome = QWizardPage(); welcome.setTitle("Your private bridge")
         wl = QVBoxLayout(welcome)
-        wl.addWidget(QLabel("Laptop Bridge runs a local MCP server and gives you a private HTTPS link for ChatGPT and Gemini.\n\nNo shared keys are shipped: this setup creates your own Cloudflare route and stores secrets in macOS Keychain."))
+        wl.addWidget(QLabel("Laptop Bridge runs a local MCP server and gives you a private HTTPS link for ChatGPT, Gemini, and other MCP clients.\n\nNo shared keys are shipped: this setup creates your own ngrok endpoint and stores secrets in macOS Keychain."))
         self.addPage(welcome)
 
         cf = QWizardPage(); cf.setTitle("Connect ngrok")
@@ -131,7 +131,7 @@ class OnboardingWizard(QWizard):
             update_config(**config)
             self.companion.restart_server()
         except Exception as error:
-            QMessageBox.critical(self, "Cloudflare setup failed", str(error))
+            QMessageBox.critical(self, "ngrok setup failed", str(error))
             self.setEnabled(True)
             return
         super().accept()
@@ -374,7 +374,7 @@ class StatusWindow(QMainWindow):
         self.endpoint_value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         endpoint_layout.addWidget(QLabel("Public MCP endpoint"))
         endpoint_layout.addWidget(self.endpoint_value)
-        endpoint_layout.addWidget(QLabel("ChatGPT and Gemini use OAuth. Re-run setup to change the hostname or Cloudflare route."))
+        endpoint_layout.addWidget(QLabel("MCP clients use OAuth. Re-run setup to change the reserved domain or ngrok route."))
         settings_layout.addWidget(endpoint_box)
         actions = QGroupBox("Maintenance")
         actions_layout = QHBoxLayout(actions)
