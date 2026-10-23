@@ -218,6 +218,7 @@ final class BridgeModel: ObservableObject {
         let process = Process(); let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-m", "laptop_bridge.approvals", "list-oauth"]
+        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
         process.standardOutput = pipe
         try? process.run(); process.waitUntilExit()
         guard let data = try? pipe.fileHandleForReading.readToEnd(),
@@ -235,6 +236,7 @@ final class BridgeModel: ObservableObject {
         let decision = alert.runModal() == .alertFirstButtonReturn ? "approve" : "deny"
         let decisionProcess = Process(); decisionProcess.executableURL = URL(fileURLWithPath: python)
         decisionProcess.arguments = ["-m", "laptop_bridge.approvals", "decide-oauth", requestID, decision]
+        decisionProcess.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
         try? decisionProcess.run(); decisionProcess.waitUntilExit()
         visibleApprovalID = nil
     }
@@ -245,6 +247,7 @@ final class BridgeModel: ObservableObject {
         let process = Process(); let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-m", "laptop_bridge.approvals", "list-oauth"]
+        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
         process.standardOutput = pipe
         try? process.run(); process.waitUntilExit()
         guard let data = try? pipe.fileHandleForReading.readToEnd(),
@@ -269,6 +272,7 @@ final class BridgeModel: ObservableObject {
         let decision = alert.runModal() == .alertFirstButtonReturn ? "approve" : "deny"
         let process = Process(); process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-m", "laptop_bridge.approvals", "decide-oauth", requestID, decision]
+        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
         try? process.run(); process.waitUntilExit()
         visibleApprovalID = nil
     }
