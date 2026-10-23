@@ -79,6 +79,11 @@ def _db():
                 created_at REAL NOT NULL, expires_at REAL,
                 revoked_at REAL
             );
+            CREATE TABLE IF NOT EXISTS permission_grants (
+                token TEXT PRIMARY KEY, grant_type TEXT NOT NULL, duration TEXT NOT NULL,
+                scope TEXT NOT NULL, details_json TEXT NOT NULL, created_at REAL NOT NULL,
+                expires_at REAL, revoked_at REAL
+            );
             CREATE TABLE IF NOT EXISTS oauth_clients (
                 client_id TEXT PRIMARY KEY, metadata_json TEXT NOT NULL, created_at REAL NOT NULL
             );
@@ -483,8 +488,10 @@ def _command_digest(argv, cwd):
 
 def grant_project_command(project_root, executable, argv, cwd, grant_type="once"):
     """Save a one-use exact invocation or a persistent executable/project grant."""
-    if grant_type not in {"once", "always"}:
-        raise ValueError("grant_type must be 'once' or 'always'")
+    if grant_type == "always":
+        grant_type = "persistent"
+    if grant_type not in {"once", "session", "persistent"}:
+        raise ValueError("grant_type must be once, session, or persistent")
     if emergency_stop():
         raise PermissionError("Emergency stop is enabled")
     token = secrets.token_urlsafe(24)
@@ -495,16 +502,16 @@ def grant_project_command(project_root, executable, argv, cwd, grant_type="once"
         if emergency_stop(connection):
             connection.rollback()
             raise PermissionError("Emergency stop is enabled")
-        if grant_type == "always":
+        if grant_type == "persistent":
             connection.execute(
-                "UPDATE command_grants SET revoked_at = ? WHERE project_root = ? AND executable = ? AND grant_type = 'always' AND revoked_at IS NULL",
-                (now, project_root, executable),
+                "UPDATE command_grants SET revoked_at = ? WHERE executable = ? AND grant_type IN ('always', 'persistent') AND revoked_at IS NULL",
+                (now, executable),
             )
         connection.execute(
             "INSERT INTO command_grants (token, project_root, executable, argv_digest, working_directory, grant_type, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (token, project_root, executable, argv_digest, cwd if grant_type == "once" else None, grant_type, now, now + 300 if grant_type == "once" else None),
+            (token, project_root, executable, argv_digest, cwd if grant_type == "once" else None, grant_type, now, now + 3600 if grant_type == "session" else (now + 300 if grant_type == "once" else None)),
         )
-        _record(connection, "command_grant", f"{project_root}:{executable}", "approved_once" if grant_type == "once" else "approved_always")
+        _record(connection, "command_grant", f"{project_root}:{executable}", f"approved_{grant_type}")
         connection.commit()
     return token
 
@@ -529,8 +536,8 @@ def consume_project_command_grant(project_root, executable, argv, cwd, grant_tok
             connection.commit()
             return "approved_once"
         row = connection.execute(
-            "SELECT token FROM command_grants WHERE project_root = ? AND executable = ? AND grant_type = 'always' AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1",
-            (project_root, executable),
+            "SELECT token FROM command_grants WHERE executable = ? AND grant_type IN ('always', 'persistent', 'session') AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?) ORDER BY created_at DESC LIMIT 1",
+            (executable, now),
         ).fetchone()
         if row is None:
             connection.rollback()
@@ -542,7 +549,7 @@ def consume_project_command_grant(project_root, executable, argv, cwd, grant_tok
 def saved_command_grants():
     with _db() as connection:
         rows = connection.execute(
-            "SELECT token, project_root, executable, created_at FROM command_grants WHERE grant_type = 'always' AND revoked_at IS NULL ORDER BY created_at DESC"
+            "SELECT token, project_root, executable, grant_type, created_at, expires_at FROM command_grants WHERE grant_type IN ('always', 'persistent') AND revoked_at IS NULL ORDER BY created_at DESC"
         ).fetchall()
     return [dict(row) for row in rows]
 
@@ -551,12 +558,46 @@ def revoke_command_grant(token):
     with _db() as connection:
         connection.execute("BEGIN IMMEDIATE")
         cursor = connection.execute(
-            "UPDATE command_grants SET revoked_at = ? WHERE token = ? AND grant_type = 'always' AND revoked_at IS NULL",
+            "UPDATE command_grants SET revoked_at = ? WHERE token = ? AND grant_type IN ('always', 'persistent') AND revoked_at IS NULL",
             (time.time(), token),
         )
         if cursor.rowcount != 1:
             connection.rollback()
             raise ValueError("Saved command grant not found or already revoked")
+        connection.commit()
+
+
+def grant_folder(folder, duration="persistent"):
+    """Persist an exact-folder grant; descendants are authorized by the caller."""
+    if duration not in {"once", "session", "persistent"}:
+        raise ValueError("duration must be once, session, or persistent")
+    token = secrets.token_urlsafe(24); now = time.time()
+    with _db() as connection:
+        connection.execute("INSERT INTO permission_grants VALUES (?, 'folder', ?, ?, ?, ?, NULL, NULL)",
+                           (token, duration, folder, json.dumps({"folder": folder}), now))
+        connection.commit()
+    return token
+
+
+def folder_granted(folder):
+    path = str(folder)
+    with _db() as connection:
+        now = time.time()
+        row = connection.execute(
+            "SELECT 1 FROM permission_grants WHERE grant_type = 'folder' AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND (? = scope OR ? LIKE scope || '/%') ORDER BY created_at DESC LIMIT 1",
+            (now, path, path)).fetchone()
+    return row is not None
+
+
+def active_permission_grants():
+    with _db() as connection:
+        rows = connection.execute("SELECT token, grant_type, duration, scope, details_json, created_at, expires_at FROM permission_grants WHERE revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?) ORDER BY created_at DESC", (time.time(),)).fetchall()
+    return [dict(row) for row in rows]
+
+
+def revoke_permission_grant(token):
+    with _db() as connection:
+        connection.execute("UPDATE permission_grants SET revoked_at = ? WHERE token = ? AND revoked_at IS NULL", (time.time(), token))
         connection.commit()
 
 
