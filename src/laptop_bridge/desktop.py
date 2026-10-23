@@ -147,6 +147,18 @@ class StatusWindow(QMainWindow):
         self.grants.setMaximumHeight(150)
         layout.addWidget(self.grants)
 
+        oauth_title = QLabel("Gemini Connections (30-day refresh authorization)")
+        oauth_title.setStyleSheet("font-weight: bold; font-size: 12px;")
+        layout.addWidget(oauth_title)
+        self.oauth_grants = QTableWidget(0, 3)
+        self.oauth_grants.setHorizontalHeaderLabels(["OAuth client", "Authorized", ""])
+        self.oauth_grants.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.oauth_grants.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.oauth_grants.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self.oauth_grants.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self.oauth_grants.setMaximumHeight(120)
+        layout.addWidget(self.oauth_grants)
+
         # 4. Overlay Controls
         overlay_box = QHBoxLayout()
         overlay_title = QLabel("Visual Guidance:")
@@ -244,6 +256,15 @@ class StatusWindow(QMainWindow):
             revoke = QPushButton("Revoke")
             revoke.clicked.connect(lambda _checked=False, token=grant["token"]: self.companion.revoke_command_grant(token))
             self.grants.setCellWidget(row_index, 3, revoke)
+
+        oauth_grants = state.active_oauth_grants()
+        self.oauth_grants.setRowCount(len(oauth_grants))
+        for row_index, grant in enumerate(oauth_grants):
+            self.oauth_grants.setItem(row_index, 0, QTableWidgetItem(grant["client_id"]))
+            self.oauth_grants.setItem(row_index, 1, QTableWidgetItem(datetime.fromtimestamp(grant["created_at"]).strftime("%Y-%m-%d %H:%M")))
+            revoke = QPushButton("Disconnect")
+            revoke.clicked.connect(lambda _checked=False, token=grant["grant_id"]: self.companion.revoke_oauth_grant(token))
+            self.oauth_grants.setCellWidget(row_index, 2, revoke)
 
         # Update history
         rows = state.recent_history()
@@ -421,6 +442,10 @@ class Companion:
             self.window.refresh()
         except Exception as error:
             QMessageBox.warning(self.window, "Could not revoke grant", str(error))
+
+    def revoke_oauth_grant(self, grant_id):
+        state.revoke_oauth_grant(grant_id)
+        self.window.refresh()
 
     def _record_guidance_click(self, x, y, button, modifiers, occurred_at):
         session = state.guidance_session_status(self.guidance_observer_session)
