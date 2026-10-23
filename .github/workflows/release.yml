@@ -29,7 +29,17 @@ jobs:
           name: RelayOS-macOS
           path: dist/RelayOS.dmg
           if-no-files-found: error
-      - name: Publish GitHub release asset
+      - name: Publish nightly GitHub release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: RelayOS nightly
+          prerelease: true
+          make_latest: false
+          files: dist/RelayOS.dmg
+          generate_release_notes: false
+      - name: Publish versioned GitHub release asset
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
