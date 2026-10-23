@@ -10,13 +10,14 @@ from PySide6.QtCore import QLockFile, QProcess, QTimer, Qt
 from PySide6.QtGui import QAction, QFont, QIcon, QGuiApplication
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
-    QHBoxLayout, QHeaderView, QLabel, QMainWindow, QMenu, QMessageBox,
-    QPlainTextEdit, QPushButton, QSystemTrayIcon, QTableWidget,
-    QTableWidgetItem, QVBoxLayout, QWidget,
+    QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
+    QPlainTextEdit, QPushButton, QSystemTrayIcon, QTableWidget, QTableWidgetItem,
+    QVBoxLayout, QWidget, QWizard, QWizardPage,
 )
 
 from . import capture, state
-from .config import STATE_DIR
+from .config import STATE_DIR, load_config, update_config
+from . import cloudflare, keychain
 from .overlay import GuidanceOverlay
 from .input_observer import ClickObserver
 
@@ -70,6 +71,70 @@ class ApprovalDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
+
+
+class OnboardingWizard(QWizard):
+    """Small, self-contained provisioning flow for a fresh installation."""
+    def __init__(self, companion, parent=None):
+        super().__init__(parent)
+        self.companion = companion
+        self.setWindowTitle("Set up Laptop Bridge")
+        self.setMinimumSize(620, 480)
+
+        welcome = QWizardPage(); welcome.setTitle("Your private bridge")
+        wl = QVBoxLayout(welcome)
+        wl.addWidget(QLabel("Laptop Bridge runs a local MCP server and gives you a private HTTPS link for ChatGPT and Gemini.\n\nNo shared keys are shipped: this setup creates your own Cloudflare route and stores secrets in macOS Keychain."))
+        self.addPage(welcome)
+
+        cf = QWizardPage(); cf.setTitle("Create your public link")
+        form = QFormLayout(cf)
+        self.token = QLineEdit(); self.token.setEchoMode(QLineEdit.EchoMode.Password)
+        self.hostname = QLineEdit(); self.hostname.setPlaceholderText("mcp.example.com")
+        form.addRow("Cloudflare API token", self.token)
+        form.addRow("Your hostname", self.hostname)
+        help_label = QLabel("Create a scoped token in Cloudflare with Account: Tunnel Edit, Zone: DNS Edit, and Zone: Zone Read. The token is used only to provision your route and is never written to the config file.")
+        help_label.setWordWrap(True); form.addRow(help_label)
+        self.addPage(cf)
+
+        caps = QWizardPage(); caps.setTitle("Choose capabilities")
+        cl = QVBoxLayout(caps)
+        cl.addWidget(QLabel("Start with the smallest tool set. You can change these choices later by rerunning setup."))
+        self.system_status = QCheckBox("System status (recommended)"); self.system_status.setChecked(True); self.system_status.setEnabled(False)
+        self.screen_guidance = QCheckBox("Screen guidance (requires Screen Recording and Accessibility permission)")
+        self.project_tools = QCheckBox("Project tools (requires an approved project folder for each session)")
+        for box in (self.system_status, self.screen_guidance, self.project_tools): cl.addWidget(box)
+        cl.addStretch(); self.addPage(caps)
+
+        connect = QWizardPage(); connect.setTitle("Connect your clients")
+        vl = QVBoxLayout(connect)
+        self.endpoint_preview = QLabel("Your MCP endpoint will appear here")
+        self.endpoint_preview.setStyleSheet("font-weight: bold; color: #2563eb;")
+        vl.addWidget(QLabel("ChatGPT and Gemini use OAuth. After setup, paste the endpoint below into each app; the first connection will ask you to approve it on this Mac."))
+        vl.addWidget(self.endpoint_preview); vl.addStretch(); self.addPage(connect)
+        self.hostname.textChanged.connect(lambda value: self.endpoint_preview.setText(f"https://{value.strip().strip('/')}/mcp" if value.strip() else "Your MCP endpoint will appear here"))
+
+    def accept(self):
+        token = self.token.text().strip(); hostname = self.hostname.text().strip().removeprefix("https://").removeprefix("http://").strip("/")
+        if not token or not hostname or "/" in hostname or ":" in hostname:
+            QMessageBox.warning(self, "Cloudflare details needed", "Enter a Cloudflare API token and a hostname such as mcp.example.com.")
+            return
+        try:
+            self.setEnabled(False)
+            result = cloudflare.provision(token, hostname)
+            keychain.set_secret("cloudflare_api_token", token)
+            if result.get("tunnel_token"):
+                keychain.set_secret("cloudflare_tunnel_token", result["tunnel_token"])
+            config = load_config()
+            config.update({"public_base_url": f"https://{hostname}", "setup_complete": True,
+                "capabilities": {"system_status": True, "screen_guidance": self.screen_guidance.isChecked(), "project_tools": self.project_tools.isChecked()},
+                "cloudflare": {"zone_id": result["zone_id"], "hostname": hostname, "tunnel_id": result["tunnel_id"], "config_path": config.get("cloudflare", {}).get("config_path", "")}})
+            update_config(**config)
+            self.companion.restart_server()
+        except Exception as error:
+            QMessageBox.critical(self, "Cloudflare setup failed", str(error))
+            self.setEnabled(True)
+            return
+        super().accept()
 
 
 class StatusWindow(QMainWindow):
@@ -194,7 +259,10 @@ class StatusWindow(QMainWindow):
             running = process is not None and process.state() == QProcess.ProcessState.Running
         except RuntimeError:
             running = False
-        detail = "Server: Running at http://127.0.0.1:8765/mcp" if running else "Server: Stopped"
+        config = load_config()
+        public = config.get("public_base_url", "").rstrip("/")
+        endpoint = f" · Public MCP: {public}/mcp" if public else " · Public MCP: Not configured"
+        detail = ("Server: Running at http://127.0.0.1:8765/mcp" if running else "Server: Stopped") + endpoint
         self.status.setText(detail)
 
         has_perm = capture.has_screen_recording_permission()
@@ -321,6 +389,7 @@ class Companion:
 
         menu.addSeparator()
         menu.addAction("Open Laptop Bridge…", self.show_window)
+        menu.addAction("Set up or reconfigure…", self.open_onboarding)
         menu.addAction("Restart server", self.restart_server)
 
         menu.addSeparator()
@@ -344,6 +413,8 @@ class Companion:
         self.poller.start(200)
 
         self.start_server()
+        if not load_config().get("setup_complete"):
+            QTimer.singleShot(500, self.open_onboarding)
         # Show the onboarding/status window on first launch when macOS permissions
         # still need attention; subsequent launches remain tray-first.
         if not capture.has_screen_recording_permission() or not capture.has_accessibility_permission():
@@ -364,10 +435,20 @@ class Companion:
         """Start the named Cloudflare tunnel after the local server is ready."""
         if self.tunnel.state() != QProcess.ProcessState.NotRunning:
             return
+        token = keychain.get_secret("cloudflare_tunnel_token")
+        if token:
+            executable = next((p for p in ("/opt/homebrew/bin/cloudflared", "/usr/local/bin/cloudflared", "cloudflared") if p == "cloudflared" or Path(p).exists()), "cloudflared")
+            self.tunnel.start(executable, ["tunnel", "run", "--token", token])
+            return
         config = os.getenv("LAPTOP_BRIDGE_CLOUDFLARE_CONFIG", str(Path.home() / ".cloudflared/config.yml"))
         if not Path(config).is_file():
             return
         self.tunnel.start("cloudflared", ["--config", config, "tunnel", "run"])
+
+    def open_onboarding(self):
+        wizard = OnboardingWizard(self, self.window)
+        wizard.exec()
+        self.window.refresh()
 
     def restart_server(self):
         if self.server.state() == QProcess.ProcessState.NotRunning:
