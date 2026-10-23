@@ -36,7 +36,7 @@ struct LaptopBridgeApp: App {
             QuickPanel(model: model)
                 .frame(width: 360)
         } label: {
-            Image(systemName: "computermouse.fill")
+            Image(systemName: "cursorarrow")
                 .frame(width: 18, height: 18)
                 .accessibilityLabel("RelayOS")
         }
