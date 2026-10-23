@@ -122,19 +122,26 @@ final class BridgeModel: ObservableObject {
     func startServices() {
         guard server == nil else { return }
         let process = Process()
+        let bundledHelper = Bundle.main.resourceURL?
+            .appendingPathComponent("Runtime/RelayOSMCPServer/RelayOSMCPServer")
+            .path
         let candidates = [
+            bundledHelper,
             FileManager.default.currentDirectoryPath + "/.venv/bin/python",
             FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python",
             "/usr/bin/python3",
-        ]
-        let python = candidates.first { FileManager.default.isExecutableFile(atPath: $0) } ?? "/usr/bin/python3"
-        process.executableURL = URL(fileURLWithPath: python)
-        process.arguments = ["-m", "laptop_bridge.server"]
+        ].compactMap { $0 }
+        let executable = candidates.first { FileManager.default.isExecutableFile(atPath: $0) } ?? "/usr/bin/python3"
+        let isBundledHelper = bundledHelper == executable
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = isBundledHelper ? [] : ["-m", "laptop_bridge.server"]
         // The packaged app is launched from Finder/menu bar, so its current
         // directory is not the repository. Set it explicitly so Python can
         // resolve the laptop_bridge package and its resources.
-        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Documents/GitHub/laptop-bridge")
+        if !isBundledHelper {
+            process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Documents/GitHub/laptop-bridge")
+        }
         var environment = ProcessInfo.processInfo.environment
         // Keep the current public Python OAuth/MCP listener reachable while
         // the Swift edge proxy is introduced incrementally.
