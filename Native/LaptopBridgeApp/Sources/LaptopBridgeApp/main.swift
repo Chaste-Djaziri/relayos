@@ -89,18 +89,21 @@ final class BridgeModel: ObservableObject {
     }
 
     func startTunnelIfConfigured() {
-        let executable = ["/opt/homebrew/bin/cloudflared", "/usr/local/bin/cloudflared"].first { FileManager.default.isExecutableFile(atPath: $0) }
+        guard let token = Keychain.read(account: "ngrok_authtoken"), let domain = ngrokDomain() else { return }
+        let executable = ["/opt/homebrew/bin/ngrok", "/usr/local/bin/ngrok"].first { FileManager.default.isExecutableFile(atPath: $0) }
         guard let executable else { return }
         let process = Process(); process.executableURL = URL(fileURLWithPath: executable)
-        if let token = Keychain.read(account: "cloudflare_tunnel_token") {
-            process.arguments = ["tunnel", "run", "--token", token]
-        } else {
-            let config = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".cloudflared/config.yml").path
-            guard FileManager.default.fileExists(atPath: config) else { return }
-            process.arguments = ["--config", config, "tunnel", "run"]
-        }
+        process.arguments = ["http", "127.0.0.1:8765", "--domain", domain]
+        var environment = ProcessInfo.processInfo.environment
+        environment["NGROK_AUTHTOKEN"] = token
+        process.environment = environment
         process.terminationHandler = { [weak self] _ in Task { @MainActor in self?.tunnelRunning = false; self?.tunnel = nil } }
         try? process.run(); tunnel = process; tunnelRunning = process.isRunning
+    }
+
+    private func ngrokDomain() -> String? {
+        guard let data = try? Data(contentsOf: configURL), let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let ngrok = json["ngrok"] as? [String: Any], let domain = ngrok["domain"] as? String, !domain.isEmpty else { return nil }
+        return domain
     }
 
     func saveCapabilities() {
@@ -133,8 +136,8 @@ final class BridgeModel: ObservableObject {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.window.level = .floating
-        alert.messageText = "Approve Gemini connection?"
-        alert.informativeText = "A Gemini client is requesting access to Laptop Bridge. Approve only if you initiated this connection."
+        alert.messageText = "Approve MCP connection?"
+        alert.informativeText = "An MCP client is requesting access to Laptop Bridge. Approve only if you initiated this connection."
         alert.addButton(withTitle: "Approve")
         alert.addButton(withTitle: "Deny")
         let decision = alert.runModal() == .alertFirstButtonReturn ? "approve" : "deny"
@@ -167,8 +170,8 @@ final class BridgeModel: ObservableObject {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.window.level = .floating
-        alert.messageText = "Approve Gemini connection?"
-        alert.informativeText = "A Gemini client is requesting access to Laptop Bridge. Approve only if you initiated this connection."
+        alert.messageText = "Approve MCP connection?"
+        alert.informativeText = "An MCP client is requesting access to Laptop Bridge. Approve only if you initiated this connection."
         alert.addButton(withTitle: "Approve")
         alert.addButton(withTitle: "Deny")
         let decision = alert.runModal() == .alertFirstButtonReturn ? "approve" : "deny"
@@ -197,7 +200,7 @@ struct QuickPanel: View {
             GroupBox("Connections") {
                 VStack(alignment: .leading, spacing: 10) {
                     ConnectionRow(name: "ChatGPT", connected: model.chatGPTConnected)
-                    ConnectionRow(name: "Gemini", connected: model.geminiConnected)
+                    ConnectionRow(name: "MCP client", connected: model.geminiConnected)
                     Button("Copy MCP endpoint") { model.copyEndpoint() }
                 }
             }
@@ -221,7 +224,7 @@ struct SettingsView: View {
         } detail: {
             Form {
                 Section("General") { LabeledContent("MCP endpoint", value: model.endpoint); LabeledContent("Local server", value: model.running ? "Running" : "Stopped"); Button("Restart services") { model.restartServices() } }
-                Section("Connections") { LabeledContent("ChatGPT", value: model.chatGPTConnected ? "Connected" : "OAuth ready"); LabeledContent("Gemini", value: model.geminiConnected ? "Connected" : "OAuth ready"); Button("Copy MCP endpoint") { model.copyEndpoint() } }
+                Section("Connections") { LabeledContent("ChatGPT", value: model.chatGPTConnected ? "Connected" : "OAuth ready"); LabeledContent("MCP client", value: model.geminiConnected ? "Connected" : "OAuth ready"); Button("Copy MCP endpoint") { model.copyEndpoint() } }
                 Section("Features") { Toggle("Screen guidance", isOn: $model.screenGuidance); Toggle("Project tools", isOn: $model.projectTools); Button("Save feature settings") { model.saveCapabilities() } }
                 Section("Security") { Toggle("Emergency stop", isOn: $model.emergencyStop).tint(.red); Text("Emergency stop blocks active sessions and revokes active OAuth access.").font(.caption).foregroundStyle(.secondary) }
             }.formStyle(.grouped).padding()
