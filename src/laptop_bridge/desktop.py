@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QApplication, QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
     QPlainTextEdit, QPushButton, QSystemTrayIcon, QTableWidget, QTableWidgetItem,
-    QVBoxLayout, QWidget, QWizard, QWizardPage,
+    QTabWidget, QVBoxLayout, QWidget, QWizard, QWizardPage, QGroupBox,
 )
 
 from . import capture, state
@@ -145,7 +145,27 @@ class StatusWindow(QMainWindow):
         self.setMinimumSize(760, 640)
 
         content = QWidget()
-        layout = QVBoxLayout(content)
+        root = QVBoxLayout(content)
+        root.setContentsMargins(18, 18, 18, 18)
+        root.setSpacing(14)
+        header = QHBoxLayout()
+        title = QLabel("Laptop Bridge")
+        title.setStyleSheet("font-size: 22px; font-weight: 700;")
+        header.addWidget(title)
+        header.addStretch()
+        setup_btn = QPushButton("Setup / Reconfigure")
+        setup_btn.clicked.connect(self.companion.open_onboarding)
+        header.addWidget(setup_btn)
+        root.addLayout(header)
+        subtitle = QLabel("Private MCP access for ChatGPT and Gemini")
+        subtitle.setStyleSheet("color: #64748b;")
+        root.addWidget(subtitle)
+        tabs = QTabWidget()
+        tabs.setDocumentMode(True)
+        root.addWidget(tabs)
+
+        overview = QWidget()
+        layout = QVBoxLayout(overview)
         layout.setSpacing(12)
 
         # 1. Server and Permission Status
@@ -251,7 +271,62 @@ class StatusWindow(QMainWindow):
         self.history.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         layout.addWidget(self.history)
 
+        tabs.addTab(overview, "Overview")
+
+        access = QWidget()
+        access_layout = QVBoxLayout(access)
+        access_layout.setSpacing(12)
+        capabilities = QGroupBox("Capabilities")
+        cap_layout = QVBoxLayout(capabilities)
+        cap_layout.addWidget(QLabel("Only enabled capabilities are advertised to MCP clients. Changes apply after restarting the server."))
+        self.cap_screen = QCheckBox("Screen guidance")
+        self.cap_project = QCheckBox("Project tools")
+        cap_layout.addWidget(self.cap_screen)
+        cap_layout.addWidget(self.cap_project)
+        save_caps = QPushButton("Save capability settings")
+        save_caps.clicked.connect(self.save_capabilities)
+        cap_layout.addWidget(save_caps)
+        access_layout.addWidget(capabilities)
+        permissions = QGroupBox("macOS permissions")
+        perm_layout = QVBoxLayout(permissions)
+        perm_layout.addWidget(self.perm_label)
+        perm_layout.addWidget(self.perm_button)
+        perm_layout.addWidget(self.access_label)
+        perm_layout.addWidget(self.access_button)
+        perm_layout.addWidget(self.display_sharing_label)
+        access_layout.addWidget(permissions)
+        access_layout.addStretch()
+        tabs.addTab(access, "Access")
+
+        settings = QWidget()
+        settings_layout = QVBoxLayout(settings)
+        endpoint_box = QGroupBox("Connection settings")
+        endpoint_layout = QVBoxLayout(endpoint_box)
+        self.endpoint_value = QLabel()
+        self.endpoint_value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        endpoint_layout.addWidget(QLabel("Public MCP endpoint"))
+        endpoint_layout.addWidget(self.endpoint_value)
+        endpoint_layout.addWidget(QLabel("ChatGPT and Gemini use OAuth. Re-run setup to change the hostname or Cloudflare route."))
+        settings_layout.addWidget(endpoint_box)
+        actions = QGroupBox("Maintenance")
+        actions_layout = QHBoxLayout(actions)
+        restart_btn = QPushButton("Restart server")
+        restart_btn.clicked.connect(self.companion.restart_server)
+        stop_btn = QPushButton("Emergency stop")
+        stop_btn.clicked.connect(lambda: self.companion.set_emergency_stop(True))
+        actions_layout.addWidget(restart_btn)
+        actions_layout.addWidget(stop_btn)
+        settings_layout.addWidget(actions)
+        settings_layout.addStretch()
+        tabs.addTab(settings, "Settings")
         self.setCentralWidget(content)
+
+    def save_capabilities(self):
+        config = load_config()
+        config["capabilities"] = {"system_status": True, "screen_guidance": self.cap_screen.isChecked(), "project_tools": self.cap_project.isChecked()}
+        update_config(**config)
+        self.companion.restart_server()
+        QMessageBox.information(self, "Settings saved", "Capability settings saved and the MCP server is restarting.")
 
     def refresh(self):
         process = getattr(self.companion, "server", None)
@@ -264,6 +339,10 @@ class StatusWindow(QMainWindow):
         endpoint = f" · Public MCP: {public}/mcp" if public else " · Public MCP: Not configured"
         detail = ("Server: Running at http://127.0.0.1:8765/mcp" if running else "Server: Stopped") + endpoint
         self.status.setText(detail)
+        self.endpoint_value.setText(f"{public}/mcp" if public else "Not configured — open Setup / Reconfigure")
+        capabilities = config.get("capabilities", {})
+        self.cap_screen.setChecked(bool(capabilities.get("screen_guidance")))
+        self.cap_project.setChecked(bool(capabilities.get("project_tools")))
 
         has_perm = capture.has_screen_recording_permission()
         if has_perm:
