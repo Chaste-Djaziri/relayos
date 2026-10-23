@@ -62,6 +62,25 @@ def test_google_callback_and_single_scope_are_required():
         run(provider.authorize(registered, invalid))
 
 
+def test_claude_https_callback_and_claude_code_loopback_callback_are_supported():
+    provider = LocalApprovalOAuthProvider("https://relay.example.test")
+    claude = OAuthClientInformationFull(
+        client_id="claude-web", redirect_uris=["https://claude.ai/api/mcp/auth_callback"],
+        token_endpoint_auth_method="none", grant_types=["authorization_code", "refresh_token"], scope="mcp",
+    )
+    run(provider.register_client(claude))
+    web_params = params().model_copy(update={
+        "redirect_uri": "https://claude.ai/api/mcp/auth_callback",
+        "resource": "https://relay.example.test/mcp",
+    })
+    assert run(provider.authorize(claude, web_params)).startswith("https://relay.example.test/oauth/approval/")
+
+    claude_code = claude.model_copy(update={"client_id": "claude-code", "redirect_uris": ["http://localhost:8088/callback"]})
+    run(provider.register_client(claude_code))
+    code_params = web_params.model_copy(update={"redirect_uri": "http://localhost:8088/callback"})
+    assert run(provider.authorize(claude_code, code_params)).startswith("https://relay.example.test/oauth/approval/")
+
+
 def test_emergency_stop_revokes_oauth_grants():
     provider = LocalApprovalOAuthProvider("https://gemini-bridge.shangazi.rw")
     registered = client()
