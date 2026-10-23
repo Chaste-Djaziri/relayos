@@ -569,6 +569,15 @@ def complete_follow_up(follow_up_id: str) -> dict:
 def main():
     config = load_config()
     public_url = public_base_url(config)
+    capabilities = config.get("capabilities", {})
+    if not capabilities.get("screen_guidance", False):
+        for name in ("screen_snapshot", "start_guidance_session", "guidance_session_status", "refresh_guidance_screen", "get_guidance_events", "stop_guidance_session", "show_guidance", "clear_guidance"):
+            if mcp._tool_manager.get_tool(name):
+                mcp._tool_manager.remove_tool(name)
+    if not capabilities.get("project_tools", False):
+        for name in ("propose_project_session", "approve_project_session", "project_session_status", "list_project_files", "read_project_file", "write_project_file", "apply_project_patch", "authorize_project_command", "run_project_command", "list_saved_command_grants", "revoke_saved_command_grant"):
+            if mcp._tool_manager.get_tool(name):
+                mcp._tool_manager.remove_tool(name)
     security = None
     if public_url:
         public_host = public_url.removeprefix("https://")
