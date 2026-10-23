@@ -7,6 +7,11 @@ struct LaptopBridgeApp: App {
     @StateObject private var model = BridgeModel()
 
     var body: some Scene {
+        Window("Laptop Bridge", id: "main") {
+            DesktopWindowView(model: model)
+                .frame(minWidth: 820, minHeight: 560)
+                .onAppear { NSApp.activate(ignoringOtherApps: true) }
+        }
         MenuBarExtra("Laptop Bridge", systemImage: "link.circle.fill") {
             QuickPanel(model: model)
                 .frame(width: 360)
@@ -225,6 +230,7 @@ enum Keychain {
 
 struct QuickPanel: View {
     @ObservedObject var model: BridgeModel
+    @Environment(\ .openWindow) private var openWindow
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack { Image(systemName: "link.circle.fill").foregroundStyle(.blue).font(.title2); VStack(alignment: .leading) { Text("Laptop Bridge").font(.headline); Text(model.running ? "Running locally" : "Server stopped").font(.caption).foregroundStyle(.secondary) }; Spacer() }
@@ -247,8 +253,47 @@ struct QuickPanel: View {
             }
             Text(model.endpoint).font(.caption).textSelection(.enabled).foregroundStyle(.secondary)
             Toggle("Emergency stop", isOn: $model.emergencyStop).tint(.red)
-            HStack { SettingsLink { Text("Settings") }.buttonStyle(.bordered); Spacer(); Button("Restart") { model.restartServices() }.buttonStyle(.bordered) }
+            HStack { Button("Settings") { openWindow(id: "main") }.buttonStyle(.bordered); Spacer(); Button("Restart") { model.restartServices() }.buttonStyle(.bordered) }
         }.padding(18)
+    }
+}
+
+struct DesktopWindowView: View {
+    @ObservedObject var model: BridgeModel
+    var body: some View {
+        Group {
+            if model.endpoint == "Not configured" {
+                FreshSetupView(model: model)
+            } else {
+                SettingsView(model: model)
+            }
+        }
+    }
+}
+
+struct FreshSetupView: View {
+    @ObservedObject var model: BridgeModel
+    var body: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            Image(systemName: "link.circle.fill").font(.system(size: 42)).foregroundStyle(.blue)
+            Text("Set up Laptop Bridge").font(.largeTitle.bold())
+            Text("Create a private HTTPS MCP endpoint for ChatGPT, Gemini, and other MCP clients.").foregroundStyle(.secondary)
+            Form {
+                Section("ngrok connection") {
+                    SecureField("ngrok authtoken", text: $model.ngrokToken)
+                    TextField("Reserved domain (example.ngrok.app)", text: $model.ngrokDomainValue)
+                    Text("Reserve a domain in the ngrok dashboard. Your token is stored only in macOS Keychain.").font(.caption).foregroundStyle(.secondary)
+                }
+                Section {
+                    HStack {
+                        Button("Install ngrok with Homebrew") { model.installNgrok() }
+                        Spacer()
+                        Button("Save and connect") { model.configureNgrok() }.buttonStyle(.borderedProminent)
+                    }
+                }
+            }.formStyle(.grouped)
+            Spacer()
+        }.padding(36)
     }
 }
 
