@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 import platform
 import shutil
 import subprocess
@@ -586,7 +587,8 @@ def main():
             allowed_hosts=[public_host, "127.0.0.1:*", "localhost:*"],
             allowed_origins=[public_url],
         )
-    mcp.run(transport="streamable-http", host="127.0.0.1", port=8765, transport_security=security)
+    port = int(os.environ.get("LAPTOP_BRIDGE_MCP_PORT", "8765"))
+    mcp.run(transport="streamable-http", host="127.0.0.1", port=port, transport_security=security)
 
 if __name__ == "__main__":
     main()
