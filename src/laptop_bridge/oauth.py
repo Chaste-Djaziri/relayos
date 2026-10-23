@@ -1,4 +1,4 @@
-"""Local-approval OAuth provider used by the public Gemini MCP endpoint."""
+"""Local-approval OAuth provider for ChatGPT, Claude, Gemini, and MCP clients."""
 from __future__ import annotations
 
 import json
@@ -13,9 +13,18 @@ SCOPE = "mcp"
 
 
 def _safe_redirect(url: str) -> bool:
-    """Gemini's callback hostname is product-managed and may change by region."""
+    """Allow public HTTPS callbacks and Claude Code's loopback callback.
+
+    Claude.ai uses its HTTPS callback, while Claude Code uses a local
+    ephemeral callback. Loopback is restricted to localhost/127.0.0.1 and
+    never permits credentials or a non-loopback hostname.
+    """
     parsed = urlparse(url)
-    return parsed.scheme == "https" and bool(parsed.hostname) and parsed.username is None and parsed.password is None
+    if not parsed.hostname or parsed.username is not None or parsed.password is not None:
+        return False
+    if parsed.scheme == "https":
+        return True
+    return parsed.scheme == "http" and parsed.hostname in {"localhost", "127.0.0.1"}
 
 
 class LocalApprovalOAuthProvider:
@@ -45,7 +54,7 @@ class LocalApprovalOAuthProvider:
 
     async def authorize(self, client, params: AuthorizationParams):
         if not _safe_redirect(str(params.redirect_uri)):
-            raise AuthorizeError("unauthorized_client", "The redirect URI must use HTTPS")
+            raise AuthorizeError("unauthorized_client", "The redirect URI must use HTTPS or Claude Code localhost")
         if params.resource not in (None, f"{self.public_base_url}/mcp"):
             raise AuthorizeError("invalid_target", "The resource must be this MCP endpoint")
         scopes = params.scopes or [SCOPE]
