@@ -121,7 +121,7 @@ async def oauth_approval(request: Request):
     return HTMLResponse(f"<!doctype html><title>RelayOS</title><main><h1>Connection unavailable</h1><p>{message}</p></main>", status_code=403, headers={"Cache-Control": "no-store"})
 
 @mcp.tool()
-def system_status() -> dict:
+def system_status(**_kwargs) -> dict:
     """Read OS, hostname, processor utilization, memory, and battery."""
     # Sensor APIs are optional on macOS, inside PyInstaller, and on some
     # virtualized/remote hosts. A status request must remain useful even when
