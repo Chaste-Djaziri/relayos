@@ -363,9 +363,19 @@ def pending_oauth_authorizations():
     result = []
     for row in rows:
         metadata = json.loads(row["metadata_json"] or "{}")
+        redirect_uri = row["redirect_uri"]
+        client_name = metadata.get("client_name") or metadata.get("client_uri")
+        if not client_name:
+            lowered = redirect_uri.lower()
+            if "claude.ai" in lowered or "claude.com" in lowered:
+                client_name = "Claude"
+            elif "chatgpt.com" in lowered or "openai.com" in lowered:
+                client_name = "ChatGPT"
+            elif "googleusercontent.com" in lowered:
+                client_name = "Gemini"
         result.append({"request_id": row["token"], "client_id": row["client_id"],
-                       "client_name": metadata.get("client_name") or metadata.get("client_uri"),
-                       "redirect_uri": row["redirect_uri"], "scopes": json.loads(row["scopes_json"]),
+                       "client_name": client_name or "MCP client",
+                       "redirect_uri": redirect_uri, "scopes": json.loads(row["scopes_json"]),
                        "created_at": row["created_at"]})
     return result
 
