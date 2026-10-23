@@ -125,7 +125,7 @@ final class BridgeModel: ObservableObject {
         let output = Pipe(); process.standardOutput = output; process.standardError = output
         output.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
-            guard let text = String(data: data, encoding: .utf8), let range = text.range(of: "https://[^\\s]+ngrok[^\\s]+", options: .regularExpression) else { return }
+            guard let text = String(data: data, encoding: .utf8), let range = text.range(of: "https://[^\\s]+\\.ngrok-free\\.dev[^\\s]*", options: .regularExpression) else { return }
             let url = String(text[range]).trimmingCharacters(in: CharacterSet(charactersIn: "\\\"'`,"))
             Task { @MainActor in self?.adoptNgrokEndpoint(url) }
         }
