@@ -3,13 +3,14 @@
 import argparse
 import json
 
-from .state import approve, deny, pending_requests, pending_oauth_authorizations, decide_oauth_authorization
+from .state import approve, deny, pending_requests, pending_oauth_authorizations, active_oauth_grants, decide_oauth_authorization
 
 def main():
     parser = argparse.ArgumentParser(description="Approve sensitive laptop actions locally")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("list")
     sub.add_parser("list-oauth")
+    sub.add_parser("list-grants")
     oauth = sub.add_parser("decide-oauth")
     oauth.add_argument("request_id")
     oauth.add_argument("decision", choices=("approve", "deny"))
@@ -22,6 +23,9 @@ def main():
         return
     if args.command == "list-oauth":
         print(json.dumps(pending_oauth_authorizations()))
+        return
+    if args.command == "list-grants":
+        print(json.dumps(active_oauth_grants()))
         return
     if args.command == "decide-oauth":
         decide_oauth_authorization(args.request_id, args.decision == "approve")
