@@ -18,6 +18,23 @@ DEFAULT = {
     # Streamable HTTP resource identifier when a relay (such as Cloudflare
     # Tunnel) forwards requests to this loopback-only server.
     "public_base_url": "",
+    "setup_complete": False,
+    "capabilities": {
+        "system_status": True,
+        "screen_guidance": False,
+        "project_tools": False,
+    },
+    "cloudflare": {
+        "zone_id": "",
+        "hostname": "",
+        "tunnel_id": "",
+        "config_path": "",
+    },
+    "connection_modes": {
+        "chatgpt_public": True,
+        "gemini_public": True,
+        "openai_secure_tunnel": False,
+    },
 }
 
 def load_config():
@@ -32,7 +49,28 @@ def load_config():
     # Existing installations predate public-endpoint support.  Keep their
     # behavior unchanged until they opt in by setting this value.
     config.setdefault("public_base_url", "")
+    config.setdefault("setup_complete", False)
+    config.setdefault("capabilities", dict(DEFAULT["capabilities"]))
+    config.setdefault("cloudflare", dict(DEFAULT["cloudflare"]))
+    config.setdefault("connection_modes", dict(DEFAULT["connection_modes"]))
     return config
+
+
+def save_config(config):
+    """Persist non-secret setup state with restrictive permissions."""
+    STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    CONFIG_FILE.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    try:
+        CONFIG_FILE.chmod(0o600)
+    except OSError:
+        pass
+    return config
+
+
+def update_config(**changes):
+    config = load_config()
+    config.update(changes)
+    return save_config(config)
 
 
 def public_base_url(config=None):
