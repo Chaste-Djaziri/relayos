@@ -294,6 +294,7 @@ struct FreshSetupView: View {
                 Link("Get authtoken", destination: URL(string: "https://dashboard.ngrok.com/get-started/your-authtoken")!)
                 Link("Reserve a domain", destination: URL(string: "https://dashboard.ngrok.com/domains")!)
             }.font(.callout)
+            Text("1. Install ngrok. 2. Sign in to ngrok and copy your authtoken. 3. Reserve a domain and paste both values below.").font(.caption).foregroundStyle(.secondary)
             Form {
                 Section("ngrok connection") {
                     SecureField("ngrok authtoken", text: $model.ngrokToken)
