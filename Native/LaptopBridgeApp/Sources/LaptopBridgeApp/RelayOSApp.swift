@@ -126,6 +126,18 @@ final class BridgeModel: ObservableObject {
         return FileManager.default.isExecutableFile(atPath: development) ? development : nil
     }
 
+    private nonisolated func setApprovalWorkingDirectory(_ process: Process, executable: String) {
+        // A downloaded bundle has no repository checkout. Point bundled
+        // approval helpers at the user's home directory instead of the
+        // developer-only path, which otherwise makes Process.run() fail before
+        // the approval dialog can be shown.
+        if executable.contains("/Contents/Resources/Runtime/") {
+            process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
+        } else {
+            process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+        }
+    }
+
     func startServices() {
         guard server == nil else { return }
         let process = Process()
@@ -277,7 +289,7 @@ final class BridgeModel: ObservableObject {
         let process = Process(); let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-m", "laptop_bridge.approvals", "list-oauth"]
-        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+        setApprovalWorkingDirectory(process, executable: python)
         process.standardOutput = pipe
         try? process.run(); process.waitUntilExit()
         guard let data = try? pipe.fileHandleForReading.readToEnd(),
@@ -295,7 +307,7 @@ final class BridgeModel: ObservableObject {
         let decision = alert.runModal() == .alertFirstButtonReturn ? "approve" : "deny"
         let decisionProcess = Process(); decisionProcess.executableURL = URL(fileURLWithPath: python)
         decisionProcess.arguments = ["-m", "laptop_bridge.approvals", "decide-oauth", requestID, decision]
-        decisionProcess.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+        setApprovalWorkingDirectory(decisionProcess, executable: python)
         try? decisionProcess.run(); decisionProcess.waitUntilExit()
         visibleApprovalID = nil
     }
@@ -306,7 +318,7 @@ final class BridgeModel: ObservableObject {
             let process = Process(); let pipe = Pipe()
             process.executableURL = URL(fileURLWithPath: python)
             process.arguments = ["-m", "laptop_bridge.approvals", "list-grants"]
-            process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+            self?.setApprovalWorkingDirectory(process, executable: python)
             process.standardOutput = pipe
             try? process.run(); process.waitUntilExit()
             guard let data = try? pipe.fileHandleForReading.readToEnd(),
@@ -331,7 +343,7 @@ final class BridgeModel: ObservableObject {
     func revokePermission(_ id: String) {
         guard let python = approvalExecutable() else { return }
         let process = Process(); process.executableURL = URL(fileURLWithPath: python); process.arguments = ["-m", "laptop_bridge.approvals", "revoke-permission", id]
-        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+        setApprovalWorkingDirectory(process, executable: python)
         try? process.run(); process.waitUntilExit(); refreshPermissionGrants()
     }
 
@@ -343,7 +355,7 @@ final class BridgeModel: ObservableObject {
         let process = Process(); let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-m", "laptop_bridge.approvals", "list-oauth"]
-        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+        setApprovalWorkingDirectory(process, executable: python)
         process.standardOutput = pipe
         try? process.run(); process.waitUntilExit()
         guard let data = try? pipe.fileHandleForReading.readToEnd(),
@@ -364,7 +376,7 @@ final class BridgeModel: ObservableObject {
         guard let python = approvalExecutable() else { return }
         let process = Process(); let pipe = Pipe(); process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-m", "laptop_bridge.approvals", "list-pending-json"]
-        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+        setApprovalWorkingDirectory(process, executable: python)
         process.standardOutput = pipe; try? process.run(); process.waitUntilExit()
         guard let data = try? pipe.fileHandleForReading.readToEnd(), let items = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]], let item = items.first, let id = item["request_id"] as? String else { return }
         DispatchQueue.main.async { [weak self] in
@@ -380,7 +392,7 @@ final class BridgeModel: ObservableObject {
         alert.messageText = "Approve \(kind)?"; alert.informativeText = "The MCP client requests access to \(target). Choose how long this permission should remain active."
         alert.addButton(withTitle: "Always allow"); alert.addButton(withTitle: "For this session"); alert.addButton(withTitle: "Once"); alert.addButton(withTitle: "Deny")
         let response = alert.runModal(); let duration = response == .alertFirstButtonReturn ? "persistent" : response == .alertSecondButtonReturn ? "session" : response == .alertThirdButtonReturn ? "once" : nil
-        if let duration { let process = Process(); process.executableURL = URL(fileURLWithPath: python); process.arguments = ["-m", "laptop_bridge.approvals", "decide-request", requestID, duration]; process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge"); try? process.run(); process.waitUntilExit() } else { let process = Process(); process.executableURL = URL(fileURLWithPath: python); process.arguments = ["-m", "laptop_bridge.approvals", "decide-request", requestID, "once"]; process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge"); try? process.run(); process.waitUntilExit() }
+        if let duration { let process = Process(); process.executableURL = URL(fileURLWithPath: python); process.arguments = ["-m", "laptop_bridge.approvals", "decide-request", requestID, duration]; setApprovalWorkingDirectory(process, executable: python); try? process.run(); process.waitUntilExit() } else { let process = Process(); process.executableURL = URL(fileURLWithPath: python); process.arguments = ["-m", "laptop_bridge.approvals", "decide-request", requestID, "once"]; setApprovalWorkingDirectory(process, executable: python); try? process.run(); process.waitUntilExit() }
         visibleApprovalID = nil
     }
 
@@ -392,14 +404,14 @@ final class BridgeModel: ObservableObject {
         let alert = NSAlert()
         alert.window.level = .floating
         alert.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        alert.messageText = "Approve (clientName) connection?"
+        alert.messageText = "Approve \(clientName) connection?"
         alert.informativeText = "\(clientName) is requesting access to RelayOS. Approve only if you initiated this connection."
         alert.addButton(withTitle: "Approve")
         alert.addButton(withTitle: "Deny")
         let decision = alert.runModal() == .alertFirstButtonReturn ? "approve" : "deny"
         let process = Process(); process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-m", "laptop_bridge.approvals", "decide-oauth", requestID, decision]
-        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+        setApprovalWorkingDirectory(process, executable: python)
         try? process.run(); process.waitUntilExit()
         visibleApprovalID = nil
     }
