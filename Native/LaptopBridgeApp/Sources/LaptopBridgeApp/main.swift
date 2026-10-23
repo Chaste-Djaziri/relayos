@@ -44,6 +44,7 @@ final class BridgeModel: ObservableObject {
     @Published var ngrokToken = ""
     @Published var ngrokDomainValue = ""
     @Published var ngrokInstallState = ""
+    @Published var connectedClients: [String] = []
 
     private let configURL: URL
     private var server: Process?
@@ -62,6 +63,7 @@ final class BridgeModel: ObservableObject {
         timer.setEventHandler { [weak self] in self?.checkOAuthApprovalsInBackground() }
         timer.resume()
         approvalTimer = timer
+        refreshConnectedClients()
     }
 
     func loadConfig() {
@@ -242,7 +244,25 @@ final class BridgeModel: ObservableObject {
         visibleApprovalID = nil
     }
 
+    nonisolated private func refreshConnectedClients() {
+        let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
+        guard FileManager.default.isExecutableFile(atPath: python) else { return }
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let process = Process(); let pipe = Pipe()
+            process.executableURL = URL(fileURLWithPath: python)
+            process.arguments = ["-m", "laptop_bridge.approvals", "list-grants"]
+            process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+            process.standardOutput = pipe
+            try? process.run(); process.waitUntilExit()
+            guard let data = try? pipe.fileHandleForReading.readToEnd(),
+                  let items = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
+            let names = items.compactMap { $0["client_name"] as? String }
+            DispatchQueue.main.async { self?.connectedClients = names }
+        }
+    }
+
     nonisolated func checkOAuthApprovalsInBackground() {
+        refreshConnectedClients()
         let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
         guard FileManager.default.isExecutableFile(atPath: python) else { return }
         let process = Process(); let pipe = Pipe()
@@ -341,8 +361,13 @@ struct QuickPanel: View {
             }
             GroupBox("Connections") {
                 VStack(alignment: .leading, spacing: 10) {
-                    ConnectionRow(name: "ChatGPT", connected: model.chatGPTConnected)
-                    ConnectionRow(name: "MCP client", connected: model.geminiConnected)
+                    if model.connectedClients.isEmpty {
+                        Text("No connected AI clients").foregroundStyle(.secondary)
+                    } else {
+                        ForEach(Array(model.connectedClients.enumerated()), id: \.offset) { _, name in
+                            ConnectionRow(name: name, connected: true)
+                        }
+                    }
                     Button("Copy MCP endpoint") { model.copyEndpoint() }
                 }
             }
@@ -418,7 +443,13 @@ struct SettingsView: View {
         } detail: {
             Form {
                 Section("General") { LabeledContent("MCP endpoint", value: model.endpoint); LabeledContent("Local server", value: model.running ? "Running" : "Stopped"); Button("Restart services") { model.restartServices() } }
-                Section("Connections") { LabeledContent("ChatGPT", value: model.chatGPTConnected ? "Connected" : "OAuth ready"); LabeledContent("MCP client", value: model.geminiConnected ? "Connected" : "OAuth ready"); Button("Copy MCP endpoint") { model.copyEndpoint() } }
+                Section("Connected AI clients") {
+                    if model.connectedClients.isEmpty { Text("No connected AI clients").foregroundStyle(.secondary) }
+                    ForEach(Array(model.connectedClients.enumerated()), id: \.offset) { _, name in
+                        LabeledContent(name, value: "Connected").foregroundStyle(.green)
+                    }
+                    Button("Copy MCP endpoint") { model.copyEndpoint() }
+                }
                 Section("Features") { Toggle("Screen guidance", isOn: $model.screenGuidance); Toggle("Project tools", isOn: $model.projectTools); Button("Save feature settings") { model.saveCapabilities() } }
                 Section("Security") { Toggle("Emergency stop", isOn: $model.emergencyStop).tint(.red); Text("Emergency stop blocks active sessions and revokes active OAuth access.").font(.caption).foregroundStyle(.secondary) }
             }.formStyle(.grouped).padding()
