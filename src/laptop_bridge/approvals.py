@@ -35,3 +35,7 @@ def main():
         raise SystemExit("Denied")
     approve(args.request_id)
     print("Approved. Ask the MCP client to execute the request within five minutes.")
+
+
+if __name__ == "__main__":
+    main()
