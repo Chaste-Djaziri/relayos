@@ -3,6 +3,7 @@ import json
 import os
 import platform
 import shutil
+import socket
 import subprocess
 import time
 from pathlib import Path
@@ -123,32 +124,26 @@ async def oauth_approval(request: Request):
 @mcp.tool()
 def system_status() -> dict:
     """Read OS, hostname, processor utilization, memory, and battery."""
-    # Sensor APIs are optional on macOS, inside PyInstaller, and on some
-    # virtualized/remote hosts. A status request must remain useful even when
-    # one individual sensor is unavailable.
+    # Keep this path non-blocking: psutil's battery/platform probes can stall
+    # inside a packaged macOS process while process listing remains healthy.
     try:
-        cpu_percent = psutil.cpu_percent(interval=0.1)
+        cpu_percent = psutil.cpu_percent(interval=None)
     except Exception:
         cpu_percent = None
     try:
         mem_percent = psutil.virtual_memory().percent
     except Exception:
         mem_percent = None
+    battery_percent = None
+    battery_charging = None
     try:
-        battery = psutil.sensors_battery()
-        battery_percent = battery.percent if battery else None
-        battery_charging = battery.power_plugged if battery else None
-    except Exception:
-        battery_percent = None
-        battery_charging = None
-    try:
-        hostname = platform.node()
+        hostname = socket.gethostname()
     except Exception:
         hostname = "unknown"
     try:
-        operating_system = platform.platform()
+        operating_system = f"{platform.system()} {platform.release()}".strip()
     except Exception:
-        operating_system = platform.system() or "unknown"
+        operating_system = "unknown"
     return {
         "hostname": hostname, "os": operating_system,
         "cpu_percent": cpu_percent,
