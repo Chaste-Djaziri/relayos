@@ -288,6 +288,8 @@ struct DesktopWindowView: View {
 
 struct FreshSetupView: View {
     @ObservedObject var model: BridgeModel
+    @State private var tokenInput = ""
+    @State private var domainInput = ""
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             Image(systemName: "link.circle.fill").font(.system(size: 42)).foregroundStyle(.blue)
@@ -301,14 +303,14 @@ struct FreshSetupView: View {
             Form {
                 Section("ngrok connection") {
                     HStack {
-                        SecureField("ngrok authtoken", text: $model.ngrokToken)
+                            SecureField("ngrok authtoken", text: $tokenInput)
                             .textFieldStyle(.roundedBorder)
                             .frame(minHeight: 30)
                         Button("Paste token") {
-                            if let value = NSPasteboard.general.string(forType: .string) { model.ngrokToken = value.trimmingCharacters(in: .whitespacesAndNewlines) }
+                            if let value = NSPasteboard.general.string(forType: .string) { tokenInput = value.trimmingCharacters(in: .whitespacesAndNewlines) }
                         }
                     }
-                    TextField("Reserved domain (example.ngrok.app)", text: $model.ngrokDomainValue)
+                    TextField("Reserved domain (example.ngrok.app)", text: $domainInput)
                         .textFieldStyle(.roundedBorder)
                         .frame(minHeight: 30)
                     Text("Reserve a domain in the ngrok dashboard. Your token is stored only in macOS Keychain.").font(.caption).foregroundStyle(.secondary)
@@ -319,7 +321,7 @@ struct FreshSetupView: View {
                     HStack {
                         Button("Install ngrok with Homebrew") { model.installNgrok() }
                         Spacer()
-                        Button("Save and connect") { model.configureNgrok() }.buttonStyle(.borderedProminent)
+                        Button("Save and connect") { model.ngrokToken = tokenInput; model.ngrokDomainValue = domainInput; model.configureNgrok() }.buttonStyle(.borderedProminent)
                     }
                 }
             }.formStyle(.grouped)
