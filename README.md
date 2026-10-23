@@ -49,6 +49,18 @@ The public endpoint accepts only bearer tokens issued after local approval. Auth
 
 To create a Finder-launchable app, run `./scripts/build_macos_app.sh` and open `dist/Laptop Bridge.app`.
 
+## Native macOS companion (preview)
+
+The native Swift companion targets macOS 14 Sonoma and uses a SwiftUI/AppKit menu-bar surface. It keeps the Python MCP server as the tool runtime while moving the interactive shell and process supervision into a responsive native app.
+
+Build the native package locally with:
+
+```sh
+swift build --package-path Native/LaptopBridgeApp
+```
+
+The native target currently runs the Python MCP server on an internal loopback port (`8766`) and leaves the existing PyInstaller app available as the production fallback while the Swift edge proxy and OAuth service are migrated.
+
 ## macOS Screen Recording Permissions
 
 Screen capture requires the user to grant macOS Screen Recording permission to Laptop Bridge (or your terminal / Python environment during development):
