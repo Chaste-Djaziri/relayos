@@ -6,6 +6,16 @@ import Security
 struct LaptopBridgeApp: App {
     @StateObject private var model = BridgeModel()
 
+    init() {
+        // SwiftPM resources do not automatically become the Dock icon. Set it
+        // explicitly so the native app and its menu-bar companion share the
+        // RelayOS identity.
+        if let url = Bundle.module.url(forResource: "relayos-white", withExtension: "png"),
+           let image = NSImage(contentsOf: url) {
+            NSApplication.shared.applicationIconImage = image
+        }
+    }
+
     var body: some Scene {
         Window("RelayOS", id: "main") {
             DesktopWindowView(model: model)
@@ -22,7 +32,12 @@ struct LaptopBridgeApp: App {
             QuickPanel(model: model)
                 .frame(width: 360)
         } label: {
-            Image("relayos-black", bundle: .module).resizable().scaledToFit().frame(width: 18, height: 18).accessibilityLabel("RelayOS")
+            Image("relayos-white", bundle: .module)
+                .renderingMode(.original)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 18, height: 18)
+                .accessibilityLabel("RelayOS")
         }
         .menuBarExtraStyle(.window)
 
