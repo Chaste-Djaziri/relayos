@@ -457,10 +457,18 @@ def active_oauth_grants():
         now = time.time()
         _expire_oauth(connection, now)
         rows = connection.execute(
-            "SELECT grant_id, client_id, created_at, expires_at FROM oauth_tokens WHERE token_type = 'refresh' AND revoked_at IS NULL AND expires_at > ? ORDER BY created_at DESC",
+            "SELECT t.grant_id, t.client_id, t.created_at, t.expires_at, c.metadata_json "
+            "FROM oauth_tokens t LEFT JOIN oauth_clients c ON c.client_id = t.client_id "
+            "WHERE t.token_type = 'refresh' AND t.revoked_at IS NULL AND t.expires_at > ? ORDER BY t.created_at DESC",
             (now,),
         ).fetchall()
-    return [dict(row) for row in rows]
+    result = []
+    for row in rows:
+        metadata = json.loads(row["metadata_json"] or "{}")
+        result.append({"grant_id": row["grant_id"], "client_id": row["client_id"],
+                       "client_name": metadata.get("client_name") or metadata.get("client_uri") or "MCP client",
+                       "created_at": row["created_at"], "expires_at": row["expires_at"]})
+    return result
 
 
 def revoke_oauth_grant(grant_id):
