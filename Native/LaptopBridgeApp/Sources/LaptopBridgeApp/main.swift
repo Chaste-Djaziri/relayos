@@ -220,7 +220,7 @@ struct SettingsView: View {
     @ObservedObject var model: BridgeModel
     var body: some View {
         NavigationSplitView {
-            List { Label("General", systemImage: "gearshape"); Label("Connections", systemImage: "link"); Label("Features", systemImage: "square.grid.2x2"); Label("Cloudflare", systemImage: "globe"); Label("Security", systemImage: "lock"); Label("Activity", systemImage: "clock.arrow.circlepath") }.listStyle(.sidebar)
+            List { Label("General", systemImage: "gearshape"); Label("Connections", systemImage: "link"); Label("Features", systemImage: "square.grid.2x2"); Label("ngrok", systemImage: "globe"); Label("Security", systemImage: "lock"); Label("Activity", systemImage: "clock.arrow.circlepath") }.listStyle(.sidebar)
         } detail: {
             Form {
                 Section("General") { LabeledContent("MCP endpoint", value: model.endpoint); LabeledContent("Local server", value: model.running ? "Running" : "Stopped"); Button("Restart services") { model.restartServices() } }
