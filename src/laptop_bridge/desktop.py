@@ -15,9 +15,9 @@ from PySide6.QtWidgets import (
     QTabWidget, QVBoxLayout, QWidget, QWizard, QWizardPage, QGroupBox, QDialog,
 )
 
-from . import capture, state
+from . import capture, state, ngrok
 from .config import STATE_DIR, load_config, update_config
-from . import cloudflare, keychain
+from . import keychain
 from .overlay import GuidanceOverlay
 from .input_observer import ClickObserver
 
@@ -44,14 +44,14 @@ class ApprovalDialog(QDialog):
             info.setWordWrap(True)
             layout.addRow("Permission scope", info)
         elif request["kind"] == "oauth_authorization":
-            self.setWindowTitle("Laptop Bridge: Gemini Connection Approval")
-            kind_label = QLabel("Gemini MCP Connection")
+            self.setWindowTitle("Laptop Bridge: MCP Connection Approval")
+            kind_label = QLabel("MCP Connection")
             kind_label.setStyleSheet("font-weight: bold; color: #0284c7;")
             layout.addRow("Action", kind_label)
             layout.addRow("OAuth client", QLabel(request["client_id"]))
             layout.addRow("Google callback", QLabel(request["redirect_uri"]))
             layout.addRow("Scope", QLabel(", ".join(request["scopes"])))
-            info = QLabel("Approving lets this Gemini client call Laptop Bridge until the connection is revoked or its 30-day authorization expires.")
+            info = QLabel("Approving lets this MCP client call Laptop Bridge until the connection is revoked or its 30-day authorization expires.")
             info.setWordWrap(True)
             layout.addRow("Permission scope", info)
         else:
@@ -86,13 +86,13 @@ class OnboardingWizard(QWizard):
         wl.addWidget(QLabel("Laptop Bridge runs a local MCP server and gives you a private HTTPS link for ChatGPT and Gemini.\n\nNo shared keys are shipped: this setup creates your own Cloudflare route and stores secrets in macOS Keychain."))
         self.addPage(welcome)
 
-        cf = QWizardPage(); cf.setTitle("Create your public link")
+        cf = QWizardPage(); cf.setTitle("Connect ngrok")
         form = QFormLayout(cf)
         self.token = QLineEdit(); self.token.setEchoMode(QLineEdit.EchoMode.Password)
         self.hostname = QLineEdit(); self.hostname.setPlaceholderText("mcp.example.com")
-        form.addRow("Cloudflare API token", self.token)
-        form.addRow("Your hostname", self.hostname)
-        help_label = QLabel("Create a scoped token in Cloudflare with Account: Tunnel Edit, Zone: DNS Edit, and Zone: Zone Read. The token is used only to provision your route and is never written to the config file.")
+        form.addRow("ngrok authtoken", self.token)
+        form.addRow("Reserved domain", self.hostname)
+        help_label = QLabel("Create an authtoken in the ngrok dashboard and reserve a stable domain such as bridge.ngrok.app. The token is stored only in macOS Keychain and never written to the config file.")
         help_label.setWordWrap(True); form.addRow(help_label)
         self.addPage(cf)
 
@@ -115,19 +115,19 @@ class OnboardingWizard(QWizard):
 
     def accept(self):
         token = self.token.text().strip(); hostname = self.hostname.text().strip().removeprefix("https://").removeprefix("http://").strip("/")
-        if not token or not hostname or "/" in hostname or ":" in hostname:
-            QMessageBox.warning(self, "Cloudflare details needed", "Enter a Cloudflare API token and a hostname such as mcp.example.com.")
+        if not token:
+            QMessageBox.warning(self, "ngrok details needed", "Enter your ngrok authtoken.")
             return
         try:
             self.setEnabled(False)
-            result = cloudflare.provision(token, hostname)
-            keychain.set_secret("cloudflare_api_token", token)
-            if result.get("tunnel_token"):
-                keychain.set_secret("cloudflare_tunnel_token", result["tunnel_token"])
+            hostname = ngrok.validate_domain(hostname)
+            if not ngrok.find_executable():
+                raise ngrok.NgrokError("ngrok was not found. Install it from ngrok.com/download")
+            keychain.set_secret("ngrok_authtoken", token)
             config = load_config()
-            config.update({"public_base_url": f"https://{hostname}", "setup_complete": True,
+            config.update({"public_base_url": ngrok.endpoint_url(hostname), "active_transport": "ngrok", "setup_complete": True,
                 "capabilities": {"system_status": True, "screen_guidance": self.screen_guidance.isChecked(), "project_tools": self.project_tools.isChecked()},
-                "cloudflare": {"zone_id": result["zone_id"], "hostname": hostname, "tunnel_id": result["tunnel_id"], "config_path": config.get("cloudflare", {}).get("config_path", "")}})
+                "ngrok": {"enabled": True, "domain": hostname, "region": "", "config_path": "", "agent_version": ""}})
             update_config(**config)
             self.companion.restart_server()
         except Exception as error:
@@ -300,7 +300,7 @@ class StatusWindow(QMainWindow):
         self.grants.setMaximumHeight(150)
         layout.addWidget(self.grants)
 
-        oauth_title = QLabel("Gemini Connections (30-day refresh authorization)")
+        oauth_title = QLabel("Connected MCP Clients (30-day refresh authorization)")
         oauth_title.setStyleSheet("font-weight: bold; font-size: 12px;")
         layout.addWidget(oauth_title)
         self.oauth_grants = QTableWidget(0, 3)
@@ -578,18 +578,21 @@ class Companion:
         self.status_action.setText("Server: starting")
 
     def start_tunnel(self):
-        """Start the named Cloudflare tunnel after the local server is ready."""
+        """Start the configured ngrok agent after the local server is ready."""
         if self.tunnel.state() != QProcess.ProcessState.NotRunning:
             return
-        token = keychain.get_secret("cloudflare_tunnel_token")
-        if token:
-            executable = next((p for p in ("/opt/homebrew/bin/cloudflared", "/usr/local/bin/cloudflared", "cloudflared") if p == "cloudflared" or Path(p).exists()), "cloudflared")
-            self.tunnel.start(executable, ["tunnel", "run", "--token", token])
+        config = load_config()
+        if config.get("active_transport") != "ngrok" or not config.get("ngrok", {}).get("enabled"):
             return
-        config = os.getenv("LAPTOP_BRIDGE_CLOUDFLARE_CONFIG", str(Path.home() / ".cloudflared/config.yml"))
-        if not Path(config).is_file():
+        try:
+            spec = ngrok.process_spec(config["ngrok"]["domain"], keychain.get_secret("ngrok_authtoken") or "")
+        except ngrok.NgrokError:
             return
-        self.tunnel.start("cloudflared", ["--config", config, "tunnel", "run"])
+        environment = QProcess.systemEnvironment()
+        environment = [entry for entry in environment if not entry.startswith("NGROK_AUTHTOKEN=")]
+        environment.append(f"NGROK_AUTHTOKEN={spec['environment']['NGROK_AUTHTOKEN']}")
+        self.tunnel.setEnvironment(environment)
+        self.tunnel.start(spec["executable"], spec["arguments"])
 
     def open_onboarding(self):
         wizard = OnboardingWizard(self, self.window)
