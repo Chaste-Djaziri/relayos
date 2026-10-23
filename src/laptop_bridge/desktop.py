@@ -168,6 +168,9 @@ class QuickPanel(QDialog):
             state_label = QLabel("OAuth ready"); state_label.setObjectName("muted"); row.addWidget(state_label)
             if name == "Gemini":
                 self.gemini_state = state_label
+                disconnect = QPushButton("Disconnect")
+                disconnect.clicked.connect(self.disconnect_gemini)
+                row.addWidget(disconnect)
             cl.addLayout(row)
         connect = QPushButton("Copy MCP endpoint")
         connect.clicked.connect(self.copy_endpoint)
@@ -193,6 +196,13 @@ class QuickPanel(QDialog):
         self.endpoint.setText(f"{public}/mcp" if public else "Setup required")
         self.stop.blockSignals(True); self.stop.setChecked(state.emergency_stop()); self.stop.blockSignals(False)
         grants = state.active_oauth_grants(); self.gemini_state.setText(f"Connected · {len(grants)} grant" if grants else "OAuth ready")
+
+    def disconnect_gemini(self):
+        grants = state.active_oauth_grants()
+        if not grants:
+            return
+        self.companion.revoke_oauth_grant(grants[0]["grant_id"])
+        self.refresh()
 
 
 class StatusWindow(QMainWindow):
