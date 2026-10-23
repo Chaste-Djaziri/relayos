@@ -59,7 +59,7 @@ Build the native package locally with:
 swift build --package-path Native/LaptopBridgeApp
 ```
 
-The native target currently runs the Python MCP server on an internal loopback port (`8766`) and leaves the existing PyInstaller app available as the production fallback while the Swift edge proxy and OAuth service are migrated.
+The native target currently supervises the existing Python MCP/OAuth listener on `127.0.0.1:8765` and the existing Cloudflare tunnel while the Swift edge proxy and OAuth service are migrated.
 
 ## macOS Screen Recording Permissions
 
