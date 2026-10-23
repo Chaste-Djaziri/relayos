@@ -3,7 +3,7 @@
 import argparse
 import json
 
-from .state import approve, deny, pending_requests, pending_oauth_authorizations, active_oauth_grants, active_permission_grants, revoke_permission_grant, decide_oauth_authorization
+from .state import approve, deny, pending_requests, pending_oauth_authorizations, active_oauth_grants, active_permission_grants, revoke_permission_grant, decide_oauth_authorization, decide_request
 
 def main():
     parser = argparse.ArgumentParser(description="Approve sensitive laptop actions locally")
@@ -12,6 +12,10 @@ def main():
     sub.add_parser("list-oauth")
     sub.add_parser("list-grants")
     sub.add_parser("list-permissions")
+    sub.add_parser("list-pending-json")
+    decide = sub.add_parser("decide-request")
+    decide.add_argument("request_id")
+    decide.add_argument("duration", choices=("once", "session", "persistent"))
     revoke_perm = sub.add_parser("revoke-permission")
     revoke_perm.add_argument("grant_id")
     oauth = sub.add_parser("decide-oauth")
@@ -32,6 +36,12 @@ def main():
         return
     if args.command == "list-permissions":
         print(json.dumps(active_permission_grants()))
+        return
+    if args.command == "list-pending-json":
+        print(json.dumps(pending_requests()))
+        return
+    if args.command == "decide-request":
+        decide_request(args.request_id, args.duration)
         return
     if args.command == "revoke-permission":
         revoke_permission_grant(args.grant_id)
