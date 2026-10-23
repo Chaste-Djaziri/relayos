@@ -165,6 +165,20 @@ def deny(token):
     _decide(token, "denied")
 
 
+def decide_request(token, duration="once"):
+    """Approve a pending request and optionally persist its folder permission."""
+    if duration not in {"once", "session", "persistent"}:
+        raise ValueError("duration must be once, session, or persistent")
+    with _db() as connection:
+        row = connection.execute("SELECT kind, target, status FROM requests WHERE token = ?", (token,)).fetchone()
+    if row is None or row["status"] != "pending":
+        return False
+    if duration == "persistent" and row["kind"] == "project_session":
+        grant_folder(row["target"], "persistent")
+    _decide(token, "approved")
+    return True
+
+
 def _decide(token, status):
     with _db() as connection:
         connection.execute("BEGIN IMMEDIATE")
