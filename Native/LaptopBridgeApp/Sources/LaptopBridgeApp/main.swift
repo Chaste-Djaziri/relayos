@@ -66,7 +66,7 @@ final class BridgeModel: ObservableObject {
     func loadConfig() {
         guard let data = try? Data(contentsOf: configURL),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
-        if let base = json["public_base_url"] as? String, !base.isEmpty { endpoint = base + "/mcp" }
+        if let base = json["public_base_url"] as? String, base.hasPrefix("https://"), !base.contains("/docs/"), !base.isEmpty { endpoint = base + "/mcp" }
         if let caps = json["capabilities"] as? [String: Any] {
             screenGuidance = caps["screen_guidance"] as? Bool ?? false
             projectTools = caps["project_tools"] as? Bool ?? false
@@ -113,7 +113,7 @@ final class BridgeModel: ObservableObject {
     }
 
     func startTunnelIfConfigured() {
-        guard tunnel == nil, let token = Keychain.read(account: "ngrok_authtoken") else { return }
+        guard tunnel == nil, let token = TokenStore.read() else { return }
         let executable = ["/opt/homebrew/bin/ngrok", "/usr/local/bin/ngrok"].first { FileManager.default.isExecutableFile(atPath: $0) }
         guard let executable else { return }
         let process = Process(); process.executableURL = URL(fileURLWithPath: executable)
@@ -186,7 +186,7 @@ final class BridgeModel: ObservableObject {
         let domain = ngrokDomainValue.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "https://", with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard !ngrokToken.isEmpty else { return }
         guard domain.isEmpty || (domain.contains(".") && !domain.contains("/")) else { return }
-        Keychain.write(account: "ngrok_authtoken", value: ngrokToken)
+        TokenStore.write(ngrokToken)
         var json = (try? JSONSerialization.jsonObject(with: (try? Data(contentsOf: configURL)) ?? Data())) as? [String: Any] ?? [:]
         json["public_base_url"] = domain.isEmpty ? "" : "https://\(domain)"
         json["active_transport"] = "ngrok"
@@ -194,7 +194,7 @@ final class BridgeModel: ObservableObject {
         json["ngrok"] = ["enabled": true, "domain": domain, "region": "", "config_path": "", "agent_version": ""]
         try? FileManager.default.createDirectory(at: configURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         if let data = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]) { try? data.write(to: configURL, options: .atomic) }
-        endpoint = "https://\(domain)/mcp"
+        endpoint = domain.isEmpty ? "Waiting for ngrok…" : "https://\(domain)/mcp"
         ngrokToken = ""
         restartServices()
     }
@@ -276,6 +276,20 @@ enum Keychain {
         SecItemDelete(query as CFDictionary)
         var add = query; add[kSecValueData as String] = data
         SecItemAdd(add as CFDictionary, nil)
+    }
+}
+
+enum TokenStore {
+    private static var url: URL { FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".laptop-bridge/ngrok.token") }
+    static func read() -> String? {
+        if let data = try? Data(contentsOf: url), let value = String(data: data, encoding: .utf8), !value.isEmpty { return value }
+        return Keychain.read(account: "ngrok_authtoken")
+    }
+    static func write(_ value: String) {
+        let dir = url.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? Data(value.utf8).write(to: url, options: .atomic)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 }
 
