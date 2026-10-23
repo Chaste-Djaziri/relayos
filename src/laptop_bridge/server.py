@@ -80,6 +80,14 @@ if _public_base_url:
     async def oauth_metadata(_: Request):
         return await MetadataHandler(_oauth_metadata).handle(_)
 
+    @mcp.custom_route("/.well-known/openid-configuration", methods=["GET"])
+    async def openid_metadata(_: Request):
+        # Some ChatGPT connector flows probe OpenID discovery before using
+        # OAuth authorization-server metadata. The MCP provider is also a
+        # standards-compatible authorization server, so expose the same
+        # document at both discovery locations.
+        return await MetadataHandler(_oauth_metadata).handle(_)
+
     @mcp.custom_route("/authorize", methods=["GET", "POST"])
     async def oauth_authorize(request: Request):
         return await AuthorizationHandler(_oauth_provider).handle(request)
