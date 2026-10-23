@@ -56,7 +56,10 @@ final class BridgeModel: ObservableObject {
         guard server == nil else { return }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["python3", "-m", "laptop_bridge.server", "--port", "8766"]
+        process.arguments = ["python3", "-m", "laptop_bridge.server"]
+        var environment = ProcessInfo.processInfo.environment
+        environment["LAPTOP_BRIDGE_MCP_PORT"] = "8766"
+        process.environment = environment
         process.terminationHandler = { [weak self] _ in Task { @MainActor in self?.running = false; self?.server = nil } }
         try? process.run()
         server = process
