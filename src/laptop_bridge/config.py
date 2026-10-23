@@ -14,10 +14,9 @@ DEFAULT = {
     "allowed_apps": {},
     "allowed_commands": {},
     "max_read_bytes": 65536,
-    # A public HTTPS origin is opt-in.  It is used for OAuth metadata and the
-    # Streamable HTTP resource identifier when a relay (such as Cloudflare
-    # Tunnel) forwards requests to this loopback-only server.
+    # A public HTTPS origin is opt-in and is used for OAuth metadata.
     "public_base_url": "",
+    "active_transport": "ngrok",
     "setup_complete": False,
     "capabilities": {
         "system_status": True,
@@ -29,6 +28,13 @@ DEFAULT = {
         "hostname": "",
         "tunnel_id": "",
         "config_path": "",
+    },
+    "ngrok": {
+        "enabled": False,
+        "domain": "",
+        "region": "",
+        "config_path": "",
+        "agent_version": "",
     },
     "connection_modes": {
         "chatgpt_public": True,
@@ -49,11 +55,13 @@ def load_config():
     # Existing installations predate public-endpoint support.  Keep their
     # behavior unchanged until they opt in by setting this value.
     config.setdefault("public_base_url", "")
+    config.setdefault("active_transport", "ngrok" if config.get("ngrok", {}).get("domain") else "cloudflare")
     # A configured public endpoint is sufficient to treat older installs as
     # onboarded; users can still reopen the setup wizard from the companion.
     config.setdefault("setup_complete", bool(config.get("public_base_url")))
     config.setdefault("capabilities", dict(DEFAULT["capabilities"]))
     config.setdefault("cloudflare", dict(DEFAULT["cloudflare"]))
+    config.setdefault("ngrok", dict(DEFAULT["ngrok"]))
     config.setdefault("connection_modes", dict(DEFAULT["connection_modes"]))
     return config
 
