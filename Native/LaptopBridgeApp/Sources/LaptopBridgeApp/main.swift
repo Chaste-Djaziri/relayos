@@ -102,20 +102,32 @@ final class BridgeModel: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { self.startServices() }
     }
 
+    func restartPythonServer() {
+        server?.terminate(); server = nil; running = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self.startServices() }
+    }
+
     func startTunnelIfConfigured() {
-        guard let token = Keychain.read(account: "ngrok_authtoken"), let domain = ngrokDomain() else { return }
+        guard tunnel == nil, let token = Keychain.read(account: "ngrok_authtoken") else { return }
         let executable = ["/opt/homebrew/bin/ngrok", "/usr/local/bin/ngrok"].first { FileManager.default.isExecutableFile(atPath: $0) }
         guard let executable else { return }
         let process = Process(); process.executableURL = URL(fileURLWithPath: executable)
-        process.arguments = ["http", "127.0.0.1:8765", "--domain", domain]
+        // An empty domain uses ngrok's free generated HTTPS hostname. A
+        // reserved domain is only passed when explicitly configured.
+        let domain = ngrokDomain()
+        process.arguments = domain.map { ["http", "127.0.0.1:8765", "--url", "https://\($0)"] } ?? ["http", "127.0.0.1:8765"]
         var environment = ProcessInfo.processInfo.environment
         environment["NGROK_AUTHTOKEN"] = token
         process.environment = environment
         // Detach the agent from the terminal that launched the menu-bar app;
         // otherwise ngrok can receive job-control signals and become stopped.
         process.standardInput = Pipe()
-        process.standardOutput = Pipe()
-        process.standardError = Pipe()
+        let output = Pipe(); process.standardOutput = output; process.standardError = output
+        output.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            guard let text = String(data: data, encoding: .utf8), let url = text.split(whereSeparator: { $0 == " " || $0 == "\n" }).first(where: { $0.hasPrefix("https://") && $0.contains("ngrok") }) else { return }
+            Task { @MainActor in self?.adoptNgrokEndpoint(String(url)) }
+        }
         process.terminationHandler = { [weak self] _ in Task { @MainActor in self?.tunnelRunning = false; self?.tunnel = nil } }
         try? process.run(); tunnel = process; tunnelRunning = process.isRunning
     }
@@ -123,6 +135,15 @@ final class BridgeModel: ObservableObject {
     private func ngrokDomain() -> String? {
         guard let data = try? Data(contentsOf: configURL), let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let ngrok = json["ngrok"] as? [String: Any], let domain = ngrok["domain"] as? String, !domain.isEmpty else { return nil }
         return domain
+    }
+
+    private func adoptNgrokEndpoint(_ origin: String) {
+        let clean = origin.trimmingCharacters(in: CharacterSet(charactersIn: "\r\n"))
+        endpoint = clean + "/mcp"
+        guard let data = try? Data(contentsOf: configURL), var json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return }
+        json["public_base_url"] = clean
+        if let output = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]) { try? output.write(to: configURL, options: .atomic) }
+        restartPythonServer()
     }
 
     func saveCapabilities() {
@@ -157,10 +178,11 @@ final class BridgeModel: ObservableObject {
 
     func configureNgrok() {
         let domain = ngrokDomainValue.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "https://", with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        guard !ngrokToken.isEmpty, domain.contains("."), !domain.contains("/") else { return }
+        guard !ngrokToken.isEmpty else { return }
+        guard domain.isEmpty || (domain.contains(".") && !domain.contains("/")) else { return }
         Keychain.write(account: "ngrok_authtoken", value: ngrokToken)
         var json = (try? JSONSerialization.jsonObject(with: (try? Data(contentsOf: configURL)) ?? Data())) as? [String: Any] ?? [:]
-        json["public_base_url"] = "https://\(domain)"
+        json["public_base_url"] = domain.isEmpty ? "" : "https://\(domain)"
         json["active_transport"] = "ngrok"
         json["setup_complete"] = true
         json["ngrok"] = ["enabled": true, "domain": domain, "region": "", "config_path": "", "agent_version": ""]
