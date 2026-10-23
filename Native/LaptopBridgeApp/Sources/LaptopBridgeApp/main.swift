@@ -45,6 +45,7 @@ final class BridgeModel: ObservableObject {
     @Published var ngrokDomainValue = ""
     @Published var ngrokInstallState = ""
     @Published var connectedClients: [String] = []
+    @Published var permissionGrants: [[String: Any]] = []
 
     private let configURL: URL
     private var server: Process?
@@ -64,6 +65,7 @@ final class BridgeModel: ObservableObject {
         timer.resume()
         approvalTimer = timer
         refreshConnectedClients()
+        refreshPermissionGrants()
     }
 
     func loadConfig() {
@@ -261,8 +263,29 @@ final class BridgeModel: ObservableObject {
         }
     }
 
+    nonisolated private func refreshPermissionGrants() {
+        let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
+        guard FileManager.default.isExecutableFile(atPath: python) else { return }
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let process = Process(); let pipe = Pipe(); process.executableURL = URL(fileURLWithPath: python)
+            process.arguments = ["-m", "laptop_bridge.approvals", "list-permissions"]
+            process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+            process.standardOutput = pipe; try? process.run(); process.waitUntilExit()
+            guard let data = try? pipe.fileHandleForReading.readToEnd(), let grants = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
+            DispatchQueue.main.async { self?.permissionGrants = grants }
+        }
+    }
+
+    func revokePermission(_ id: String) {
+        let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
+        let process = Process(); process.executableURL = URL(fileURLWithPath: python); process.arguments = ["-m", "laptop_bridge.approvals", "revoke-permission", id]
+        process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+        try? process.run(); process.waitUntilExit(); refreshPermissionGrants()
+    }
+
     nonisolated func checkOAuthApprovalsInBackground() {
         refreshConnectedClients()
+        refreshPermissionGrants()
         let python = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
         guard FileManager.default.isExecutableFile(atPath: python) else { return }
         let process = Process(); let pipe = Pipe()
@@ -461,6 +484,17 @@ struct SettingsView: View {
                     }
                 case .tools:
                     Section("Available tools") { Toggle("Project tools", isOn: $model.projectTools); Button("Save tool settings") { model.saveCapabilities() } }
+                    Section("Persistent permissions") {
+                        if model.permissionGrants.isEmpty { Text("No persistent folder permissions yet.").foregroundStyle(.secondary) }
+                        ForEach(Array(model.permissionGrants.enumerated()), id: \.offset) { _, grant in
+                            HStack {
+                                VStack(alignment: .leading) { Text((grant["grant_type"] as? String ?? "permission").capitalized); Text(grant["scope"] as? String ?? "").font(.caption).foregroundStyle(.secondary) }
+                                Spacer()
+                                Button("Revoke") { if let id = grant["token"] as? String { model.revokePermission(id) } }
+                            }
+                        }
+                        Button("Revoke all permissions", role: .destructive) { for grant in model.permissionGrants { if let id = grant["token"] as? String { model.revokePermission(id) } } }
+                    }
                     Section("Permissions") { LabeledContent("Screen recording", value: "Managed by macOS"); Button("Open Privacy & Security") { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!) } }
                 case .ngrok:
                     Section("ngrok transport") { LabeledContent("Status", value: model.tunnelRunning ? "Connected" : "Stopped"); LabeledContent("Endpoint", value: model.endpoint); Button("Reconnect") { model.restartServices() } }
