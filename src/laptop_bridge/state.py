@@ -488,10 +488,9 @@ def _command_digest(argv, cwd):
 
 def grant_project_command(project_root, executable, argv, cwd, grant_type="once"):
     """Save a one-use exact invocation or a persistent executable/project grant."""
-    if grant_type == "always":
-        grant_type = "persistent"
     if grant_type not in {"once", "session", "persistent"}:
-        raise ValueError("grant_type must be once, session, or persistent")
+        if grant_type != "always":
+            raise ValueError("grant_type must be once, session, or persistent")
     if emergency_stop():
         raise PermissionError("Emergency stop is enabled")
     token = secrets.token_urlsafe(24)
@@ -502,9 +501,9 @@ def grant_project_command(project_root, executable, argv, cwd, grant_type="once"
         if emergency_stop(connection):
             connection.rollback()
             raise PermissionError("Emergency stop is enabled")
-        if grant_type == "persistent":
+        if grant_type in {"persistent", "always"}:
             connection.execute(
-                "UPDATE command_grants SET revoked_at = ? WHERE executable = ? AND grant_type IN ('always', 'persistent') AND revoked_at IS NULL",
+                "UPDATE command_grants SET revoked_at = ? WHERE executable = ? AND grant_type = 'persistent' AND revoked_at IS NULL",
                 (now, executable),
             )
         connection.execute(
@@ -536,8 +535,8 @@ def consume_project_command_grant(project_root, executable, argv, cwd, grant_tok
             connection.commit()
             return "approved_once"
         row = connection.execute(
-            "SELECT token FROM command_grants WHERE executable = ? AND grant_type IN ('always', 'persistent', 'session') AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?) ORDER BY created_at DESC LIMIT 1",
-            (executable, now),
+            "SELECT token FROM command_grants WHERE ((grant_type = 'persistent' AND executable = ?) OR (grant_type = 'always' AND project_root = ?)) AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?) ORDER BY created_at DESC LIMIT 1",
+            (executable, project_root, now),
         ).fetchone()
         if row is None:
             connection.rollback()
