@@ -136,6 +136,18 @@ final class BridgeModel: ObservableObject {
         }
         process.terminationHandler = { [weak self] _ in Task { @MainActor in self?.tunnelRunning = false; self?.tunnel = nil } }
         try? process.run(); tunnel = process; tunnelRunning = process.isRunning
+        // The agent may emit no stdout when launched from a GUI. Ask its
+        // local inspector API for the assigned free hostname as a fallback.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.refreshNgrokEndpoint() }
+    }
+
+    private func refreshNgrokEndpoint() {
+        guard tunnelRunning, let url = URL(string: "http://127.0.0.1:4040/api/tunnels") else { return }
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+            guard let data, let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let tunnels = object["tunnels"] as? [[String: Any]], let publicURL = tunnels.compactMap({ $0["public_url"] as? String }).first else { return }
+            Task { @MainActor in self?.adoptNgrokEndpoint(publicURL) }
+        }.resume()
     }
 
     private func ngrokDomain() -> String? {
