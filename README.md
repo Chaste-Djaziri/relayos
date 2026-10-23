@@ -28,6 +28,17 @@ laptop-bridge-desktop
 
 The desktop companion starts the Streamable HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`. Its menu shows server status, overlay status, active coding sessions, folder picker for sessions, guidance controls, local history/settings window, server restart, and an emergency stop.
 
+## Gemini custom app connection
+
+Gemini requires a public HTTPS Streamable HTTP endpoint. Laptop Bridge keeps its server loopback-only and uses a named Cloudflare Tunnel to expose it. Configure a dedicated hostname (for this installation, `gemini-bridge.shangazi.rw`) rather than changing the existing ChatGPT/Cloudflare Access hostname.
+
+1. Add an ingress entry for `gemini-bridge.shangazi.rw` in `~/.cloudflared/config.yml` that forwards to `http://127.0.0.1:8765` and create the corresponding tunnel DNS route.
+2. Do not attach Cloudflare Access to this new hostname: Gemini must reach Laptop Bridge's own OAuth metadata, authorization, token, and `/mcp` endpoints. Keep any Access policy on `bridge.shangazi.rw` unchanged.
+3. Set `public_base_url` in `~/.laptop-bridge/config.json` to `https://gemini-bridge.shangazi.rw`, then restart Laptop Bridge. The companion starts `cloudflared --config ~/.cloudflared/config.yml tunnel run` once the local server is ready.
+4. In Gemini Connected Apps, enter `https://gemini-bridge.shangazi.rw/mcp`. Dynamic Client Registration supplies the credentials automatically. Approve the connection in the visible Laptop Bridge companion dialog.
+
+The public endpoint accepts only bearer tokens issued after the local approval. Authorization requests only accept Gemini's `oauth-redirect.googleusercontent.com` callback, enforce PKCE and the single `mcp` scope, issue one-hour access tokens, rotate refresh tokens, and expire the connection after 30 days. Use **Disconnect** in the companion's Gemini Connections section, or Emergency Stop, to revoke it immediately.
+
 To create a Finder-launchable app, run `./scripts/build_macos_app.sh` and open `dist/Laptop Bridge.app`.
 
 ## macOS Screen Recording Permissions
