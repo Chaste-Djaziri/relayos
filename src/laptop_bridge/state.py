@@ -13,6 +13,10 @@ HISTORY_RETENTION = 30 * 24 * 60 * 60
 PROJECT_SESSION_TTL = 60 * 60
 JOB_TTL = 30
 GUIDANCE_SESSION_TTL = 15 * 60
+OAUTH_APPROVAL_TTL = 5 * 60
+OAUTH_CODE_TTL = 5 * 60
+OAUTH_ACCESS_TOKEN_TTL = 60 * 60
+OAUTH_REFRESH_TOKEN_TTL = 30 * 24 * 60 * 60
 
 
 _INITIALIZED_DBS = set()
@@ -75,8 +79,28 @@ def _db():
                 created_at REAL NOT NULL, expires_at REAL,
                 revoked_at REAL
             );
+            CREATE TABLE IF NOT EXISTS oauth_clients (
+                client_id TEXT PRIMARY KEY, metadata_json TEXT NOT NULL, created_at REAL NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS oauth_authorizations (
+                token TEXT PRIMARY KEY, client_id TEXT NOT NULL, redirect_uri TEXT NOT NULL,
+                state TEXT, scopes_json TEXT NOT NULL, code_challenge TEXT NOT NULL,
+                resource TEXT, created_at REAL NOT NULL, status TEXT NOT NULL, decided_at REAL,
+                consumed_at REAL
+            );
+            CREATE TABLE IF NOT EXISTS oauth_codes (
+                token_digest TEXT PRIMARY KEY, client_id TEXT NOT NULL, redirect_uri TEXT NOT NULL,
+                scopes_json TEXT NOT NULL, code_challenge TEXT NOT NULL, resource TEXT,
+                created_at REAL NOT NULL, expires_at REAL NOT NULL, consumed_at REAL
+            );
+            CREATE TABLE IF NOT EXISTS oauth_tokens (
+                token_digest TEXT PRIMARY KEY, grant_id TEXT NOT NULL, token_type TEXT NOT NULL,
+                client_id TEXT NOT NULL, scopes_json TEXT NOT NULL, resource TEXT,
+                created_at REAL NOT NULL, expires_at REAL NOT NULL, revoked_at REAL
+            );
             """)
             connection.execute("CREATE INDEX IF NOT EXISTS command_grants_lookup ON command_grants(project_root, executable, grant_type, revoked_at)")
+            connection.execute("CREATE INDEX IF NOT EXISTS oauth_tokens_lookup ON oauth_tokens(token_digest, token_type, revoked_at)")
             _INITIALIZED_DBS.add(db_path)
         yield connection
     finally:
@@ -115,6 +139,8 @@ def set_emergency_stop(enabled):
             connection.execute("UPDATE project_sessions SET status = 'revoked', revoked_at = ? WHERE status = 'active'", (now,))
             connection.execute("UPDATE guidance_sessions SET status = 'stopped', stopped_at = ? WHERE status = 'active'", (now,))
             connection.execute("UPDATE desktop_jobs SET status = 'cancelled', completed_at = ? WHERE status IN ('pending', 'claimed')", (now,))
+            connection.execute("UPDATE oauth_tokens SET revoked_at = ? WHERE revoked_at IS NULL", (now,))
+            connection.execute("UPDATE oauth_authorizations SET status = 'denied', decided_at = ? WHERE status = 'pending'", (now,))
         connection.commit()
 
 
@@ -244,6 +270,193 @@ def active_project_sessions():
         ).fetchall()
         connection.commit()
     return [{"session_id": row["token"], "root": row["root"], "created_at": row["created_at"], "expires_at": row["expires_at"]} for row in rows]
+
+
+def _oauth_digest(value):
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _expire_oauth(connection, now):
+    connection.execute(
+        "UPDATE oauth_authorizations SET status = 'expired', decided_at = ? WHERE status = 'pending' AND created_at < ?",
+        (now, now - OAUTH_APPROVAL_TTL),
+    )
+    connection.execute("DELETE FROM oauth_codes WHERE expires_at <= ? OR consumed_at IS NOT NULL", (now,))
+    connection.execute("DELETE FROM oauth_tokens WHERE expires_at <= ?", (now,))
+
+
+def oauth_register_client(client_id, metadata):
+    with _db() as connection:
+        connection.execute(
+            "INSERT INTO oauth_clients (client_id, metadata_json, created_at) VALUES (?, ?, ?) "
+            "ON CONFLICT(client_id) DO UPDATE SET metadata_json = excluded.metadata_json",
+            (client_id, json.dumps(metadata), time.time()),
+        )
+
+
+def oauth_client(client_id):
+    with _db() as connection:
+        row = connection.execute("SELECT metadata_json FROM oauth_clients WHERE client_id = ?", (client_id,)).fetchone()
+    return json.loads(row["metadata_json"]) if row else None
+
+
+def create_oauth_authorization(client_id, redirect_uri, state_value, scopes, code_challenge, resource):
+    token = secrets.token_urlsafe(24)
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        now = time.time()
+        _expire_oauth(connection, now)
+        if emergency_stop(connection):
+            connection.rollback()
+            raise PermissionError("Emergency stop is enabled")
+        connection.execute(
+            "INSERT INTO oauth_authorizations (token, client_id, redirect_uri, state, scopes_json, code_challenge, resource, created_at, status) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')",
+            (token, client_id, redirect_uri, state_value, json.dumps(scopes), code_challenge, resource, now),
+        )
+        connection.commit()
+    return token
+
+
+def pending_oauth_authorizations():
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        _expire_oauth(connection, time.time())
+        rows = connection.execute(
+            "SELECT token, client_id, redirect_uri, scopes_json, created_at FROM oauth_authorizations WHERE status = 'pending' ORDER BY created_at"
+        ).fetchall()
+        connection.commit()
+    return [{"request_id": row["token"], "client_id": row["client_id"], "redirect_uri": row["redirect_uri"], "scopes": json.loads(row["scopes_json"]), "created_at": row["created_at"]} for row in rows]
+
+
+def decide_oauth_authorization(request_id, approved):
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        now = time.time()
+        _expire_oauth(connection, now)
+        row = connection.execute("SELECT status FROM oauth_authorizations WHERE token = ?", (request_id,)).fetchone()
+        if row is None or row["status"] != "pending":
+            connection.rollback()
+            raise PermissionError("Unknown, expired, or already decided OAuth authorization")
+        connection.execute(
+            "UPDATE oauth_authorizations SET status = ?, decided_at = ? WHERE token = ?",
+            ("approved" if approved else "denied", now, request_id),
+        )
+        _record(connection, "oauth_authorization", "Gemini MCP", "approved" if approved else "denied")
+        connection.commit()
+
+
+def consume_oauth_authorization(request_id):
+    """Turn one locally approved browser request into a one-time OAuth code."""
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        now = time.time()
+        _expire_oauth(connection, now)
+        row = connection.execute("SELECT * FROM oauth_authorizations WHERE token = ? AND status = 'approved'", (request_id,)).fetchone()
+        if row is None:
+            connection.rollback()
+            return None
+        code = secrets.token_urlsafe(32)
+        connection.execute("UPDATE oauth_authorizations SET status = 'consumed', consumed_at = ? WHERE token = ?", (now, request_id))
+        connection.execute(
+            "INSERT INTO oauth_codes (token_digest, client_id, redirect_uri, scopes_json, code_challenge, resource, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (_oauth_digest(code), row["client_id"], row["redirect_uri"], row["scopes_json"], row["code_challenge"], row["resource"], now, now + OAUTH_CODE_TTL),
+        )
+        connection.commit()
+    return {"code": code, "redirect_uri": row["redirect_uri"], "state": row["state"]}
+
+
+def oauth_authorization_status(request_id):
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        _expire_oauth(connection, time.time())
+        row = connection.execute("SELECT status FROM oauth_authorizations WHERE token = ?", (request_id,)).fetchone()
+        connection.commit()
+    return row["status"] if row else "missing"
+
+
+def oauth_load_code(code):
+    with _db() as connection:
+        now = time.time()
+        _expire_oauth(connection, now)
+        row = connection.execute("SELECT * FROM oauth_codes WHERE token_digest = ? AND expires_at > ?", (_oauth_digest(code), now)).fetchone()
+    return dict(row) if row else None
+
+
+def oauth_consume_code_and_issue_tokens(code):
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        now = time.time()
+        _expire_oauth(connection, now)
+        row = connection.execute("SELECT * FROM oauth_codes WHERE token_digest = ? AND expires_at > ? AND consumed_at IS NULL", (_oauth_digest(code), now)).fetchone()
+        if row is None:
+            connection.rollback()
+            return None
+        connection.execute("UPDATE oauth_codes SET consumed_at = ? WHERE token_digest = ?", (now, row["token_digest"]))
+        grant_id, access, refresh = secrets.token_urlsafe(18), secrets.token_urlsafe(32), secrets.token_urlsafe(32)
+        scopes = row["scopes_json"]
+        connection.executemany(
+            "INSERT INTO oauth_tokens (token_digest, grant_id, token_type, client_id, scopes_json, resource, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                (_oauth_digest(access), grant_id, "access", row["client_id"], scopes, row["resource"], now, now + OAUTH_ACCESS_TOKEN_TTL),
+                (_oauth_digest(refresh), grant_id, "refresh", row["client_id"], scopes, row["resource"], now, now + OAUTH_REFRESH_TOKEN_TTL),
+            ],
+        )
+        connection.commit()
+    return {"access_token": access, "refresh_token": refresh, "client_id": row["client_id"], "scopes": json.loads(scopes), "resource": row["resource"]}
+
+
+def oauth_load_token(token, token_type):
+    with _db() as connection:
+        now = time.time()
+        _expire_oauth(connection, now)
+        row = connection.execute(
+            "SELECT * FROM oauth_tokens WHERE token_digest = ? AND token_type = ? AND expires_at > ? AND revoked_at IS NULL",
+            (_oauth_digest(token), token_type, now),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def oauth_rotate_refresh_token(refresh_token, scopes):
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        now = time.time()
+        _expire_oauth(connection, now)
+        row = connection.execute(
+            "SELECT * FROM oauth_tokens WHERE token_digest = ? AND token_type = 'refresh' AND expires_at > ? AND revoked_at IS NULL",
+            (_oauth_digest(refresh_token), now),
+        ).fetchone()
+        if row is None:
+            connection.rollback()
+            return None
+        connection.execute("UPDATE oauth_tokens SET revoked_at = ? WHERE grant_id = ? AND revoked_at IS NULL", (now, row["grant_id"]))
+        grant_id, access, refresh = secrets.token_urlsafe(18), secrets.token_urlsafe(32), secrets.token_urlsafe(32)
+        scopes_json = json.dumps(scopes)
+        connection.executemany(
+            "INSERT INTO oauth_tokens (token_digest, grant_id, token_type, client_id, scopes_json, resource, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                (_oauth_digest(access), grant_id, "access", row["client_id"], scopes_json, row["resource"], now, now + OAUTH_ACCESS_TOKEN_TTL),
+                (_oauth_digest(refresh), grant_id, "refresh", row["client_id"], scopes_json, row["resource"], now, now + OAUTH_REFRESH_TOKEN_TTL),
+            ],
+        )
+        connection.commit()
+    return {"access_token": access, "refresh_token": refresh, "client_id": row["client_id"], "scopes": scopes, "resource": row["resource"]}
+
+
+def active_oauth_grants():
+    with _db() as connection:
+        now = time.time()
+        _expire_oauth(connection, now)
+        rows = connection.execute(
+            "SELECT grant_id, client_id, created_at, expires_at FROM oauth_tokens WHERE token_type = 'refresh' AND revoked_at IS NULL AND expires_at > ? ORDER BY created_at DESC",
+            (now,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def revoke_oauth_grant(grant_id):
+    with _db() as connection:
+        connection.execute("UPDATE oauth_tokens SET revoked_at = ? WHERE grant_id = ? AND revoked_at IS NULL", (time.time(), grant_id))
 
 
 def _command_digest(argv, cwd):
