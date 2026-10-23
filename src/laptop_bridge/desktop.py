@@ -94,6 +94,10 @@ class OnboardingWizard(QWizard):
         form.addRow("Reserved domain", self.hostname)
         help_label = QLabel("Create an authtoken in the ngrok dashboard and reserve a stable domain such as bridge.ngrok.app. The token is stored only in macOS Keychain and never written to the config file.")
         help_label.setWordWrap(True); form.addRow(help_label)
+        install_ngrok = QPushButton("Install ngrok with Homebrew")
+        install_ngrok.setToolTip("Runs: brew install ngrok/ngrok/ngrok")
+        install_ngrok.clicked.connect(self.install_ngrok)
+        form.addRow(install_ngrok)
         self.addPage(cf)
 
         caps = QWizardPage(); caps.setTitle("Choose capabilities")
@@ -112,6 +116,16 @@ class OnboardingWizard(QWizard):
         vl.addWidget(QLabel("ChatGPT and Gemini use OAuth. After setup, paste the endpoint below into each app; the first connection will ask you to approve it on this Mac."))
         vl.addWidget(self.endpoint_preview); vl.addStretch(); self.addPage(connect)
         self.hostname.textChanged.connect(lambda value: self.endpoint_preview.setText(f"https://{value.strip().strip('/')}/mcp" if value.strip() else "Your MCP endpoint will appear here"))
+
+    def install_ngrok(self):
+        if not Path("/opt/homebrew/bin/brew").exists() and not Path("/usr/local/bin/brew").exists():
+            QMessageBox.warning(self, "Homebrew not found", "Install Homebrew from brew.sh, then return here to install ngrok.")
+            return
+        brew = "/opt/homebrew/bin/brew" if Path("/opt/homebrew/bin/brew").exists() else "/usr/local/bin/brew"
+        if QProcess.startDetached(brew, ["install", "ngrok/ngrok/ngrok"]):
+            QMessageBox.information(self, "Installing ngrok", "Homebrew is installing ngrok in the background. Return to this step when it finishes.")
+        else:
+            QMessageBox.warning(self, "Could not start Homebrew", "Laptop Bridge could not start Homebrew. Run `brew install ngrok/ngrok/ngrok` in Terminal.")
 
     def accept(self):
         token = self.token.text().strip(); hostname = self.hostname.text().strip().removeprefix("https://").removeprefix("http://").strip("/")
