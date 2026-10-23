@@ -8,7 +8,7 @@ let package = Package(
         .executable(name: "LaptopBridgeApp", targets: ["LaptopBridgeApp"])
     ],
     targets: [
-        .executableTarget(name: "LaptopBridgeApp"),
+        .executableTarget(name: "LaptopBridgeApp", resources: [.process("Assets")]),
         .testTarget(name: "LaptopBridgeAppTests", dependencies: ["LaptopBridgeApp"])
     ]
 )
