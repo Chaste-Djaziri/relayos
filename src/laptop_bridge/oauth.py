@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from urllib.parse import urlencode, urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from mcp.server.auth.provider import AccessToken, AuthorizationCode, AuthorizationParams, AuthorizeError, RefreshToken, RegistrationError
 from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
@@ -120,5 +120,14 @@ class LocalApprovalOAuthProvider:
 
 
 def approval_redirect(result):
-    query = urlencode({key: value for key, value in {"code": result["code"], "state": result["state"]}.items() if value is not None})
-    return f"{result['redirect_uri']}{'&' if '?' in result['redirect_uri'] else '?'}{query}"
+    """Build the client callback without losing existing query or fragments.
+
+    ChatGPT callbacks are opaque HTTPS URLs and may already contain query
+    parameters. Constructing the URL by string concatenation can put OAuth
+    data after a fragment, which browsers never send to the server and which
+    the connector reports as missing callback data.
+    """
+    parsed = urlparse(result["redirect_uri"])
+    query = parse_qsl(parsed.query, keep_blank_values=True)
+    query.extend((key, value) for key, value in (("code", result.get("code")), ("state", result.get("state"))) if value is not None)
+    return urlunparse(parsed._replace(query=urlencode(query), fragment=""))

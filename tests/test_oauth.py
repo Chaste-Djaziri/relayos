@@ -5,7 +5,7 @@ from mcp.server.auth.provider import AuthorizationParams, AuthorizeError
 from mcp.shared.auth import OAuthClientInformationFull
 
 from laptop_bridge import state
-from laptop_bridge.oauth import LocalApprovalOAuthProvider
+from laptop_bridge.oauth import LocalApprovalOAuthProvider, approval_redirect
 
 
 @pytest.fixture(autouse=True)
@@ -91,3 +91,12 @@ def test_emergency_stop_revokes_oauth_grants():
     tokens = run(provider.exchange_authorization_code(registered, run(provider.load_authorization_code(registered, code))))
     state.set_emergency_stop(True)
     assert run(provider.load_access_token(tokens.access_token)) is None
+
+
+def test_callback_data_survives_existing_query_and_fragment():
+    callback = approval_redirect({
+        "redirect_uri": "https://chatgpt.com/connector/oauth/callback?client=relay#ignored",
+        "code": "one-time-code",
+        "state": "chatgpt-state",
+    })
+    assert callback == "https://chatgpt.com/connector/oauth/callback?client=relay&code=one-time-code&state=chatgpt-state"
