@@ -37,6 +37,7 @@ final class BridgeModel: ObservableObject {
     @Published var projectTools = false
     @Published var ngrokToken = ""
     @Published var ngrokDomainValue = ""
+    @Published var ngrokInstallState = ""
 
     private let configURL: URL
     private var server: Process?
@@ -127,9 +128,20 @@ final class BridgeModel: ObservableObject {
     func setEmergencyStop(_ value: Bool) { emergencyStop = value }
 
     func installNgrok() {
+        if FileManager.default.isExecutableFile(atPath: "/opt/homebrew/bin/ngrok") || FileManager.default.isExecutableFile(atPath: "/usr/local/bin/ngrok") {
+            ngrokInstallState = "ngrok is already installed."
+            return
+        }
         let brew = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"].first { FileManager.default.isExecutableFile(atPath: $0) }
-        guard let brew else { return }
-        let process = Process(); process.executableURL = URL(fileURLWithPath: brew); process.arguments = ["install", "ngrok/ngrok/ngrok"]; try? process.run()
+        guard let brew else { ngrokInstallState = "Homebrew was not found. Install it from brew.sh."; return }
+        ngrokInstallState = "Installing ngrok…"
+        let process = Process(); process.executableURL = URL(fileURLWithPath: brew); process.arguments = ["install", "ngrok/ngrok/ngrok"]
+        process.terminationHandler = { [weak self] process in
+            Task { @MainActor in
+                self?.ngrokInstallState = process.terminationStatus == 0 ? "ngrok installed successfully." : "ngrok installation failed. Try again or use Terminal."
+            }
+        }
+        try? process.run()
     }
 
     func configureNgrok() {
@@ -278,11 +290,17 @@ struct FreshSetupView: View {
             Image(systemName: "link.circle.fill").font(.system(size: 42)).foregroundStyle(.blue)
             Text("Set up Laptop Bridge").font(.largeTitle.bold())
             Text("Create a private HTTPS MCP endpoint for ChatGPT, Gemini, and other MCP clients.").foregroundStyle(.secondary)
+            HStack(spacing: 16) {
+                Link("Get authtoken", destination: URL(string: "https://dashboard.ngrok.com/get-started/your-authtoken")!)
+                Link("Reserve a domain", destination: URL(string: "https://dashboard.ngrok.com/domains")!)
+            }.font(.callout)
             Form {
                 Section("ngrok connection") {
                     SecureField("ngrok authtoken", text: $model.ngrokToken)
                     TextField("Reserved domain (example.ngrok.app)", text: $model.ngrokDomainValue)
                     Text("Reserve a domain in the ngrok dashboard. Your token is stored only in macOS Keychain.").font(.caption).foregroundStyle(.secondary)
+                    if model.ngrokInstallState == "Installing ngrok…" { ProgressView("Installing ngrok…") }
+                    else if !model.ngrokInstallState.isEmpty { Text(model.ngrokInstallState).font(.caption).foregroundStyle(model.ngrokInstallState.contains("successfully") || model.ngrokInstallState.contains("already") ? .green : .red) }
                 }
                 Section {
                     HStack {
