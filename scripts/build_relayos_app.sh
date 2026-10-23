@@ -43,7 +43,7 @@ cp Native/LaptopBridgeApp/.build/arm64-apple-macosx/release/LaptopBridgeApp "$AP
   --name RelayOSMCPServer \
   --distpath "$STAGE_DIR" --workpath "$STAGE_DIR/build" --specpath "$STAGE_DIR" \
   --paths src --hidden-import mcp.server --hidden-import mcp.server.auth \
-  --hidden-import mcp.server.transport_security src/laptop_bridge/server.py
+  --hidden-import mcp.server.transport_security packaging/relayos_server_entry.py
 cp -R "$STAGE_DIR/RelayOSMCPServer" "$APP_PATH/Contents/Resources/Runtime/"
 
 cp Native/LaptopBridgeApp/Sources/LaptopBridgeApp/Assets/relayos-white.png "$APP_PATH/Contents/Resources/relayos-white.png"
