@@ -14,6 +14,10 @@ DEFAULT = {
     "allowed_apps": {},
     "allowed_commands": {},
     "max_read_bytes": 65536,
+    # A public HTTPS origin is opt-in.  It is used for OAuth metadata and the
+    # Streamable HTTP resource identifier when a relay (such as Cloudflare
+    # Tunnel) forwards requests to this loopback-only server.
+    "public_base_url": "",
 }
 
 def load_config():
@@ -24,7 +28,21 @@ def load_config():
             CONFIG_FILE.chmod(0o600)
         except OSError:
             pass
-    return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+    config = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+    # Existing installations predate public-endpoint support.  Keep their
+    # behavior unchanged until they opt in by setting this value.
+    config.setdefault("public_base_url", "")
+    return config
+
+
+def public_base_url(config=None):
+    """Return the configured public HTTPS origin without a trailing slash."""
+    value = (config or load_config()).get("public_base_url", "").strip().rstrip("/")
+    if not value:
+        return None
+    if not value.startswith("https://") or "/" in value.removeprefix("https://"):
+        raise ValueError("public_base_url must be an HTTPS origin without a path")
+    return value
 
 def authorized_path(raw, config):
     path = Path(raw).expanduser().resolve(strict=True)
