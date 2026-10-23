@@ -1,6 +1,6 @@
 # Laptop Bridge — v0.4 Native macOS App
 
-**Status: macOS app.** Python 3.11+. On first launch, the companion walks you through Cloudflare provisioning, capability choices, and client connections. Each installation gets its own HTTPS endpoint and secrets stay in macOS Keychain; no project credentials are shipped.
+**Status: macOS app.** Python 3.11+. On first launch, the companion walks you through ngrok setup, capability choices, and client connections. Each installation gets its own HTTPS endpoint and secrets stay in macOS Keychain; no project credentials are shipped.
 
 No mouse/keyboard injection or unrestricted computer control is configured or permitted. It is not safe to expose the HTTP port publicly without a production authentication layer.
 
@@ -58,7 +58,7 @@ Build the native package locally with:
 swift build --package-path Native/LaptopBridgeApp
 ```
 
-The native target currently supervises the existing Python MCP/OAuth listener on `127.0.0.1:8765` and the existing Cloudflare tunnel while the Swift edge proxy and OAuth service are migrated.
+The native target currently supervises the existing Python MCP/OAuth listener on `127.0.0.1:8765` and the configured ngrok agent while the Swift edge proxy and OAuth service are migrated.
 
 ## macOS Screen Recording Permissions
 
