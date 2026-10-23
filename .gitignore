@@ -18,6 +18,7 @@ htmlcov/
 # Build and packaging output
 dist/
 build/
+.build/
 
 # macOS metadata
 .DS_Store
