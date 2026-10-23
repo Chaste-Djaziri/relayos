@@ -7,11 +7,10 @@ struct LaptopBridgeApp: App {
     @StateObject private var model = BridgeModel()
 
     init() {
-        // SwiftPM resources do not automatically become the Dock icon. Set it
-        // explicitly so the native app and its menu-bar companion share the
-        // RelayOS identity.
-        if let url = Bundle.module.url(forResource: "relayos-white", withExtension: "png"),
-           let image = NSImage(contentsOf: url) {
+        // Use a native macOS glyph for both surfaces. Status-item images are
+        // rendered as template masks, so bitmap logos can disappear against
+        // the menu bar; the system mouse glyph remains visible in every theme.
+        if let image = NSImage(systemSymbolName: "computermouse.fill", accessibilityDescription: "RelayOS") {
             NSApplication.shared.applicationIconImage = image
         }
     }
@@ -32,10 +31,7 @@ struct LaptopBridgeApp: App {
             QuickPanel(model: model)
                 .frame(width: 360)
         } label: {
-            Image("relayos-white", bundle: .module)
-                .renderingMode(.original)
-                .resizable()
-                .scaledToFit()
+            Image(systemName: "computermouse.fill")
                 .frame(width: 18, height: 18)
                 .accessibilityLabel("RelayOS")
         }
