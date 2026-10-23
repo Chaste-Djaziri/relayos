@@ -95,6 +95,12 @@ def public_base_url(config=None):
 def authorized_path(raw, config):
     path = Path(raw).expanduser().resolve(strict=True)
     roots = [Path(p).expanduser().resolve(strict=True) for p in config["allowed_folders"]]
-    if not any(path == root or root in path.parents for root in roots):
+    granted = False
+    try:
+        from .state import folder_granted
+        granted = folder_granted(path)
+    except Exception:
+        granted = False
+    if not granted and not any(path == root or root in path.parents for root in roots):
         raise PermissionError("Path outside authorized folders")
     return path
