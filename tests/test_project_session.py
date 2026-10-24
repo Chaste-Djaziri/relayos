@@ -66,6 +66,14 @@ def test_project_session_creates_an_approved_new_root(tmp_path):
     assert server.write_project_file(session["session_id"], "src/main.py", "print('ready')\n")["bytes_written"] == 15
 
 
+def test_project_session_relative_path_is_anchored_at_home(tmp_path, monkeypatch):
+    monkeypatch.setattr(server.Path, "home", classmethod(lambda cls: tmp_path))
+
+    proposal = server.propose_project_session("Documents/github/new-project")
+
+    assert proposal["project_root"] == str(tmp_path / "Documents" / "github" / "new-project")
+
+
 def test_project_session_expiry_at_60_minutes(project_dir, monkeypatch):
     res = server.propose_project_session(str(project_dir))
     state.approve(res["request_id"])

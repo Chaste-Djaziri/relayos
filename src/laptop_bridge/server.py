@@ -310,7 +310,11 @@ def _requested_project_root(project_path: str) -> Path:
     """
     candidate = Path(project_path).expanduser()
     if not candidate.is_absolute():
-        candidate = Path.cwd() / candidate
+        # MCP clients commonly send familiar workspace paths such as
+        # "Documents/github/name".  A daemon's working directory is an
+        # implementation detail, so make relative user paths unambiguous by
+        # anchoring them at the logged-in user's home directory.
+        candidate = Path.home() / candidate
     candidate = candidate.resolve(strict=False)
     if candidate.exists() and not candidate.is_dir():
         raise ValueError("Project path must be a directory or a new directory path")
