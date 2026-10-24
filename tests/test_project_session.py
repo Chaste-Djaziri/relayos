@@ -211,8 +211,9 @@ def test_run_project_command_security_and_caps(project_dir):
 
     # Commands require an exact one-use ChatGPT approval before execution.
     argv = ["echo", "test-bridge"]
-    with pytest.raises(PermissionError, match="Command approval required"):
-        server.run_project_command(session_id, argv)
+    unapproved = server.run_project_command(session_id, argv)
+    assert unapproved["executed"] is False
+    assert unapproved["requires_authorization"] is True
     permission = server.authorize_project_command(session_id, argv)
     cmd_res = server.run_project_command(session_id, argv, authorization_token=permission["authorization_token"])
     assert cmd_res["exit_code"] == 0
@@ -243,11 +244,20 @@ def test_one_use_command_grant_is_exact_and_single_use(project_dir):
     authorization = server.authorize_project_command(session_id, argv)
     token = authorization["authorization_token"]
 
-    with pytest.raises(PermissionError, match="mismatched"):
-        server.run_project_command(session_id, ["echo", "different"], authorization_token=token)
+    mismatched = server.run_project_command(session_id, ["echo", "different"], authorization_token=token)
+    assert mismatched["requires_authorization"] is True
     assert server.run_project_command(session_id, argv, authorization_token=token)["exit_code"] == 0
-    with pytest.raises(PermissionError, match="already-used"):
-        server.run_project_command(session_id, argv, authorization_token=token)
+    used = server.run_project_command(session_id, argv, authorization_token=token)
+    assert used["requires_authorization"] is True
+
+
+def test_project_relative_executable_is_resolved_from_command_cwd(project_dir):
+    executable = project_dir / "node_modules" / ".bin" / "tool"
+    executable.parent.mkdir(parents=True)
+    executable.write_text("#!/bin/sh\necho local-tool\n", encoding="utf-8")
+    executable.chmod(0o755)
+
+    assert server._resolve_executable("./node_modules/.bin/tool", project_dir) == str(executable.resolve())
 
 
 def test_persistent_command_grant_allows_arguments_in_project_and_can_be_revoked(project_dir):
@@ -264,8 +274,7 @@ def test_persistent_command_grant_allows_arguments_in_project_and_can_be_revoked
     assert saved[0]["project_root"] == str(project_dir.resolve())
 
     server.revoke_saved_command_grant(saved[0]["token"])
-    with pytest.raises(PermissionError, match="Command approval required"):
-        server.run_project_command(session_id, ["echo", "after revoke"])
+    assert server.run_project_command(session_id, ["echo", "after revoke"])["requires_authorization"] is True
 
 
 def test_saved_command_grant_is_project_scoped_and_emergency_stop_blocks_it(project_dir, tmp_path):
@@ -279,8 +288,7 @@ def test_saved_command_grant_is_project_scoped_and_emergency_stop_blocks_it(proj
     second = server.propose_project_session(str(other_root))
     state.approve(second["request_id"])
     second_session = server.project_session_status(second["request_id"])["session_id"]
-    with pytest.raises(PermissionError, match="Command approval required"):
-        server.run_project_command(second_session, ["echo", "not allowed"])
+    assert server.run_project_command(second_session, ["echo", "not allowed"])["requires_authorization"] is True
 
     state.set_emergency_stop(True)
     with pytest.raises(PermissionError, match="Emergency stop"):
