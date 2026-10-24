@@ -114,6 +114,24 @@ def test_folder_grants_are_case_insensitive_for_existing_path_components(tmp_pat
     assert active[0]["scope"] == str(project_dir)
 
 
+def test_existing_folder_grants_are_migrated_to_canonical_path(tmp_path):
+    project_dir = tmp_path / "GitHub" / "Bika"
+    project_dir.mkdir(parents=True)
+    legacy_scope = str(tmp_path / "github" / "bika")
+
+    # Simulate a grant written by RelayOS before path normalization existed.
+    with state._db() as connection:
+        connection.execute(
+            "INSERT INTO permission_grants VALUES (?, 'folder', 'persistent', ?, ?, ?, NULL, NULL)",
+            ("legacy-grant", legacy_scope, '{\"folder\": \"legacy\"}', time.time()),
+        )
+    state._INITIALIZED_DBS.discard(str(state.DATABASE_FILE))
+
+    assert state.folder_granted(project_dir)
+    active = state.active_permission_grants()
+    assert active[0]["scope"] == str(project_dir)
+
+
 def test_project_session_expiry_at_60_minutes(project_dir, monkeypatch):
     res = server.propose_project_session(str(project_dir))
     state.approve(res["request_id"])

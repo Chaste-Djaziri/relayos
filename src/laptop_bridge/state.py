@@ -23,6 +23,33 @@ OAUTH_REFRESH_TOKEN_TTL = 30 * 24 * 60 * 60
 _INITIALIZED_DBS = set()
 
 
+def normalize_folder_scope(folder):
+    """Return a stable folder scope on case-insensitive macOS volumes.
+
+    MCP clients often disagree on `GitHub` versus `github`.  Resolve every
+    existing path component against the directory's actual entry name so those
+    spellings share one persistent grant instead of producing duplicates.
+    """
+    candidate = Path(folder).expanduser()
+    if not candidate.is_absolute():
+        candidate = Path.home() / candidate
+    candidate = candidate.resolve(strict=False)
+    current = Path(candidate.anchor)
+    parts = candidate.parts[1:]
+    for index, part in enumerate(parts):
+        if current.is_dir():
+            try:
+                match = next((entry for entry in current.iterdir() if entry.name.casefold() == part.casefold()), None)
+            except OSError:
+                match = None
+            if match is not None:
+                current = match
+                continue
+        current = current.joinpath(*parts[index:])
+        break
+    return str(current.resolve(strict=False))
+
+
 @contextmanager
 def _db():
     STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -108,6 +135,19 @@ def _db():
             connection.execute("CREATE INDEX IF NOT EXISTS command_grants_lookup ON command_grants(project_root, executable, grant_type, revoked_at)")
             connection.execute("CREATE INDEX IF NOT EXISTS permission_grants_scope ON permission_grants(grant_type, scope, revoked_at)")
             connection.execute("CREATE INDEX IF NOT EXISTS oauth_tokens_lookup ON oauth_tokens(token_digest, token_type, revoked_at)")
+            # Rewrite grants made before path normalization, then deduplicate.
+            # On default macOS volumes GitHub and github are the same folder,
+            # but SQLite string comparison treated them as separate grants.
+            old_scopes = connection.execute(
+                "SELECT token, scope FROM permission_grants WHERE grant_type = 'folder' AND revoked_at IS NULL"
+            ).fetchall()
+            for row in old_scopes:
+                scope = normalize_folder_scope(row["scope"])
+                if scope != row["scope"]:
+                    connection.execute(
+                        "UPDATE permission_grants SET scope = ?, details_json = ? WHERE token = ?",
+                        (scope, json.dumps({"folder": scope}), row["token"]),
+                    )
             # Older companions inserted a new persistent row each time a user
             # chose "always allow" for the same folder. Keep one canonical
             # live grant per scope and mark redundant rows revoked.
@@ -677,33 +717,6 @@ def folder_granted(folder):
             "SELECT 1 FROM permission_grants WHERE grant_type = 'folder' AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND (? = scope OR ? LIKE scope || '/%') ORDER BY created_at DESC LIMIT 1",
             (now, path, path)).fetchone()
     return row is not None
-
-
-def normalize_folder_scope(folder):
-    """Return a stable folder scope on case-insensitive macOS volumes.
-
-    MCP clients often disagree on `GitHub` versus `github`.  Resolve every
-    existing path component against the directory's actual entry name so those
-    spellings share one persistent grant instead of producing duplicates.
-    """
-    candidate = Path(folder).expanduser()
-    if not candidate.is_absolute():
-        candidate = Path.home() / candidate
-    candidate = candidate.resolve(strict=False)
-    current = Path(candidate.anchor)
-    parts = candidate.parts[1:]
-    for index, part in enumerate(parts):
-        if current.is_dir():
-            try:
-                match = next((entry for entry in current.iterdir() if entry.name.casefold() == part.casefold()), None)
-            except OSError:
-                match = None
-            if match is not None:
-                current = match
-                continue
-        current = current.joinpath(*parts[index:])
-        break
-    return str(current.resolve(strict=False))
 
 
 def active_permission_grants():
