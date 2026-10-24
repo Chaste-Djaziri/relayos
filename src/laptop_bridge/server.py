@@ -343,8 +343,18 @@ def propose_project_session(project_path: str) -> dict:
 
 @mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False))
 def approve_project_session(request_id: str) -> dict:
-    """Approve and activate the exact pending 60-minute folder session in ChatGPT."""
-    approve_request(request_id)
+    """Approve and activate the exact pending 60-minute folder session in ChatGPT.
+
+    Clients may replay a confirmation after reconnecting.  Activation is
+    idempotent, so return the existing active session rather than treating a
+    repeated approval as a transport-breaking tool error.
+    """
+    try:
+        approve_request(request_id)
+    except PermissionError:
+        # activate_project_session returns an existing active session for this
+        # request, and still rejects an unknown or expired request.
+        return activate_project_session(request_id)
     return activate_project_session(request_id)
 
 

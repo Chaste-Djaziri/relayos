@@ -49,6 +49,16 @@ def test_project_session_approval_and_activation(project_dir):
     assert sess["root"] == str(project_dir.resolve())
 
 
+def test_approve_project_session_is_idempotent_after_reconnect(project_dir):
+    proposal = server.propose_project_session(str(project_dir))
+
+    first = server.approve_project_session(proposal["request_id"])
+    second = server.approve_project_session(proposal["request_id"])
+
+    assert second["session_id"] == first["session_id"]
+    assert second["root"] == str(project_dir.resolve())
+
+
 def test_project_session_creates_an_approved_new_root(tmp_path):
     project_dir = tmp_path / "Documents" / "new-coding-project"
 
