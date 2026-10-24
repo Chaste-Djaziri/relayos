@@ -301,20 +301,40 @@ def _session_path(session_id, raw_path, must_exist=True):
     return session, resolved
 
 
+def _requested_project_root(project_path: str) -> Path:
+    """Validate a requested project root without requiring it to exist yet.
+
+    Coding agents commonly need an empty destination for a new project.  The
+    destination remains only a *request* until the person approves it; root
+    creation happens during session activation, never while proposing access.
+    """
+    candidate = Path(project_path).expanduser()
+    if not candidate.is_absolute():
+        candidate = Path.cwd() / candidate
+    candidate = candidate.resolve(strict=False)
+    if candidate.exists() and not candidate.is_dir():
+        raise ValueError("Project path must be a directory or a new directory path")
+    ancestor = candidate
+    while not ancestor.exists():
+        ancestor = ancestor.parent
+    if not ancestor.is_dir():
+        raise ValueError("Project path must have a directory ancestor")
+    return candidate
+
+
 @mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False))
 def propose_project_session(project_path: str) -> dict:
-    """Request a 60-minute coding session for this exact existing folder.
+    """Request a 60-minute coding session for an exact project folder.
 
     This grants direct read, list, write, patch, and command capabilities within
-    the selected root. ChatGPT should request user confirmation before calling.
+    the selected root. A new root is created only after approval. ChatGPT should
+    request user confirmation before calling.
     """
-    root = Path(project_path).expanduser().resolve(strict=True)
-    if not root.is_dir():
-        raise ValueError("Project path must be an existing directory")
+    root = _requested_project_root(project_path)
     if emergency_stop():
         raise PermissionError("Emergency stop is enabled")
     token = request("project_session", {"target": str(root), "argv": []})
-    return {"request_id": token, "project_root": str(root), "expires_in_seconds": 300, "message": "Confirm this folder-access request in ChatGPT. If the client cannot present confirmations, approve it in the RelayOS companion, then call project_session_status."}
+    return {"request_id": token, "project_root": str(root), "will_create_project_root": not root.exists(), "expires_in_seconds": 300, "message": "Confirm this folder-access request in ChatGPT. If the client cannot present confirmations, approve it in the RelayOS companion, then call project_session_status."}
 
 
 @mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False))

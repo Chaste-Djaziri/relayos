@@ -49,6 +49,23 @@ def test_project_session_approval_and_activation(project_dir):
     assert sess["root"] == str(project_dir.resolve())
 
 
+def test_project_session_creates_an_approved_new_root(tmp_path):
+    project_dir = tmp_path / "Documents" / "new-coding-project"
+
+    proposal = server.propose_project_session(str(project_dir))
+
+    assert proposal["project_root"] == str(project_dir)
+    assert proposal["will_create_project_root"] is True
+    assert not project_dir.exists()
+
+    state.approve(proposal["request_id"])
+    session = server.project_session_status(proposal["request_id"])
+
+    assert project_dir.is_dir()
+    assert session["root"] == str(project_dir.resolve())
+    assert server.write_project_file(session["session_id"], "src/main.py", "print('ready')\n")["bytes_written"] == 15
+
+
 def test_project_session_expiry_at_60_minutes(project_dir, monkeypatch):
     res = server.propose_project_session(str(project_dir))
     state.approve(res["request_id"])

@@ -5,6 +5,7 @@ import secrets
 import sqlite3
 import time
 from contextlib import contextmanager
+from pathlib import Path
 
 from .config import DATABASE_FILE, STATE_DIR
 
@@ -258,6 +259,14 @@ def activate_project_session(request_id):
         raise
     if item["kind"] != "project_session":
         raise PermissionError("Request is not a project-session approval")
+    root = Path(item["details"]["target"])
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        raise PermissionError(f"Could not create approved project root: {error}") from error
+    if not root.is_dir():
+        raise PermissionError("Approved project root is not a directory")
+    root = root.resolve(strict=True)
     token = secrets.token_urlsafe(18)
     now = time.time()
     with _db() as connection:
@@ -267,11 +276,11 @@ def activate_project_session(request_id):
             raise PermissionError("Emergency stop is enabled")
         connection.execute(
             "INSERT INTO project_sessions (token, root, created_at, expires_at, status, decided_at, request_id) VALUES (?, ?, ?, ?, 'active', ?, ?)",
-            (token, item["details"]["target"], now, now + PROJECT_SESSION_TTL, now, request_id),
+            (token, str(root), now, now + PROJECT_SESSION_TTL, now, request_id),
         )
-        _record(connection, "project_session", item["details"]["target"], "approved")
+        _record(connection, "project_session", str(root), "approved")
         connection.commit()
-    return {"session_id": token, "root": item["details"]["target"], "expires_at": now + PROJECT_SESSION_TTL}
+    return {"session_id": token, "root": str(root), "expires_at": now + PROJECT_SESSION_TTL}
 
 
 def project_session(session_id):
