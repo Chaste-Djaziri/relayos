@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import Security
+import Darwin
 
 final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
@@ -138,8 +139,34 @@ final class BridgeModel: ObservableObject {
         }
     }
 
+    /// A separately supervised local server (for example, the LaunchAgent
+    /// used by development installs) already owns this endpoint. Starting a
+    /// second helper would make it exit on EADDRINUSE and falsely toggle the
+    /// companion UI between Running and Stopped.
+    private func localServerIsListening() -> Bool {
+        let descriptor = socket(AF_INET, SOCK_STREAM, 0)
+        guard descriptor >= 0 else { return false }
+        defer { close(descriptor) }
+
+        var address = sockaddr_in()
+        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_port = in_port_t(8765).bigEndian
+        guard "127.0.0.1".withCString({ inet_pton(AF_INET, $0, &address.sin_addr) }) == 1 else { return false }
+        return withUnsafePointer(to: &address) { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                connect(descriptor, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) == 0
+            }
+        }
+    }
+
     func startServices() {
         guard server == nil else { return }
+        if localServerIsListening() {
+            running = true
+            startTunnelIfConfigured()
+            return
+        }
         let process = Process()
         let bundledHelper = Bundle.main.resourceURL?
             .appendingPathComponent("Runtime/RelayOSMCPServer")
@@ -174,9 +201,16 @@ final class BridgeModel: ObservableObject {
     }
 
     func restartServices() {
+        let ownsServer = server != nil
         server?.terminate(); tunnel?.terminate(); server = nil; tunnel = nil
         running = false; tunnelRunning = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { self.startServices() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            if ownsServer { self.startServices() }
+            else {
+                self.running = self.localServerIsListening()
+                self.startTunnelIfConfigured()
+            }
+        }
     }
 
     func restartPythonServer() {
