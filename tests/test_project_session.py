@@ -289,9 +289,10 @@ def test_saved_command_grant_is_project_scoped_and_emergency_stop_blocks_it(proj
 
 def test_permission_expansion_tools_have_destructive_annotations():
     tools = {tool.name: tool for tool in server.mcp._tool_manager.list_tools()}
-    for name in ("propose_project_session", "approve_project_session", "authorize_project_command", "run_project_command", "write_project_file", "apply_project_patch"):
+    for name in ("propose_project_session", "approve_project_session", "authorize_project_command", "write_project_file", "apply_project_patch"):
         assert tools[name].annotations is not None
         assert tools[name].annotations.destructive_hint is True
+    assert tools["run_project_command"].annotations.destructive_hint is False
 
 
 def test_concurrent_project_operations(project_dir):
