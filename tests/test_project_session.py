@@ -103,6 +103,17 @@ def test_grant_folder_replaces_an_existing_active_grant(project_dir):
     assert first != second
 
 
+def test_folder_grants_are_case_insensitive_for_existing_path_components(tmp_path):
+    project_dir = tmp_path / "GitHub" / "Bika"
+    project_dir.mkdir(parents=True)
+
+    state.grant_folder(str(tmp_path / "github" / "bika"))
+
+    assert state.folder_granted(project_dir)
+    active = state.active_permission_grants()
+    assert active[0]["scope"] == str(project_dir)
+
+
 def test_project_session_expiry_at_60_minutes(project_dir, monkeypatch):
     res = server.propose_project_session(str(project_dir))
     state.approve(res["request_id"])

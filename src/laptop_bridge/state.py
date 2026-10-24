@@ -656,7 +656,7 @@ def grant_folder(folder, duration="persistent"):
     """Persist an exact-folder grant; descendants are authorized by the caller."""
     if duration not in {"once", "session", "persistent"}:
         raise ValueError("duration must be once, session, or persistent")
-    scope = str(Path(folder).expanduser().resolve(strict=False))
+    scope = normalize_folder_scope(folder)
     token = secrets.token_urlsafe(24); now = time.time()
     with _db() as connection:
         connection.execute(
@@ -670,13 +670,40 @@ def grant_folder(folder, duration="persistent"):
 
 
 def folder_granted(folder):
-    path = str(folder)
+    path = normalize_folder_scope(folder)
     with _db() as connection:
         now = time.time()
         row = connection.execute(
             "SELECT 1 FROM permission_grants WHERE grant_type = 'folder' AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND (? = scope OR ? LIKE scope || '/%') ORDER BY created_at DESC LIMIT 1",
             (now, path, path)).fetchone()
     return row is not None
+
+
+def normalize_folder_scope(folder):
+    """Return a stable folder scope on case-insensitive macOS volumes.
+
+    MCP clients often disagree on `GitHub` versus `github`.  Resolve every
+    existing path component against the directory's actual entry name so those
+    spellings share one persistent grant instead of producing duplicates.
+    """
+    candidate = Path(folder).expanduser()
+    if not candidate.is_absolute():
+        candidate = Path.home() / candidate
+    candidate = candidate.resolve(strict=False)
+    current = Path(candidate.anchor)
+    parts = candidate.parts[1:]
+    for index, part in enumerate(parts):
+        if current.is_dir():
+            try:
+                match = next((entry for entry in current.iterdir() if entry.name.casefold() == part.casefold()), None)
+            except OSError:
+                match = None
+            if match is not None:
+                current = match
+                continue
+        current = current.joinpath(*parts[index:])
+        break
+    return str(current.resolve(strict=False))
 
 
 def active_permission_grants():
