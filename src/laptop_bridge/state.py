@@ -106,7 +106,22 @@ def _db():
             );
             """)
             connection.execute("CREATE INDEX IF NOT EXISTS command_grants_lookup ON command_grants(project_root, executable, grant_type, revoked_at)")
+            connection.execute("CREATE INDEX IF NOT EXISTS permission_grants_scope ON permission_grants(grant_type, scope, revoked_at)")
             connection.execute("CREATE INDEX IF NOT EXISTS oauth_tokens_lookup ON oauth_tokens(token_digest, token_type, revoked_at)")
+            # Older companions inserted a new persistent row each time a user
+            # chose "always allow" for the same folder. Keep one canonical
+            # live grant per scope and mark redundant rows revoked.
+            connection.execute("""
+                UPDATE permission_grants SET revoked_at = ? WHERE token IN (
+                    SELECT token FROM (
+                        SELECT token, ROW_NUMBER() OVER (
+                            PARTITION BY grant_type, scope ORDER BY created_at DESC
+                        ) AS duplicate_rank
+                        FROM permission_grants
+                        WHERE revoked_at IS NULL
+                    ) WHERE duplicate_rank > 1
+                )
+            """, (time.time(),))
             _INITIALIZED_DBS.add(db_path)
             try:
                 connection.execute("ALTER TABLE project_sessions ADD COLUMN request_id TEXT")
@@ -279,6 +294,31 @@ def activate_project_session(request_id):
             (token, str(root), now, now + PROJECT_SESSION_TTL, now, request_id),
         )
         _record(connection, "project_session", str(root), "approved")
+        connection.commit()
+    return {"session_id": token, "root": str(root), "expires_at": now + PROJECT_SESSION_TTL}
+
+
+def activate_granted_project_session(root):
+    """Create a session directly when an exact persistent folder grant exists."""
+    root = Path(root).expanduser().resolve(strict=False)
+    if emergency_stop():
+        raise PermissionError("Emergency stop is enabled")
+    if not folder_granted(root):
+        raise PermissionError("Folder does not have a persistent permission grant")
+    root.mkdir(parents=True, exist_ok=True)
+    root = root.resolve(strict=True)
+    token = secrets.token_urlsafe(18)
+    now = time.time()
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        if emergency_stop(connection):
+            connection.rollback()
+            raise PermissionError("Emergency stop is enabled")
+        connection.execute(
+            "INSERT INTO project_sessions (token, root, created_at, expires_at, status, decided_at, request_id) VALUES (?, ?, ?, ?, 'active', ?, NULL)",
+            (token, str(root), now, now + PROJECT_SESSION_TTL, now),
+        )
+        _record(connection, "project_session", str(root), "persistent_grant_reused")
         connection.commit()
     return {"session_id": token, "root": str(root), "expires_at": now + PROJECT_SESSION_TTL}
 
@@ -616,10 +656,15 @@ def grant_folder(folder, duration="persistent"):
     """Persist an exact-folder grant; descendants are authorized by the caller."""
     if duration not in {"once", "session", "persistent"}:
         raise ValueError("duration must be once, session, or persistent")
+    scope = str(Path(folder).expanduser().resolve(strict=False))
     token = secrets.token_urlsafe(24); now = time.time()
     with _db() as connection:
+        connection.execute(
+            "UPDATE permission_grants SET revoked_at = ? WHERE grant_type = 'folder' AND scope = ? AND revoked_at IS NULL",
+            (now, scope),
+        )
         connection.execute("INSERT INTO permission_grants VALUES (?, 'folder', ?, ?, ?, ?, NULL, NULL)",
-                           (token, duration, folder, json.dumps({"folder": folder}), now))
+                           (token, duration, scope, json.dumps({"folder": scope}), now))
         connection.commit()
     return token
 

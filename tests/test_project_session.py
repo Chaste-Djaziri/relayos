@@ -84,6 +84,25 @@ def test_project_session_relative_path_is_anchored_at_home(tmp_path, monkeypatch
     assert proposal["project_root"] == str(tmp_path / "Documents" / "github" / "new-project")
 
 
+def test_persistent_folder_permission_reuses_session_without_a_new_request(project_dir):
+    state.grant_folder(str(project_dir))
+
+    proposal = server.propose_project_session(str(project_dir))
+
+    assert proposal["reused_persistent_permission"] is True
+    assert state.project_session(proposal["session_id"])["root"] == str(project_dir.resolve())
+    assert state.pending_requests() == []
+
+
+def test_grant_folder_replaces_an_existing_active_grant(project_dir):
+    first = state.grant_folder(str(project_dir))
+    second = state.grant_folder(str(project_dir))
+
+    active = state.active_permission_grants()
+    assert [grant["token"] for grant in active] == [second]
+    assert first != second
+
+
 def test_project_session_expiry_at_60_minutes(project_dir, monkeypatch):
     res = server.propose_project_session(str(project_dir))
     state.approve(res["request_id"])
