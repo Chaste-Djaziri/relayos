@@ -408,9 +408,32 @@ def apply_project_patch(session_id: str, patch: str) -> dict:
     return {"applied": result.returncode == 0, "exit_code": result.returncode, "stderr": result.stderr[:8192]}
 
 
+def _coding_command_path() -> str:
+    """Return a safe PATH that also works when launchd starts the bridge.
+
+    launchd provides only the system directories by default, while developer
+    tooling installed through Homebrew or npm commonly lives elsewhere.  Keep
+    command execution explicit and shell-free, but make approved tools such
+    as node, npm, and npx discoverable in that non-interactive environment.
+    """
+    home = Path.home()
+    directories = os.environ.get("PATH", "").split(os.pathsep)
+    directories.extend(
+        str(path) for path in (
+            Path("/opt/homebrew/bin"),
+            Path("/opt/homebrew/sbin"),
+            Path("/usr/local/bin"),
+            home / ".local/bin",
+            home / ".npm-global/bin",
+            home / ".volta/bin",
+        )
+    )
+    return os.pathsep.join(dict.fromkeys(directory for directory in directories if directory))
+
+
 def _resolve_executable(name: str) -> str:
     candidate = Path(name).expanduser()
-    resolved = str(candidate.resolve()) if candidate.is_absolute() or "/" in name else shutil.which(name)
+    resolved = str(candidate.resolve()) if candidate.is_absolute() or "/" in name else shutil.which(name, path=_coding_command_path())
     if not resolved or not Path(resolved).is_file():
         raise FileNotFoundError(f"Command executable not found: {name}")
     return str(Path(resolved).resolve())
@@ -486,7 +509,9 @@ def run_project_command(
     argv = [executable, *argv[1:]]
     started = time.monotonic()
     try:
-        result = subprocess.run(argv, text=True, capture_output=True, timeout=120, shell=False, cwd=directory, stdin=subprocess.DEVNULL, check=False)
+        environment = os.environ.copy()
+        environment["PATH"] = _coding_command_path()
+        result = subprocess.run(argv, text=True, capture_output=True, timeout=120, shell=False, cwd=directory, stdin=subprocess.DEVNULL, check=False, env=environment)
     except subprocess.TimeoutExpired:
         record_result("run_project_command", session["root"], duration_ms=int((time.monotonic() - started) * 1000))
         return {"error": "Command timed out"}

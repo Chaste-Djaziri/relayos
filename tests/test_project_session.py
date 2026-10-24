@@ -207,6 +207,16 @@ def test_run_project_command_security_and_caps(project_dir):
     assert len(cap_res["stdout"]) <= 8192
 
 
+def test_coding_command_path_supports_launchd_tool_locations(monkeypatch):
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+
+    path = server._coding_command_path().split(":")
+
+    assert "/usr/bin" in path
+    assert "/opt/homebrew/bin" in path
+    assert "/usr/local/bin" in path
+
+
 def test_one_use_command_grant_is_exact_and_single_use(project_dir):
     res = server.propose_project_session(str(project_dir))
     state.approve(res["request_id"])
