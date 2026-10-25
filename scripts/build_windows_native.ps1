@@ -1,5 +1,5 @@
 param(
-    [string]$Python = ".venv\Scripts\python.exe",
+    [string]$Python = "",
     [string]$Version = "0.1.0"
 )
 
@@ -8,7 +8,21 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $root
 $env:Path = "C:\Program Files\dotnet;" + $env:Path
 
-if (-not (Test-Path $Python)) { throw "Python runtime not found: $Python" }
+if ([string]::IsNullOrWhiteSpace($Python)) {
+    $Python = (Get-Command python.exe -ErrorAction Stop).Source
+} elseif (-not (Test-Path -LiteralPath $Python)) {
+    # Local developer builds commonly pass the venv path, while CI uses the
+    # interpreter installed by actions/setup-python. Fall back to that runner
+    # interpreter when the local venv does not exist.
+    $runnerPython = Get-Command python.exe -ErrorAction SilentlyContinue
+    if ($runnerPython) {
+        Write-Host "Python runtime '$Python' was not found; using $($runnerPython.Source)."
+        $Python = $runnerPython.Source
+    } else {
+        throw "Python runtime not found: $Python"
+    }
+}
+Write-Host "Using Python runtime: $Python"
 & $Python -m pip install --upgrade pip
 & $Python -m pip install -e ".[dev]"
 
