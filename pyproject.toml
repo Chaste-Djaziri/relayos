@@ -7,7 +7,7 @@ name = "laptop-bridge"
 version = "0.1.0"
 description = "Permission-gated local laptop MCP agent for macOS and Windows"
 requires-python = ">=3.11"
-dependencies = ["mcp>=2,<3", "psutil>=6,<9", "PySide6>=6.8,<7", "pyobjc-framework-Cocoa>=10; sys_platform == 'darwin'"]
+dependencies = ["mcp>=2,<3", "psutil>=6,<9", "PySide6>=6.8,<7", "pyobjc-framework-Cocoa>=10; sys_platform == 'darwin'", "pynput>=1.7,<2; sys_platform == 'win32'"]
 
 [project.scripts]
 laptop-bridge = "laptop_bridge.server:main"
