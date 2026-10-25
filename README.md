@@ -26,7 +26,7 @@ python -m pip install -e '.[dev]'
 laptop-bridge-desktop
 ```
 
-The desktop companion starts the Streamable HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`. Its menu shows server status, overlay status, active coding sessions, folder picker for sessions, guidance controls, local history/settings window, server restart, and an emergency stop.
+The desktop companion starts the Streamable HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`. Its controls expose server and overlay status, active coding sessions, a folder picker, guidance controls, local history/settings, server restart, and an emergency stop. macOS also offers these controls from its menu-bar companion.
 
 ## Windows 10/11
 
