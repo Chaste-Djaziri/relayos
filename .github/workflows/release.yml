@@ -61,7 +61,7 @@ jobs:
             throw "Windows App SDK runtime binaries were not staged"
           }
           if (Test-Path (Join-Path $stage "WindowsAppRuntimeInstall.exe")) { throw "Framework-dependent runtime installer must not be bundled" }
-          if (-not (Test-Path "dist\installer\RelayOS-Setup-0.1.0.exe")) { throw "Expected RelayOS Setup installer was not produced" }
+          if (-not (Get-ChildItem "dist\installer\RelayOS-Setup-*.exe" -ErrorAction SilentlyContinue)) { throw "Expected RelayOS Setup installer was not produced" }
       - uses: actions/upload-artifact@v4
         with:
           name: RelayOS-Windows
