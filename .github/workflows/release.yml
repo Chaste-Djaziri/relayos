@@ -50,6 +50,18 @@ jobs:
           $version = "0.1.0"
           if ("${{ github.ref }}" -like "refs/tags/v*") { $version = "${{ github.ref_name }}".Substring(1) }
           .\scripts\build_windows_native.ps1 -Version $version
+      - name: Verify self-contained Windows payload
+        shell: pwsh
+        run: |
+          $stage = "dist\windows-native\RelayOS"
+          foreach ($asset in @("RelayOSWindows.exe", "Microsoft.UI.Xaml.dll", "RelayOSWindows.pri", "Runtime\RelayOSServer.exe")) {
+            if (-not (Test-Path (Join-Path $stage $asset))) { throw "Missing self-contained payload asset: $asset" }
+          }
+          if (-not (Get-ChildItem -LiteralPath $stage -Filter "Microsoft.WindowsAppRuntime*.dll" -ErrorAction SilentlyContinue)) {
+            throw "Windows App SDK runtime binaries were not staged"
+          }
+          if (Test-Path (Join-Path $stage "WindowsAppRuntimeInstall.exe")) { throw "Framework-dependent runtime installer must not be bundled" }
+          if (-not (Test-Path "dist\installer\RelayOS-Setup-0.1.0.exe")) { throw "Expected RelayOS Setup installer was not produced" }
       - uses: actions/upload-artifact@v4
         with:
           name: RelayOS-Windows
