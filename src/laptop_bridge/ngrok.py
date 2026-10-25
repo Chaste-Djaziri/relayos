@@ -24,6 +24,17 @@ def find_executable():
         Path("/opt/homebrew/bin/ngrok"),
         Path("/usr/local/bin/ngrok"),
     ]
+    if os.name == "nt":
+        local_app_data = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local"))
+        program_files = Path(os.environ.get("ProgramFiles", r"C:\\Program Files"))
+        candidates.extend((
+            Path(__file__).resolve().parents[2] / "resources" / "ngrok.exe",
+            program_files / "ngrok" / "ngrok.exe",
+            local_app_data / "ngrok" / "ngrok.exe",
+        ))
+        winget_root = local_app_data / "Microsoft" / "WinGet" / "Packages"
+        if winget_root.is_dir():
+            candidates.extend(winget_root.glob("ngrok.ngrok*/*/ngrok.exe"))
     for candidate in candidates:
         if candidate.is_file() and os.access(candidate, os.X_OK):
             return str(candidate)
