@@ -42,19 +42,21 @@ The Windows companion is a standard main-window application: every control lives
 
 - The ngrok authtoken is stored only in the current user's Windows Credential Manager entry; it is never written to `config.json` or passed as a command-line argument.
 - Screen snapshots use the active desktop display; guidance uses a click-through, always-on-top overlay. Passive click metadata is collected only during an explicit active guidance session—no keyboard data, clicks, or commands are injected or replayed.
+- Current `RelayOS-Setup-<version>.exe` releases are self-contained x64 installers: they include .NET and Windows App SDK dependencies and do not require a separate Windows App Runtime or .NET Desktop Runtime download.
+- The old small `RelayOSWindows.exe` is a legacy framework-dependent build. If it is already downloaded, install the matching [Windows App Runtime 1.6 x64](https://aka.ms/windowsappsdk/1.6/1.6.240923002/windowsappruntimeinstall-x64.exe), then replace it with the current RelayOS Setup installer.
 - The app starts silent `winget` installs for missing ngrok and Git; if winget is unavailable, install them from the official download pages. Git for Windows is required for `apply_project_patch`.
 - Windows Privacy settings or endpoint-protection software can restrict capture or global hooks. The dashboard reports capture and passive-observation availability.
 
 ### Build and install on Windows
 
-Install Python 3.11+ and [Inno Setup 6](https://jrsoftware.org/isinfo.php). From PowerShell in the project root:
+Install Python 3.11+, the .NET 8 SDK, and [Inno Setup 6](https://jrsoftware.org/isinfo.php). From PowerShell in the project root:
 
 ```powershell
 .venv\Scripts\Activate.ps1
-./scripts/build_windows.ps1 -Python .venv\Scripts\python.exe -Version 0.1.0
+.\scripts\build_windows_native.ps1 -Python .venv\Scripts\python.exe -Version 0.1.0
 ```
 
-The installer is written to `dist\installer\LaptopBridge-Setup-<version>.exe`. It installs per user under `%LOCALAPPDATA%`, creates a Start Menu shortcut, and can optionally create a desktop shortcut. To Authenticode-sign the application executable, set `LAPTOP_BRIDGE_SIGNING_CERTIFICATE` (and, when applicable, `LAPTOP_BRIDGE_SIGNING_PASSWORD`) before building. Unsigned developer builds can trigger Microsoft Defender SmartScreen; install only builds you trust.
+The installer is written to `dist\installer\RelayOS-Setup-<version>.exe`; the portable self-contained archive is `dist\RelayOS-Windows-<version>.zip`. Both include their required x64 native dependencies. The installer installs per user under `%LOCALAPPDATA%`, creates a Start Menu shortcut, and can optionally create a desktop shortcut. Unsigned developer builds can trigger Microsoft Defender SmartScreen; install only builds you trust.
 
 ## First-run setup and client connections
 
