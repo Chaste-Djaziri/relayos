@@ -1,14 +1,23 @@
-"""macOS screen capture using ScreenCaptureKit / CoreGraphics permissions and PySide6."""
+"""On-demand display capture for the visible desktop companion."""
 import ctypes
 import ctypes.util
+import os
 import time
 
 from PySide6.QtCore import QBuffer, QIODevice, QPoint
 from PySide6.QtGui import QCursor, QGuiApplication
 
 
+def _is_windows() -> bool:
+    return os.name == "nt"
+
+
 def has_screen_recording_permission() -> bool:
-    """Check if Screen Recording permission has been granted on macOS."""
+    """Check platform capture availability without starting a capture."""
+    if _is_windows():
+        # Desktop Win32 applications do not have a per-app screen-recording
+        # consent dialog. Actual access is still verified by grabWindow below.
+        return True
     try:
         cg_path = ctypes.util.find_library("CoreGraphics")
         if not cg_path:
@@ -23,6 +32,8 @@ def has_screen_recording_permission() -> bool:
 
 def request_screen_recording_permission() -> bool:
     """Prompt macOS for Screen Recording permission if not yet determined."""
+    if _is_windows():
+        return has_screen_recording_permission()
     try:
         cg_path = ctypes.util.find_library("CoreGraphics")
         if not cg_path:
@@ -37,6 +48,10 @@ def request_screen_recording_permission() -> bool:
 
 def has_accessibility_permission() -> bool:
     """Check whether macOS Accessibility access is available to the app."""
+    if _is_windows():
+        # Low-level mouse observation is started only during an active,
+        # explicitly requested guidance session and does not need elevation.
+        return True
     if __import__("sys").platform != "darwin":
         return True
     try:
@@ -51,7 +66,13 @@ def has_accessibility_permission() -> bool:
 
 
 def open_permission_settings(kind="screen"):
-    """Open the relevant macOS Privacy & Security pane."""
+    """Open the relevant operating-system privacy/settings page."""
+    if _is_windows():
+        try:
+            os.startfile("ms-settings:privacy")  # type: ignore[attr-defined]
+        except OSError:
+            return False
+        return True
     import subprocess
     url = (
         "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
@@ -99,6 +120,27 @@ def get_frontmost_app_pid() -> int | None:
         return None
 
 
+def _windows_foreground_center() -> QPoint | None:
+    """Return the center of the foreground Win32 window, when available."""
+    if not _is_windows() or not hasattr(ctypes, "windll"):
+        return None
+    try:
+        from ctypes import wintypes
+
+        class RECT(ctypes.Structure):
+            _fields_ = [("left", wintypes.LONG), ("top", wintypes.LONG), ("right", wintypes.LONG), ("bottom", wintypes.LONG)]
+
+        hwnd = ctypes.windll.user32.GetForegroundWindow()
+        rect = RECT()
+        if not hwnd or not ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+            return None
+        if rect.right <= rect.left or rect.bottom <= rect.top:
+            return None
+        return QPoint((rect.left + rect.right) // 2, (rect.top + rect.bottom) // 2)
+    except Exception:
+        return None
+
+
 def get_active_display():
     """Find the display containing the focused app, falling back to the pointer's display."""
     screens = QGuiApplication.screens()
@@ -109,7 +151,11 @@ def get_active_display():
     cursor_pos = QCursor.pos()
     pointer_screen = QGuiApplication.screenAt(cursor_pos) or QGuiApplication.primaryScreen() or screens[0]
 
-    # Attempt to locate the focused app window display
+    if _is_windows():
+        center = _windows_foreground_center()
+        return QGuiApplication.screenAt(center) if center is not None else pointer_screen
+
+    # Attempt to locate the focused app window display on macOS.
     pid = get_frontmost_app_pid()
     if pid is not None:
         try:
@@ -184,7 +230,7 @@ def capture_snapshot(display_id: int | None = None) -> tuple[dict, bytes]:
     """
     if not has_screen_recording_permission():
         raise PermissionError(
-            "Screen Recording permission is required. Please grant Screen Recording "
+            "Screen capture permission is required. Please grant Screen Recording "
             "permission to Laptop Bridge in macOS System Settings > Privacy & Security > Screen Recording."
         )
 
