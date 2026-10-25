@@ -19,6 +19,7 @@ def test_native_windows_project_is_self_contained_x64():
 
 def test_windows_build_and_release_use_self_contained_installer_name():
     build = (ROOT / "scripts/build_windows_native.ps1").read_text(encoding="utf-8")
+    developer_publish = (ROOT / "scripts/publish_windows_native.ps1").read_text(encoding="utf-8")
     installer = (ROOT / "packaging/windows-installer.iss").read_text(encoding="utf-8")
     workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     page = (ROOT / "website/app/page.tsx").read_text(encoding="utf-8")
@@ -26,6 +27,8 @@ def test_windows_build_and_release_use_self_contained_installer_name():
     assert "-r win-x64 --self-contained true" in build
     assert "Microsoft.UI.Xaml.dll" in build
     assert "Microsoft.WindowsAppRuntime*.dll" in build
+    assert "-r win-x64 --self-contained true" in developer_publish
+    assert "win-x64\\publish" in developer_publish
     assert "OutputBaseFilename=RelayOS-Setup-{#AppVersion}" in installer
     assert "RelayOS-Setup-*.exe" in workflow
     assert "Verify self-contained Windows payload" in workflow
