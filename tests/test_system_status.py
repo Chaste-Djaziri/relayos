@@ -40,7 +40,7 @@ def test_system_status_reads_windows_battery_from_psutil(monkeypatch):
 def test_windows_command_path_includes_common_gui_tool_locations(monkeypatch):
     from laptop_bridge import server
 
-    monkeypatch.setattr(server.os, "name", "nt")
+    monkeypatch.setattr(server, "_is_windows", lambda: True)
     monkeypatch.setenv("LOCALAPPDATA", r"C:\\Users\\Test\\AppData\\Local")
     monkeypatch.setenv("ProgramFiles", r"C:\\Program Files")
 

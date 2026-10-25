@@ -40,6 +40,10 @@ from .state import (
     oauth_authorization_status, consume_oauth_authorization,
 )
 
+
+def _is_windows() -> bool:
+    return os.name == "nt"
+
 _config = load_config()
 _public_base_url = public_base_url(_config)
 _oauth_provider = LocalApprovalOAuthProvider(_public_base_url) if _public_base_url else None
@@ -452,7 +456,7 @@ def _coding_command_path() -> str:
     """
     home = Path.home()
     directories = os.environ.get("PATH", "").split(os.pathsep)
-    if os.name == "nt":
+    if _is_windows():
         local_app_data = Path(os.environ.get("LOCALAPPDATA", home / "AppData/Local"))
         program_files = Path(os.environ.get("ProgramFiles", r"C:\\Program Files"))
         directories.extend(str(path) for path in (
