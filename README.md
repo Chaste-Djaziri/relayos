@@ -1,6 +1,6 @@
-# Laptop Bridge — v0.4 Native macOS App
+# Laptop Bridge — Desktop Companion
 
-**Status: macOS app.** Python 3.11+. On first launch, the companion walks you through ngrok setup, capability choices, and client connections. Each installation gets its own HTTPS endpoint and secrets stay in macOS Keychain; no project credentials are shipped.
+**Status: macOS and Windows 10/11 companion.** Python 3.11+. On first launch, the companion walks you through ngrok setup, capability choices, and client connections. Each installation gets its own HTTPS endpoint and secrets stay in the platform credential store; no project credentials are shipped.
 
 No mouse/keyboard injection or unrestricted computer control is configured or permitted. It is not safe to expose the HTTP port publicly without a production authentication layer.
 
@@ -27,6 +27,26 @@ laptop-bridge-desktop
 ```
 
 The desktop companion starts the Streamable HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`. Its menu shows server status, overlay status, active coding sessions, folder picker for sessions, guidance controls, local history/settings window, server restart, and an emergency stop.
+
+## Windows 10/11
+
+The Windows companion is a standard main-window application: every control lives in its dashboard and closing the window stops the local MCP server and ngrok tunnel. It does not run hidden in the notification area.
+
+- The ngrok authtoken is stored only in the current user's Windows Credential Manager entry; it is never written to `config.json` or passed as a command-line argument.
+- Screen snapshots use the active desktop display; guidance uses a click-through, always-on-top overlay. Passive click metadata is collected only during an explicit active guidance session—no keyboard data, clicks, or commands are injected or replayed.
+- The setup wizard can invoke `winget install ngrok.ngrok`; if winget is unavailable, it opens the official ngrok download page. Install Git for Windows separately to use `apply_project_patch`.
+- Windows Privacy settings or endpoint-protection software can restrict capture or global hooks. The dashboard reports capture and passive-observation availability.
+
+### Build and install on Windows
+
+Install Python 3.11+ and [Inno Setup 6](https://jrsoftware.org/isinfo.php). From PowerShell in the project root:
+
+```powershell
+.venv\Scripts\Activate.ps1
+./scripts/build_windows.ps1 -Python .venv\Scripts\python.exe -Version 0.1.0
+```
+
+The installer is written to `dist\installer\LaptopBridge-Setup-<version>.exe`. It installs per user under `%LOCALAPPDATA%`, creates a Start Menu shortcut, and can optionally create a desktop shortcut. To Authenticode-sign the application executable, set `LAPTOP_BRIDGE_SIGNING_CERTIFICATE` (and, when applicable, `LAPTOP_BRIDGE_SIGNING_PASSWORD`) before building. Unsigned developer builds can trigger Microsoft Defender SmartScreen; install only builds you trust.
 
 ## First-run setup and client connections
 
