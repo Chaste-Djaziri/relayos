@@ -23,6 +23,7 @@ def test_windows_build_and_release_use_self_contained_installer_name():
     installer = (ROOT / "packaging/windows-installer.iss").read_text(encoding="utf-8")
     workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     page = (ROOT / "website/app/page.tsx").read_text(encoding="utf-8")
+    project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
     assert "-r win-x64 --self-contained true" in build
     assert "Microsoft.UI.Xaml.dll" in build
@@ -31,6 +32,9 @@ def test_windows_build_and_release_use_self_contained_installer_name():
     assert "win-x64\\publish" in developer_publish
     assert "OutputBaseFilename=RelayOS-Setup-{#AppVersion}" in installer
     assert "RelayOS-Setup-*.exe" in workflow
+    assert "RelayOS-Windows-*.zip" not in workflow
+    assert "Compress-Archive" not in build
+    assert "typer>=0.12" in project
     assert "Verify self-contained Windows payload" in workflow
     assert "RelayOS-Setup-0.1.0.exe" in page
     assert "windowsappruntimeinstall-x64.exe" in page
