@@ -230,7 +230,7 @@ def capture_snapshot(display_id: int | None = None) -> tuple[dict, bytes]:
     """
     if not has_screen_recording_permission():
         raise PermissionError(
-            "Screen capture permission is required. Please grant Screen Recording "
+            "Screen Recording permission is required. Please grant Screen Recording "
             "permission to Laptop Bridge in macOS System Settings > Privacy & Security > Screen Recording."
         )
 

@@ -4,6 +4,7 @@ import time
 
 import pytest
 from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication
 
 from laptop_bridge import capture, desktop, server, state
