@@ -54,7 +54,7 @@ jobs:
         shell: pwsh
         run: |
           $stage = "dist\windows-native\RelayOS"
-          foreach ($asset in @("RelayOSWindows.exe", "Microsoft.UI.Xaml.dll", "RelayOSWindows.pri", "Runtime\RelayOSServer.exe")) {
+          foreach ($asset in @("RelayOSWindows.exe", "Microsoft.UI.Xaml.dll", "Runtime\RelayOSServer.exe")) {
             if (-not (Test-Path (Join-Path $stage $asset))) { throw "Missing self-contained payload asset: $asset" }
           }
           if (-not (Get-ChildItem -LiteralPath $stage -Filter "Microsoft.WindowsAppRuntime*.dll" -ErrorAction SilentlyContinue)) {

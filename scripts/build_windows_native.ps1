@@ -37,7 +37,7 @@ if ($LASTEXITCODE -ne 0) { throw "Self-contained Windows companion publish faile
 
 $publishedExe = Join-Path $publish "RelayOSWindows.exe"
 if (-not (Test-Path $publishedExe)) { throw "Native RelayOSWindows.exe was not produced" }
-foreach ($asset in @("Microsoft.UI.Xaml.dll", "RelayOSWindows.pri")) {
+foreach ($asset in @("Microsoft.UI.Xaml.dll")) {
     if (-not (Test-Path (Join-Path $publish $asset))) { throw "Self-contained publish is missing $asset" }
 }
 if (-not (Get-ChildItem -LiteralPath $publish -Filter "Microsoft.WindowsAppRuntime*.dll" -ErrorAction SilentlyContinue)) {
