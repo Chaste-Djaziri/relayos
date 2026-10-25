@@ -88,6 +88,20 @@ def test_screen_capture_permission_denial(monkeypatch):
         capture.capture_snapshot()
 
 
+def test_windows_capture_permissions_are_available_without_macos_tcc(monkeypatch):
+    monkeypatch.setattr(capture, "_is_windows", lambda: True)
+
+    assert capture.has_screen_recording_permission() is True
+    assert capture.has_accessibility_permission() is True
+
+
+def test_windows_active_display_uses_foreground_window_center(qapp, monkeypatch):
+    monkeypatch.setattr(capture, "_is_windows", lambda: True)
+    monkeypatch.setattr(capture, "_windows_foreground_center", lambda: QGuiApplication.primaryScreen().geometry().center())
+
+    assert capture.get_active_display() == QGuiApplication.primaryScreen()
+
+
 def test_screen_capture_on_demand_and_transient_purge(monkeypatch):
     mock_png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDRtest"
     mock_meta = {
