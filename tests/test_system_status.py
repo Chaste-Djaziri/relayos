@@ -22,3 +22,29 @@ def test_system_status_reads_macos_battery_from_pmset(monkeypatch):
     result = server.system_status()
     assert result["battery_percent"] == 81
     assert result["battery_charging"] is True
+
+
+def test_system_status_reads_windows_battery_from_psutil(monkeypatch):
+    from laptop_bridge import server
+
+    battery = type("Battery", (), {"percent": 64.5, "power_plugged": False})()
+    monkeypatch.setattr(server.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(server.psutil, "sensors_battery", lambda: battery)
+
+    result = server.system_status()
+
+    assert result["battery_percent"] == 64.5
+    assert result["battery_charging"] is False
+
+
+def test_windows_command_path_includes_common_gui_tool_locations(monkeypatch):
+    from laptop_bridge import server
+
+    monkeypatch.setattr(server.os, "name", "nt")
+    monkeypatch.setenv("LOCALAPPDATA", r"C:\\Users\\Test\\AppData\\Local")
+    monkeypatch.setenv("ProgramFiles", r"C:\\Program Files")
+
+    value = server._coding_command_path()
+
+    assert "nodejs" in value
+    assert "Git" in value
