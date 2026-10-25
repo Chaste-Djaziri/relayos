@@ -1,5 +1,6 @@
 """Transparent, always-on-top, click-through PySide6 instructional overlay with guide cursor."""
 import math
+import os
 import time
 
 from PySide6.QtCore import QPointF, QRectF, Qt, QTimer
@@ -117,9 +118,32 @@ class GuidanceOverlay(QWidget):
             self.anim_timer.start()
 
         self.show()
-        self._setup_macos_window()
+        if os.name == "nt":
+            self._setup_windows_window()
+        else:
+            self._setup_macos_window()
         self.raise_()
         self.update()
+
+    def _setup_windows_window(self):
+        """Apply Win32 styles Qt does not consistently retain on top-level tools."""
+        if not hasattr(__import__("ctypes"), "windll"):
+            return
+        try:
+            import ctypes
+
+            user32 = ctypes.windll.user32
+            hwnd = int(self.winId())
+            get_style = getattr(user32, "GetWindowLongPtrW", user32.GetWindowLongW)
+            set_style = getattr(user32, "SetWindowLongPtrW", user32.SetWindowLongW)
+            ex_style = get_style(hwnd, -20)  # GWL_EXSTYLE
+            # Layered + transparent keeps mouse input with the foreground app;
+            # no-activate avoids stealing focus while the overlay is shown.
+            ex_style |= 0x00080000 | 0x00000020 | 0x08000000 | 0x00000080
+            set_style(hwnd, -20, ex_style)
+            user32.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010 | 0x0040)
+        except Exception:
+            pass
 
     def _setup_macos_window(self):
         """Configure macOS native NSWindow to remain visible across all spaces and apps."""
