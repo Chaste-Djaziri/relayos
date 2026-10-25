@@ -77,8 +77,4 @@ if (-not $iscc) { throw "Inno Setup 6 (ISCC.exe) is required to create the insta
 $installer = Join-Path $root "dist\installer\RelayOS-Setup-$Version.exe"
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $installer)) { throw "RelayOS installer was not produced" }
 
-$zip = Join-Path $root "dist\RelayOS-Windows-$Version.zip"
-if (Test-Path $zip) { Remove-Item -LiteralPath $zip -Force }
-Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip
 Write-Host "Windows installer: $installer"
-Write-Host "Windows portable archive: $zip"
