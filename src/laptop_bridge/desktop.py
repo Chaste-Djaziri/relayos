@@ -1,13 +1,14 @@
-"""PySide6 macOS menu-bar companion for local Laptop Bridge approvals, guidance overlay, and coding sessions."""
+"""PySide6 desktop companion for local Laptop Bridge approvals and guidance."""
 import json
 import os
+import shutil
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QLockFile, QProcess, QTimer, Qt
-from PySide6.QtGui import QAction, QFont, QIcon, QGuiApplication
+from PySide6.QtCore import QLockFile, QProcess, QTimer, Qt, QUrl
+from PySide6.QtGui import QAction, QFont, QIcon, QGuiApplication, QDesktopServices
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
@@ -20,6 +21,10 @@ from .config import STATE_DIR, load_config, update_config
 from . import keychain
 from .overlay import GuidanceOverlay
 from .input_observer import ClickObserver
+
+
+def _is_windows():
+    return os.name == "nt"
 
 
 class ApprovalDialog(QDialog):
@@ -83,7 +88,8 @@ class OnboardingWizard(QWizard):
 
         welcome = QWizardPage(); welcome.setTitle("Your private bridge")
         wl = QVBoxLayout(welcome)
-        wl.addWidget(QLabel("RelayOS runs a local MCP server and gives you a private HTTPS link for ChatGPT, Claude, Gemini, and other MCP clients.\n\nNo shared keys are shipped: this setup creates your own ngrok endpoint and stores secrets in macOS Keychain."))
+        credential_store = "Windows Credential Manager" if _is_windows() else "macOS Keychain"
+        wl.addWidget(QLabel(f"RelayOS runs a local MCP server and gives you a private HTTPS link for ChatGPT, Claude, Gemini, and other MCP clients.\n\nNo shared keys are shipped: this setup creates your own ngrok endpoint and stores secrets in {credential_store}."))
         self.addPage(welcome)
 
         cf = QWizardPage(); cf.setTitle("Connect ngrok")
@@ -92,10 +98,10 @@ class OnboardingWizard(QWizard):
         self.hostname = QLineEdit(); self.hostname.setPlaceholderText("mcp.example.com")
         form.addRow("ngrok authtoken", self.token)
         form.addRow("Reserved domain", self.hostname)
-        help_label = QLabel("Create an authtoken in the ngrok dashboard and reserve a stable domain such as bridge.ngrok.app. The token is stored only in macOS Keychain and never written to the config file.")
+        help_label = QLabel(f"Create an authtoken in the ngrok dashboard and reserve a stable domain such as bridge.ngrok.app. The token is stored only in {credential_store} and never written to the config file.")
         help_label.setWordWrap(True); form.addRow(help_label)
-        install_ngrok = QPushButton("Install ngrok with Homebrew")
-        install_ngrok.setToolTip("Runs: brew install ngrok/ngrok/ngrok")
+        install_ngrok = QPushButton("Install ngrok with winget" if _is_windows() else "Install ngrok with Homebrew")
+        install_ngrok.setToolTip("Runs: winget install ngrok.ngrok" if _is_windows() else "Runs: brew install ngrok/ngrok/ngrok")
         install_ngrok.clicked.connect(self.install_ngrok)
         form.addRow(install_ngrok)
         self.addPage(cf)
@@ -104,7 +110,8 @@ class OnboardingWizard(QWizard):
         cl = QVBoxLayout(caps)
         cl.addWidget(QLabel("Start with the smallest tool set. You can change these choices later by rerunning setup."))
         self.system_status = QCheckBox("System status (recommended)"); self.system_status.setChecked(True); self.system_status.setEnabled(False)
-        self.screen_guidance = QCheckBox("Screen guidance (requires Screen Recording and Accessibility permission)")
+        permission_text = "Screen guidance (Windows privacy settings may restrict capture)" if _is_windows() else "Screen guidance (requires Screen Recording and Accessibility permission)"
+        self.screen_guidance = QCheckBox(permission_text)
         self.project_tools = QCheckBox("Project tools (requires an approved project folder for each session)")
         for box in (self.system_status, self.screen_guidance, self.project_tools): cl.addWidget(box)
         cl.addStretch(); self.addPage(caps)
@@ -118,6 +125,16 @@ class OnboardingWizard(QWizard):
         self.hostname.textChanged.connect(lambda value: self.endpoint_preview.setText(f"https://{value.strip().strip('/')}/mcp" if value.strip() else "Your MCP endpoint will appear here"))
 
     def install_ngrok(self):
+        if _is_windows():
+            if shutil.which("winget"):
+                if QProcess.startDetached("winget", ["install", "--id", "ngrok.ngrok", "--exact", "--accept-source-agreements", "--accept-package-agreements"]):
+                    QMessageBox.information(self, "Installing ngrok", "winget is installing ngrok in the background. Return to this step when it finishes, then restart Laptop Bridge if ngrok is not found yet.")
+                else:
+                    QMessageBox.warning(self, "Could not start winget", "Run `winget install ngrok.ngrok` in PowerShell, then return here.")
+            else:
+                QDesktopServices.openUrl(QUrl("https://ngrok.com/download"))
+                QMessageBox.information(self, "Download ngrok", "winget was not found, so the official ngrok download page was opened. Install ngrok, then return here.")
+            return
         if not Path("/opt/homebrew/bin/brew").exists() and not Path("/usr/local/bin/brew").exists():
             QMessageBox.warning(self, "Homebrew not found", "Install Homebrew from brew.sh, then return here to install ngrok.")
             return
