@@ -32,7 +32,8 @@ def test_windows_build_and_release_use_self_contained_installer_name():
     assert "win-x64\\publish" in developer_publish
     assert "OutputBaseFilename=RelayOS-Setup-{#AppVersion}" in installer
     assert "RelayOS-Setup-*.exe" in workflow
-    assert "RelayOS-Windows-*.zip" not in workflow
+    assert "            dist/RelayOS-Windows-*.zip" not in workflow
+    assert "gh release delete-asset nightly" in workflow
     assert "Compress-Archive" not in build
     assert "typer>=0.12" in project
     assert "Verify self-contained Windows payload" in workflow
