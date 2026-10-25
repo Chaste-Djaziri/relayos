@@ -56,7 +56,7 @@ Install Python 3.11+, the .NET 8 SDK, and [Inno Setup 6](https://jrsoftware.org/
 .\scripts\build_windows_native.ps1 -Python .venv\Scripts\python.exe -Version 0.1.0
 ```
 
-The installer is written to `dist\installer\RelayOS-Setup-<version>.exe`; the portable self-contained archive is `dist\RelayOS-Windows-<version>.zip`. Both include their required x64 native dependencies. The installer installs per user under `%LOCALAPPDATA%`, creates a Start Menu shortcut, and can optionally create a desktop shortcut. Unsigned developer builds can trigger Microsoft Defender SmartScreen; install only builds you trust.
+The installer is written to `dist\installer\RelayOS-Setup-<version>.exe` and is the only Windows release asset. It includes the required x64 native dependencies, installs per user under `%LOCALAPPDATA%`, creates a Start Menu shortcut, and can optionally create a desktop shortcut. Unsigned developer builds can trigger Microsoft Defender SmartScreen; install only builds you trust.
 
 ## First-run setup and client connections
 
