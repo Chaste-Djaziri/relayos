@@ -41,6 +41,7 @@ def test_windows_companion_uses_visible_window_without_tray(monkeypatch):
 def test_windows_prerequisites_start_winget_for_missing_tools(monkeypatch):
     calls = []
     monkeypatch.setattr(windows_setup, "is_windows", lambda: True)
+    monkeypatch.setattr(windows_setup.ngrok, "find_executable", lambda: None)
     monkeypatch.setattr(windows_setup.shutil, "which", lambda name: "C:/winget.exe" if name == "winget" else None)
     monkeypatch.setattr(windows_setup.subprocess, "Popen", lambda args, **kwargs: calls.append(args))
     result = windows_setup.provision_prerequisites()
