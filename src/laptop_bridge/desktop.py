@@ -275,7 +275,7 @@ class StatusWindow(QMainWindow):
 
         perm_layout = QHBoxLayout()
         self.perm_label = QLabel()
-        self.perm_button = QPushButton("Open Screen Recording Settings")
+        self.perm_button = QPushButton("Open Windows Privacy Settings" if _is_windows() else "Open Screen Recording Settings")
         self.perm_button.clicked.connect(lambda: capture.open_permission_settings("screen"))
         perm_layout.addWidget(self.perm_label)
         perm_layout.addWidget(self.perm_button)
@@ -284,7 +284,7 @@ class StatusWindow(QMainWindow):
 
         access_layout = QHBoxLayout()
         self.access_label = QLabel()
-        self.access_button = QPushButton("Open Accessibility Settings")
+        self.access_button = QPushButton("Open Windows Privacy Settings" if _is_windows() else "Open Accessibility Settings")
         self.access_button.clicked.connect(lambda: capture.open_permission_settings("accessibility"))
         access_layout.addWidget(self.access_label)
         access_layout.addWidget(self.access_button)
@@ -386,7 +386,7 @@ class StatusWindow(QMainWindow):
         save_caps.clicked.connect(self.save_capabilities)
         cap_layout.addWidget(save_caps)
         access_layout.addWidget(capabilities)
-        permissions = QGroupBox("macOS permissions")
+        permissions = QGroupBox("Windows capture access" if _is_windows() else "macOS permissions")
         perm_layout = QVBoxLayout(permissions)
         perm_layout.addWidget(self.perm_label)
         perm_layout.addWidget(self.perm_button)
@@ -445,21 +445,21 @@ class StatusWindow(QMainWindow):
 
         has_perm = capture.has_screen_recording_permission()
         if has_perm:
-            self.perm_label.setText("Screen Recording: Granted")
+            self.perm_label.setText("Screen capture: Available" if _is_windows() else "Screen Recording: Granted")
             self.perm_label.setStyleSheet("color: #16a34a;")
-            self.perm_button.setVisible(False)
+            self.perm_button.setVisible(_is_windows())
         else:
-            self.perm_label.setText("Screen Recording: Permission Required")
+            self.perm_label.setText("Screen capture: Permission Required" if _is_windows() else "Screen Recording: Permission Required")
             self.perm_label.setStyleSheet("color: #d97706;")
             self.perm_button.setVisible(True)
 
         has_access = capture.has_accessibility_permission()
         if has_access:
-            self.access_label.setText("Accessibility: Granted")
+            self.access_label.setText("Passive click observation: Available" if _is_windows() else "Accessibility: Granted")
             self.access_label.setStyleSheet("color: #16a34a;")
             self.access_button.setVisible(False)
         else:
-            self.access_label.setText("Accessibility: Permission Required")
+            self.access_label.setText("Passive click observation: Unavailable" if _is_windows() else "Accessibility: Permission Required")
             self.access_label.setStyleSheet("color: #d97706;")
             self.access_button.setVisible(True)
 
