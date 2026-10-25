@@ -617,9 +617,9 @@ class Companion:
         if getattr(sys, "frozen", False):
             self.server.start(sys.executable, ["--server"])
         else:
-            venv_python = Path(sys.prefix) / "bin" / "python"
-            executable = str(venv_python) if venv_python.exists() else sys.executable
-            self.server.start(executable, ["-m", "laptop_bridge.server"])
+            # sys.executable is the active virtualenv interpreter on both
+            # macOS/Linux and Windows (where it lives in Scripts\\python.exe).
+            self.server.start(sys.executable, ["-m", "laptop_bridge.server"])
         if self.status_action:
             self.status_action.setText("Server: starting")
 
