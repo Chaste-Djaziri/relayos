@@ -10,9 +10,13 @@ $env:Path = "C:\Program Files\dotnet;" + $env:Path
 
 if (-not (Test-Path $Python)) { throw "Python runtime not found: $Python" }
 & $Python -m pip install -e ".[dev]"
-dotnet publish Native\RelayOSWindows\RelayOSWindows.csproj -c $Configuration -p:Platform=x64 --no-restore
+dotnet restore Native\RelayOSWindows\RelayOSWindows.csproj -r win-x64 -p:Platform=x64
+if ($LASTEXITCODE -ne 0) { throw "Windows companion restore failed" }
+dotnet publish Native\RelayOSWindows\RelayOSWindows.csproj -c $Configuration -r win-x64 --self-contained true -p:Platform=x64 --no-restore
+if ($LASTEXITCODE -ne 0) { throw "Self-contained Windows companion publish failed" }
 
-$output = Join-Path $root "Native\RelayOSWindows\bin\x64\$Configuration\net8.0-windows10.0.19041.0"
+$output = Join-Path $root "Native\RelayOSWindows\bin\x64\$Configuration\net8.0-windows10.0.19041.0\win-x64\publish"
+if (-not (Test-Path (Join-Path $output "RelayOSWindows.exe"))) { throw "Native RelayOSWindows.exe was not produced" }
 $runtime = Join-Path $output "Runtime"
 New-Item -ItemType Directory -Force -Path $runtime | Out-Null
 
