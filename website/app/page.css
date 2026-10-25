@@ -3,3 +3,11 @@
  .brand-mark{display:none}.brand-logo{width:30px;height:30px;object-fit:contain;border-radius:7px}.brand{gap:10px}
 .download-actions{position:absolute;right:0;top:180px;display:flex;gap:10px}
 @media(max-width:700px){.download-actions{position:static;display:flex;flex-direction:column;margin-top:35px}.download-actions .button{margin-top:0}}
+
+/* Keep both platform installers in normal layout flow; the old absolute
+   selector applied to every nested download button and stacked them. */
+.download{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:start;position:static}
+.download .button{position:static;margin-top:0}
+.download-actions{position:static;display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
+.download small{grid-column:1/-1}
+@media(max-width:700px){.download{grid-template-columns:1fr}.download-actions{align-items:flex-start;justify-content:flex-start;margin-top:35px}}
