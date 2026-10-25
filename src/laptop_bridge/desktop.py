@@ -535,14 +535,41 @@ class Companion:
         self.click_observer = ClickObserver(self._record_guidance_click)
         self.guidance_observer_session = None
         self.window = StatusWindow(self)
-        self.quick_panel = QuickPanel(self)
+        self.quick_panel = None
         self.server = QProcess(self.window)
         self.tunnel = QProcess(self.window)
         self.server.finished.connect(self._server_stopped)
         self.restart_requested = False
         self.pending_dialog = False
+        self._shutting_down = False
+        self.tray = None
+        self.status_action = None
+        self.overlay_status_action = None
+        self.guidance_session_action = None
+        self.session_status_action = None
+        self.stop_action = None
 
-        self.tray = QSystemTrayIcon(QIcon.fromTheme("computer"), app)
+        if not _is_windows():
+            self._create_tray()
+
+        # Responsive polling for pending requests and desktop jobs (200ms)
+        self.poller = QTimer()
+        self.poller.timeout.connect(self.poll)
+        self.poller.start(200)
+
+        self.start_server()
+        if _is_windows():
+            self.show_window()
+        if not load_config().get("setup_complete"):
+            QTimer.singleShot(500, self.open_onboarding)
+        # Subsequent macOS launches remain tray-first unless permission needs
+        # attention; Windows always keeps controls in its main window.
+        if not _is_windows() and (not capture.has_screen_recording_permission() or not capture.has_accessibility_permission()):
+            QTimer.singleShot(350, self.show_window)
+
+    def _create_tray(self):
+        self.quick_panel = QuickPanel(self)
+        self.tray = QSystemTrayIcon(QIcon.fromTheme("computer"), self.app)
         menu = QMenu()
 
         self.status_action = QAction("Server: stopped", menu)
@@ -584,19 +611,6 @@ class Companion:
         self.tray.activated.connect(self._tray_activated)
         self.tray.show()
 
-        # Responsive polling for pending requests and desktop jobs (200ms)
-        self.poller = QTimer()
-        self.poller.timeout.connect(self.poll)
-        self.poller.start(200)
-
-        self.start_server()
-        if not load_config().get("setup_complete"):
-            QTimer.singleShot(500, self.open_onboarding)
-        # Show the onboarding/status window on first launch when macOS permissions
-        # still need attention; subsequent launches remain tray-first.
-        if not capture.has_screen_recording_permission() or not capture.has_accessibility_permission():
-            QTimer.singleShot(350, self.show_window)
-
     def start_server(self):
         if self.server.state() != QProcess.ProcessState.NotRunning:
             return
@@ -606,7 +620,8 @@ class Companion:
             venv_python = Path(sys.prefix) / "bin" / "python"
             executable = str(venv_python) if venv_python.exists() else sys.executable
             self.server.start(executable, ["-m", "laptop_bridge.server"])
-        self.status_action.setText("Server: starting")
+        if self.status_action:
+            self.status_action.setText("Server: starting")
 
     def start_tunnel(self):
         """Start the configured ngrok agent after the local server is ready."""
@@ -638,7 +653,8 @@ class Companion:
             self.server.terminate()
 
     def _server_stopped(self):
-        self.status_action.setText("Server: stopped")
+        if self.status_action:
+            self.status_action.setText("Server: stopped")
         try:
             self.window.refresh()
         except RuntimeError:
@@ -651,7 +667,8 @@ class Companion:
         state.set_emergency_stop(enabled)
         if enabled:
             self.overlay.clear_guidance()
-        self.stop_action.setChecked(enabled)
+        if self.stop_action:
+            self.stop_action.setChecked(enabled)
         self.window.refresh()
 
     def start_project_session_dialog(self):
@@ -724,21 +741,25 @@ class Companion:
             running = self.server.state() == QProcess.ProcessState.Running
         except RuntimeError:
             running = False
-        self.status_action.setText("Server: running" if running else "Server: stopped")
+        if self.status_action:
+            self.status_action.setText("Server: running" if running else "Server: stopped")
         if running and self.tunnel.state() == QProcess.ProcessState.NotRunning:
             self.start_tunnel()
 
-        if self.overlay.is_guidance_active():
-            self.overlay_status_action.setText(f"Overlay: active (Display {self.overlay.target_display_id})")
-        else:
-            self.overlay_status_action.setText("Overlay: inactive")
+        if self.overlay_status_action:
+            if self.overlay.is_guidance_active():
+                self.overlay_status_action.setText(f"Overlay: active (Display {self.overlay.target_display_id})")
+            else:
+                self.overlay_status_action.setText("Overlay: inactive")
 
         guidance = state.guidance_session_status()
         if guidance.get("active"):
             remaining = max(0, int(guidance["expires_at"] - time.time()))
-            self.guidance_session_action.setText(f"Screen sharing: active ({remaining // 60}m left)")
+            if self.guidance_session_action:
+                self.guidance_session_action.setText(f"Screen sharing: active ({remaining // 60}m left)")
         else:
-            self.guidance_session_action.setText("Screen sharing: inactive")
+            if self.guidance_session_action:
+                self.guidance_session_action.setText("Screen sharing: inactive")
             if self.guidance_observer_session:
                 self.click_observer.stop()
                 self.guidance_observer_session = None
@@ -750,9 +771,11 @@ class Companion:
         if sessions:
             remaining = max(0, int(sessions[0]["expires_at"] - time.time()))
             mins = remaining // 60
-            self.session_status_action.setText(f"Active session: {mins}m left")
+            if self.session_status_action:
+                self.session_status_action.setText(f"Active session: {mins}m left")
         else:
-            self.session_status_action.setText("Active session: none")
+            if self.session_status_action:
+                self.session_status_action.setText("Active session: none")
 
         try:
             self.window.refresh()
@@ -834,7 +857,7 @@ class Companion:
         self.window.activateWindow()
 
     def _tray_activated(self, reason):
-        if reason != QSystemTrayIcon.ActivationReason.Trigger:
+        if self.quick_panel is None or reason != QSystemTrayIcon.ActivationReason.Trigger:
             return
         self.quick_panel.refresh()
         self.quick_panel.adjustSize()
@@ -842,8 +865,12 @@ class Companion:
         self.quick_panel.raise_()
         self.quick_panel.activateWindow()
 
-    def quit(self):
+    def shutdown(self):
+        if self._shutting_down:
+            return
+        self._shutting_down = True
         self.poller.stop()
+        self.click_observer.stop()
         self.overlay.clear_guidance()
         try:
             self.server.finished.disconnect()
@@ -865,13 +892,16 @@ class Companion:
                     self.server.waitForFinished(1000)
         except RuntimeError:
             pass
+
+    def quit(self):
+        self.shutdown()
         self.app.quit()
 
 
 def main():
     app = QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(False)
-    if not QSystemTrayIcon.isSystemTrayAvailable():
+    app.setQuitOnLastWindowClosed(_is_windows())
+    if not _is_windows() and not QSystemTrayIcon.isSystemTrayAvailable():
         raise SystemExit("Laptop Bridge requires a system tray")
     STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
     lock = QLockFile(str(STATE_DIR / "desktop-instance.lock"))
@@ -882,4 +912,5 @@ def main():
     companion = Companion(app)
     app.companion = companion
     app.instance_lock = lock
+    app.aboutToQuit.connect(companion.shutdown)
     raise SystemExit(app.exec())
