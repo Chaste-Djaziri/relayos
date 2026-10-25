@@ -26,6 +26,14 @@ python -m pip install -e '.[dev]'
 laptop-bridge-desktop
 ```
 
+If PowerShell blocks `Activate.ps1`, do not change the machine execution
+policy. Run the virtual-environment executables directly instead:
+
+```powershell
+.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.venv\Scripts\laptop-bridge-desktop.exe
+```
+
 The desktop companion starts the Streamable HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`. Its controls expose server and overlay status, active coding sessions, a folder picker, guidance controls, local history/settings, server restart, and an emergency stop. macOS also offers these controls from its menu-bar companion.
 
 ## Windows 10/11
@@ -34,7 +42,7 @@ The Windows companion is a standard main-window application: every control lives
 
 - The ngrok authtoken is stored only in the current user's Windows Credential Manager entry; it is never written to `config.json` or passed as a command-line argument.
 - Screen snapshots use the active desktop display; guidance uses a click-through, always-on-top overlay. Passive click metadata is collected only during an explicit active guidance session—no keyboard data, clicks, or commands are injected or replayed.
-- The setup wizard can invoke `winget install ngrok.ngrok`; if winget is unavailable, it opens the official ngrok download page. Install Git for Windows separately to use `apply_project_patch`.
+- The app starts silent `winget` installs for missing ngrok and Git; if winget is unavailable, install them from the official download pages. Git for Windows is required for `apply_project_patch`.
 - Windows Privacy settings or endpoint-protection software can restrict capture or global hooks. The dashboard reports capture and passive-observation availability.
 
 ### Build and install on Windows
@@ -50,9 +58,9 @@ The installer is written to `dist\installer\LaptopBridge-Setup-<version>.exe`. I
 
 ## First-run setup and client connections
 
-Open **Set up or reconfigure…** from the menu-bar companion. Enter an ngrok authtoken and a reserved ngrok domain such as `bridge.ngrok.app`. Laptop Bridge starts the ngrok agent and forwards the stable HTTPS endpoint to the loopback MCP server. The authtoken is stored only in macOS Keychain; non-secret configuration is kept in `~/.laptop-bridge/config.json`.
+Open **Setup / Reconfigure** in the companion dashboard. Enter an ngrok authtoken and a reserved ngrok domain such as `bridge.ngrok.app`. Laptop Bridge starts the ngrok agent and forwards the stable HTTPS endpoint to the loopback MCP server. The authtoken is stored only in Windows Credential Manager on Windows or macOS Keychain on macOS; non-secret configuration is kept in the per-user `.laptop-bridge/config.json` directory.
 
-The wizard starts with system status only. Screen guidance and project tools are opt-in because they require additional macOS permissions and explicit approval.
+The wizard starts with system status only. Screen guidance and project tools are opt-in because they require additional platform permissions and explicit approval. On Windows, the app silently starts winget installation for missing ngrok and Git when winget is available; otherwise install them from their official download pages.
 
 ChatGPT, Gemini, and other MCP clients use the public OAuth endpoint shown in the dashboard. Paste the endpoint ending in `/mcp` into the client's custom MCP connection dialog; the first connection opens a local approval dialog. No client ID or secret is normally required.
 
@@ -65,6 +73,10 @@ MCP clients require a public HTTPS Streamable HTTP endpoint. Laptop Bridge keeps
 3. In the MCP client, enter `https://<your-domain>/mcp`. Dynamic Client Registration supplies the credentials automatically. Approve the connection in the visible Laptop Bridge companion dialog.
 
 The public endpoint accepts only bearer tokens issued after local approval. Authorization requests require an HTTPS callback, enforce PKCE and the single `mcp` scope, issue one-hour access tokens, rotate refresh tokens, and expire the connection after 30 days. Use **Disconnect** in the companion's Connected MCP Clients section, or Emergency Stop, to revoke it immediately.
+
+### Moving from macOS to Windows
+
+The JSON configuration and SQLite state can be imported explicitly with `scripts/migrate_windows_state.ps1 -Source <copied-macOS-state-folder>`. This never copies Keychain data, never imports an ngrok token, and always requires Windows onboarding to enter the token into Windows Credential Manager.
 
 To create a Finder-launchable app, run `./scripts/build_macos_app.sh` and open `dist/Laptop Bridge.app`.
 
@@ -128,7 +140,7 @@ For coding tasks, users can grant scoped, time-limited access to specific projec
   - `write_project_file(session_id, path, content)`: Create or update UTF-8 file up to 1 MiB.
   - `apply_project_patch(session_id, patch)`: Apply unified diffs via `/usr/bin/git apply` without shell interpolation.
   - `authorize_project_command(session_id, argv, cwd, grant)`: Confirm exact argv once (`grant="once"`) or save an executable grant for this project (`grant="always"`).
-  - `run_project_command(session_id, argv, cwd, authorization_token)`: Run an approved non-interactive command with `shell=False`, 120s timeout, DEVNULL stdin, and 8192-byte output cap.
+  - `run_project_command(session_id, argv, cwd, authorization_token)`: Run an approved non-interactive command with `shell=False`, a 10-minute timeout by default, DEVNULL stdin, and 8192-byte output cap. Set `LAPTOP_BRIDGE_COMMAND_TIMEOUT` to customize it.
   - `list_saved_command_grants()` / `revoke_saved_command_grant(grant_id)`: Review and revoke persistent command grants in ChatGPT; they are also listed in companion settings.
 - **Security Boundaries**:
   - All paths and working directories are validated against the resolved project root. Path traversal (`..`) and symlink escapes pointing outside the root are strictly rejected with `PermissionError`.

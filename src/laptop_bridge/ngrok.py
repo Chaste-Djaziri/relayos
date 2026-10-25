@@ -52,9 +52,18 @@ def process_spec(domain, token, executable=None, upstream="127.0.0.1:8765"):
     executable = executable or find_executable()
     if not executable:
         raise NgrokError("ngrok was not found. Install it from ngrok.com/download")
+    arguments = ["http", upstream]
+    if domain and domain.strip():
+        arguments += ["--domain", validate_domain(domain)]
     return {
         "executable": executable,
-        "arguments": ["http", upstream, "--domain", validate_domain(domain)],
+        "arguments": arguments,
         "environment": {"NGROK_AUTHTOKEN": token},
-        "endpoint": endpoint_url(domain),
+        "endpoint": endpoint_url(domain) if domain and domain.strip() else None,
     }
+
+
+def extract_endpoint(output):
+    """Extract ngrok's generated HTTPS URL from agent output."""
+    match = re.search(r"https://[A-Za-z0-9][A-Za-z0-9.-]*\.ngrok(?:-free)?\.(?:app|dev)", output or "")
+    return match.group(0) if match else None

@@ -119,7 +119,7 @@ class LocalApprovalOAuthProvider:
             state.revoke_oauth_grant(row["grant_id"])
 
 
-def approval_redirect(result):
+def approval_redirect(result, issuer: str | None = None):
     """Build the client callback without losing existing query or fragments.
 
     ChatGPT callbacks are opaque HTTPS URLs and may already contain query
@@ -129,5 +129,13 @@ def approval_redirect(result):
     """
     parsed = urlparse(result["redirect_uri"])
     query = parse_qsl(parsed.query, keep_blank_values=True)
-    query.extend((key, value) for key, value in (("code", result.get("code")), ("state", result.get("state"))) if value is not None)
+    query.extend(
+        (key, value)
+        for key, value in (
+            ("code", result.get("code")),
+            ("state", result.get("state")),
+            ("iss", issuer.rstrip("/") if issuer else result.get("iss")),
+        )
+        if value is not None
+    )
     return urlunparse(parsed._replace(query=urlencode(query), fragment=""))

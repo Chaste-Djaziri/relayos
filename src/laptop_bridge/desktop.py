@@ -21,6 +21,7 @@ from .config import STATE_DIR, load_config, update_config
 from . import keychain
 from .overlay import GuidanceOverlay
 from .input_observer import ClickObserver
+from .windows_setup import provision_prerequisites
 
 
 def _is_windows():
@@ -95,15 +96,19 @@ class OnboardingWizard(QWizard):
         cf = QWizardPage(); cf.setTitle("Connect ngrok")
         form = QFormLayout(cf)
         self.token = QLineEdit(); self.token.setEchoMode(QLineEdit.EchoMode.Password)
-        self.hostname = QLineEdit(); self.hostname.setPlaceholderText("mcp.example.com")
+        self.hostname = QLineEdit(); self.hostname.setPlaceholderText("Optional reserved domain (leave blank for free ngrok domain)")
         form.addRow("ngrok authtoken", self.token)
         form.addRow("Reserved domain", self.hostname)
-        help_label = QLabel(f"Create an authtoken in the ngrok dashboard and reserve a stable domain such as bridge.ngrok.app. The token is stored only in {credential_store} and never written to the config file.")
+        help_label = QLabel(f"Create an authtoken in the ngrok dashboard. Leave the domain blank to use ngrok's free generated HTTPS domain, or enter a reserved domain. The token is stored only in {credential_store} and never written to the config file.")
         help_label.setWordWrap(True); form.addRow(help_label)
         install_ngrok = QPushButton("Install ngrok with winget" if _is_windows() else "Install ngrok with Homebrew")
-        install_ngrok.setToolTip("Runs: winget install ngrok.ngrok" if _is_windows() else "Runs: brew install ngrok/ngrok/ngrok")
+        install_ngrok.setToolTip("Runs: winget install --id 9MVS1J51GMK6 --exact --source msstore" if _is_windows() else "Runs: brew install ngrok/ngrok/ngrok")
         install_ngrok.clicked.connect(self.install_ngrok)
         form.addRow(install_ngrok)
+        if ngrok.find_executable():
+            installed = QLabel(f"✓ ngrok already installed ({ngrok.find_executable()})")
+            installed.setStyleSheet("color: #15803d; font-weight: 600;")
+            form.addRow(installed)
         self.addPage(cf)
 
         caps = QWizardPage(); caps.setTitle("Choose capabilities")
@@ -120,17 +125,17 @@ class OnboardingWizard(QWizard):
         vl = QVBoxLayout(connect)
         self.endpoint_preview = QLabel("Your MCP endpoint will appear here")
         self.endpoint_preview.setStyleSheet("font-weight: bold; color: #2563eb;")
-        vl.addWidget(QLabel("ChatGPT, Claude, and Gemini use OAuth. After setup, paste the endpoint below into each app; the first connection will ask you to approve it on this Mac."))
+        vl.addWidget(QLabel("ChatGPT, Claude, and Gemini use OAuth. After setup, paste the endpoint below into each app; the first connection will ask you to approve it in the Laptop Bridge dashboard."))
         vl.addWidget(self.endpoint_preview); vl.addStretch(); self.addPage(connect)
         self.hostname.textChanged.connect(lambda value: self.endpoint_preview.setText(f"https://{value.strip().strip('/')}/mcp" if value.strip() else "Your MCP endpoint will appear here"))
 
     def install_ngrok(self):
         if _is_windows():
             if shutil.which("winget"):
-                if QProcess.startDetached("winget", ["install", "--id", "ngrok.ngrok", "--exact", "--accept-source-agreements", "--accept-package-agreements"]):
+                if QProcess.startDetached("winget", ["install", "--id", "9MVS1J51GMK6", "--exact", "--source", "msstore", "--accept-source-agreements", "--accept-package-agreements", "--silent"]):
                     QMessageBox.information(self, "Installing ngrok", "winget is installing ngrok in the background. Return to this step when it finishes, then restart Laptop Bridge if ngrok is not found yet.")
                 else:
-                    QMessageBox.warning(self, "Could not start winget", "Run `winget install ngrok.ngrok` in PowerShell, then return here.")
+                    QMessageBox.warning(self, "Could not start winget", "Run `winget install --id 9MVS1J51GMK6 --exact --source msstore --accept-source-agreements --accept-package-agreements` in PowerShell, then return here.")
             else:
                 QDesktopServices.openUrl(QUrl("https://ngrok.com/download"))
                 QMessageBox.information(self, "Download ngrok", "winget was not found, so the official ngrok download page was opened. Install ngrok, then return here.")
@@ -151,12 +156,13 @@ class OnboardingWizard(QWizard):
             return
         try:
             self.setEnabled(False)
-            hostname = ngrok.validate_domain(hostname)
+            if hostname:
+                hostname = ngrok.validate_domain(hostname)
             if not ngrok.find_executable():
                 raise ngrok.NgrokError("ngrok was not found. Install it from ngrok.com/download")
             keychain.set_secret("ngrok_authtoken", token)
             config = load_config()
-            config.update({"public_base_url": ngrok.endpoint_url(hostname), "active_transport": "ngrok", "setup_complete": True,
+            config.update({"public_base_url": ngrok.endpoint_url(hostname) if hostname else "", "active_transport": "ngrok", "setup_complete": True,
                 "capabilities": {"system_status": True, "screen_guidance": self.screen_guidance.isChecked(), "project_tools": self.project_tools.isChecked()},
                 "ngrok": {"enabled": True, "domain": hostname, "region": "", "config_path": "", "agent_version": ""}})
             update_config(**config)
@@ -538,6 +544,8 @@ class Companion:
         self.quick_panel = None
         self.server = QProcess(self.window)
         self.tunnel = QProcess(self.window)
+        self.tunnel.readyReadStandardOutput.connect(self._ngrok_output)
+        self.tunnel.readyReadStandardError.connect(self._ngrok_output)
         self.server.finished.connect(self._server_stopped)
         self.restart_requested = False
         self.pending_dialog = False
@@ -551,6 +559,10 @@ class Companion:
 
         if not _is_windows():
             self._create_tray()
+        else:
+            # Provision optional developer integrations without interrupting
+            # onboarding. The user's ngrok token is never handled here.
+            provision_prerequisites()
 
         # Responsive polling for pending requests and desktop jobs (200ms)
         self.poller = QTimer()
@@ -631,7 +643,7 @@ class Companion:
         if config.get("active_transport") != "ngrok" or not config.get("ngrok", {}).get("enabled"):
             return
         try:
-            spec = ngrok.process_spec(config["ngrok"]["domain"], keychain.get_secret("ngrok_authtoken") or "")
+            spec = ngrok.process_spec(config["ngrok"].get("domain", ""), keychain.get_secret("ngrok_authtoken") or "")
         except ngrok.NgrokError:
             return
         environment = QProcess.systemEnvironment()
@@ -639,6 +651,20 @@ class Companion:
         environment.append(f"NGROK_AUTHTOKEN={spec['environment']['NGROK_AUTHTOKEN']}")
         self.tunnel.setEnvironment(environment)
         self.tunnel.start(spec["executable"], spec["arguments"])
+
+    def _ngrok_output(self):
+        output = bytes(self.tunnel.readAllStandardOutput()).decode(errors="replace")
+        output += bytes(self.tunnel.readAllStandardError()).decode(errors="replace")
+        endpoint = ngrok.extract_endpoint(output)
+        if not endpoint:
+            return
+        config = load_config()
+        if config.get("public_base_url") == endpoint:
+            return
+        config["public_base_url"] = endpoint
+        config.setdefault("ngrok", {})["domain"] = endpoint.removeprefix("https://")
+        update_config(**config)
+        self.restart_server()
 
     def open_onboarding(self):
         wizard = OnboardingWizard(self, self.window)

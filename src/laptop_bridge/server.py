@@ -1,4 +1,5 @@
 import base64
+import asyncio
 import json
 import os
 import platform
@@ -26,6 +27,7 @@ from starlette.responses import HTMLResponse, RedirectResponse
 
 from .config import authorized_path, load_config, public_base_url
 from .oauth import LocalApprovalOAuthProvider, approval_redirect
+from . import control
 from .state import (
     activate_project_session, approve as approve_request, consume, desktop_job_result, emergency_stop,
     project_session, queue_desktop_job, record_result, request,
@@ -39,6 +41,8 @@ from .state import (
     saved_command_grants, revoke_command_grant,
     oauth_authorization_status, consume_oauth_authorization,
 )
+
+PROJECT_COMMAND_TIMEOUT = int(os.environ.get("LAPTOP_BRIDGE_COMMAND_TIMEOUT", "600"))
 
 
 def _is_windows() -> bool:
@@ -67,6 +71,11 @@ mcp = MCPServer(
     token_verifier=_oauth_provider,
 )
 
+
+@mcp.custom_route("/control/{path:path}", methods=["GET", "POST"])
+async def native_control(request: Request):
+    return await control.handle(request)
+
 if _public_base_url:
     _oauth_client_authenticator = ClientAuthenticator(_oauth_provider)
     _oauth_metadata = OAuthMetadata(
@@ -81,6 +90,7 @@ if _public_base_url:
         token_endpoint_auth_methods_supported=["none", "client_secret_post", "client_secret_basic"],
         revocation_endpoint_auth_methods_supported=["none", "client_secret_post", "client_secret_basic"],
         code_challenge_methods_supported=["S256"],
+        authorization_response_iss_parameter_supported=True,
     )
 
     @mcp.custom_route("/.well-known/oauth-authorization-server", methods=["GET"])
@@ -120,10 +130,17 @@ async def oauth_approval(request: Request):
     if status == "approved":
         result = consume_oauth_authorization(request_id)
         if result:
-            return RedirectResponse(approval_redirect(result), status_code=302, headers={"Cache-Control": "no-store"})
+            return RedirectResponse(
+                approval_redirect(result, _public_base_url),
+                # Force the connector callback to be followed as a fresh GET.
+                # Some GPT connector browser handoffs do not complete the
+                # callback when the approval page is refreshed with a 302.
+                status_code=303,
+                headers={"Cache-Control": "no-store"},
+            )
         status = "consumed"
     if status == "pending":
-        return HTMLResponse("""<!doctype html><html><head><meta http-equiv=refresh content=2><meta name=viewport content='width=device-width,initial-scale=1'><title>RelayOS · Approve connection</title><style>body{margin:0;background:#0b0d12;color:#f5f7fb;font:16px -apple-system,BlinkMacSystemFont,sans-serif;display:grid;place-items:center;min-height:100vh}.card{max-width:520px;padding:40px;border:1px solid #273044;border-radius:24px;background:#121722;box-shadow:0 20px 70px #0008}.brand{font-weight:700;letter-spacing:.02em;color:#9dbbff}h1{font-size:28px;margin:18px 0 10px}p{color:#aab4c7;line-height:1.5}.pulse{display:inline-block;width:10px;height:10px;border-radius:50%;background:#69a0ff;box-shadow:0 0 0 8px #69a0ff22}</style></head><body><main class=card><div class=brand>RelayOS · MCP</div><h1>Waiting for approval</h1><p><span class=pulse></span> Approve this MCP connection in the RelayOS app on your Mac. This page will continue automatically after approval.</p></main></body></html>""", headers={"Cache-Control": "no-store"})
+        return HTMLResponse("""<!doctype html><html><head><meta http-equiv=refresh content=2><meta name=viewport content='width=device-width,initial-scale=1'><title>RelayOS · Approve connection</title><style>body{margin:0;background:#0b0d12;color:#f5f7fb;font:16px -apple-system,BlinkMacSystemFont,sans-serif;display:grid;place-items:center;min-height:100vh}.card{max-width:520px;padding:40px;border:1px solid #273044;border-radius:24px;background:#121722;box-shadow:0 20px 70px #0008}.brand{font-weight:700;letter-spacing:.02em;color:#9dbbff}h1{font-size:28px;margin:18px 0 10px}p{color:#aab4c7;line-height:1.5}.pulse{display:inline-block;width:10px;height:10px;border-radius:50%;background:#69a0ff;box-shadow:0 0 0 8px #69a0ff22}</style></head><body><main class=card><div class=brand>RelayOS · MCP</div><h1>Waiting for approval</h1><p><span class=pulse></span> Approve this MCP connection in the RelayOS companion. This page will continue automatically after approval.</p></main></body></html>""", headers={"Cache-Control": "no-store"})
     message = "The request was denied." if status == "denied" else "The request expired or was already used. Start the MCP connection again."
     return HTMLResponse(f"<!doctype html><title>RelayOS</title><main><h1>Connection unavailable</h1><p>{message}</p></main>", status_code=403, headers={"Cache-Control": "no-store"})
 
@@ -529,7 +546,6 @@ def revoke_saved_command_grant(grant_id: str) -> dict:
     return {"grant_id": grant_id, "revoked": True}
 
 
-@mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=False))
 def run_project_command(
     session_id: str,
     argv: list[str],
@@ -566,12 +582,26 @@ def run_project_command(
     try:
         environment = os.environ.copy()
         environment["PATH"] = _coding_command_path()
-        result = subprocess.run(argv, text=True, capture_output=True, timeout=120, shell=False, cwd=directory, stdin=subprocess.DEVNULL, check=False, env=environment)
+        result = subprocess.run(argv, text=True, capture_output=True, timeout=PROJECT_COMMAND_TIMEOUT, shell=False, cwd=directory, stdin=subprocess.DEVNULL, check=False, env=environment)
     except subprocess.TimeoutExpired:
         record_result("run_project_command", session["root"], duration_ms=int((time.monotonic() - started) * 1000))
-        return {"error": "Command timed out"}
+        return {"error": "Command timed out", "timeout_seconds": PROJECT_COMMAND_TIMEOUT, "retryable": True}
     record_result("run_project_command", session["root"], result.returncode, int((time.monotonic() - started) * 1000))
     return {"exit_code": result.returncode, "stdout": result.stdout[:8192], "stderr": result.stderr[:8192]}
+
+
+@mcp.tool(
+    name="run_project_command",
+    annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False),
+)
+async def _run_project_command_tool(
+    session_id: str,
+    argv: list[str],
+    cwd: str = ".",
+    authorization_token: str | None = None,
+) -> dict:
+    """Run an approved project command without blocking the MCP request loop."""
+    return await asyncio.to_thread(run_project_command, session_id, argv, cwd, authorization_token)
 
 
 @mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=False))
@@ -731,7 +761,18 @@ def main():
             allowed_origins=[public_url],
         )
     port = int(os.environ.get("LAPTOP_BRIDGE_MCP_PORT", "8765"))
-    mcp.run(transport="streamable-http", host="127.0.0.1", port=port, transport_security=security)
+    # RelayOS is a desktop companion whose MCP connection may remain idle while
+    # the user is reviewing an approval or preparing the next action. Keep the
+    # stateful Streamable HTTP session until the client explicitly closes it;
+    # the default SDK idle reaper can otherwise make a healthy tunnel look
+    # disconnected to remote clients.
+    mcp.run(
+        transport="streamable-http",
+        host="127.0.0.1",
+        port=port,
+        session_idle_timeout=None,
+        transport_security=security,
+    )
 
 if __name__ == "__main__":
     main()

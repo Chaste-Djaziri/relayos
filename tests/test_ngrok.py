@@ -19,3 +19,10 @@ def test_process_spec_keeps_token_out_of_arguments():
     assert spec["arguments"] == ["http", "127.0.0.1:8765", "--domain", "bridge.ngrok.app"]
     assert "secret" not in spec["arguments"]
     assert spec["environment"]["NGROK_AUTHTOKEN"] == "secret"
+
+
+def test_process_spec_uses_generated_domain_when_domain_is_blank():
+    spec = ngrok.process_spec("", "secret", executable="ngrok.exe")
+    assert spec["arguments"] == ["http", "127.0.0.1:8765"]
+    assert spec["endpoint"] is None
+    assert ngrok.extract_endpoint("url https://abc123.ngrok-free.app") == "https://abc123.ngrok-free.app"

@@ -1,0 +1,26 @@
+<Window
+    x:Class="RelayOSWindows.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    Title="RelayOS">
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <CommandBar Grid.Row="0" DefaultLabelPosition="Right">
+            <AppBarButton Icon="Copy" Label="Copy MCP endpoint" Click="CopyEndpoint_Click"/>
+            <AppBarButton Icon="Sync" Label="Restart services" Click="Restart_Click"/>
+            <CommandBar.Content><StackPanel Orientation="Horizontal" Spacing="12" Padding="16,8"><TextBlock Text="RelayOS" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="ServiceSummary" VerticalAlignment="Center" Opacity="0.7"/></StackPanel></CommandBar.Content>
+        </CommandBar>
+        <NavigationView x:Name="Navigation" Grid.Row="1" IsSettingsVisible="False" SelectionChanged="Navigation_SelectionChanged" PaneDisplayMode="LeftCompact">
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="General" Tag="General" Icon="Home"/>
+                <NavigationViewItem Content="MCP connections" Tag="Connections" Icon="Link"/>
+                <NavigationViewItem Content="Tools &amp; permissions" Tag="Tools" Icon="Admin"/>
+                <NavigationViewItem Content="ngrok" Tag="Ngrok" Icon="Globe"/>
+                <NavigationViewItem Content="Security" Tag="Security" Icon="Important"/>
+                <NavigationViewItem Content="Activity" Tag="Activity" Icon="Clock"/>
+            </NavigationView.MenuItems>
+            <Frame x:Name="ContentFrame"/>
+        </NavigationView>
+    </Grid>
+</Window>

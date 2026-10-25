@@ -1,6 +1,7 @@
 # Path: src/laptop_bridge/config.py
 import json
 import os
+import shutil
 from pathlib import Path
 
 STATE_DIR = Path(os.getenv("LAPTOP_BRIDGE_STATE", str(Path.home() / ".laptop-bridge"))).expanduser().resolve()
@@ -75,6 +76,34 @@ def save_config(config):
     except OSError:
         pass
     return config
+
+
+def migrate_state(source):
+    """Explicitly import non-secret state from another installation.
+
+    Only config.json and state.sqlite3 are copied. Keychain/Credential Manager
+    secrets are deliberately excluded and must be entered on Windows once.
+    """
+    source_dir = Path(source).expanduser().resolve(strict=True)
+    if not source_dir.is_dir():
+        raise ValueError("Migration source must be a directory")
+    source_config = source_dir / "config.json"
+    source_db = source_dir / "state.sqlite3"
+    if not source_config.is_file():
+        raise ValueError("Migration source does not contain config.json")
+    imported = json.loads(source_config.read_text(encoding="utf-8"))
+    if not isinstance(imported, dict):
+        raise ValueError("config.json must contain an object")
+    # Never import a secret or mark setup complete without a Windows secret.
+    imported.pop("ngrok_authtoken", None)
+    imported["setup_complete"] = False
+    imported.setdefault("ngrok", {}).update({"enabled": False})
+    save_config(imported)
+    copied = [str(CONFIG_FILE)]
+    if source_db.is_file():
+        shutil.copy2(source_db, DATABASE_FILE)
+        copied.append(str(DATABASE_FILE))
+    return {"source": str(source_dir), "copied": copied, "requires_ngrok_setup": True}
 
 
 def update_config(**changes):

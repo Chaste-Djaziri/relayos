@@ -100,3 +100,18 @@ def test_callback_data_survives_existing_query_and_fragment():
         "state": "chatgpt-state",
     })
     assert callback == "https://chatgpt.com/connector/oauth/callback?client=relay&code=one-time-code&state=chatgpt-state"
+
+
+def test_callback_includes_authorization_server_issuer_when_available():
+    callback = approval_redirect(
+        {
+            "redirect_uri": "https://chatgpt.com/connector/oauth/callback",
+            "code": "one-time-code",
+            "state": "chatgpt-state",
+        },
+        "https://relay.example.test/",
+    )
+    assert callback == (
+        "https://chatgpt.com/connector/oauth/callback?code=one-time-code"
+        "&state=chatgpt-state&iss=https%3A%2F%2Frelay.example.test"
+    )

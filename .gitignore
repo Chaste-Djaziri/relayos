@@ -28,3 +28,6 @@ build/
 *.swp
 *.swo
 *~
+# Native Windows build output
+Native/**/bin/
+Native/**/obj/
