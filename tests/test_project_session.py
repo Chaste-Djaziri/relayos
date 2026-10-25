@@ -348,7 +348,7 @@ def test_permission_expansion_tools_have_destructive_annotations():
     for name in ("propose_project_session", "approve_project_session", "authorize_project_command", "write_project_file", "apply_project_patch"):
         assert tools[name].annotations is not None
         assert tools[name].annotations.destructive_hint is True
-    assert tools["run_project_command"].annotations.destructive_hint is False
+    assert tools["run_project_command"].annotations.destructive_hint is True
 
 
 def test_concurrent_project_operations(project_dir):
