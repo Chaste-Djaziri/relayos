@@ -138,6 +138,13 @@ def system_status() -> dict:
         mem_percent = None
     battery_percent = None
     battery_charging = None
+    try:
+        battery = psutil.sensors_battery()
+        if battery is not None:
+            battery_percent = round(float(battery.percent), 1)
+            battery_charging = bool(battery.power_plugged)
+    except Exception:
+        pass
     if platform.system() == "Darwin":
         try:
             battery_output = subprocess.run(
@@ -419,11 +426,15 @@ def apply_project_patch(session_id: str, patch: str) -> dict:
     session, root = _session_path(session_id, ".")
     started = time.monotonic()
     try:
+        git = _resolve_executable("git", root)
         result = subprocess.run(
-            ["/usr/bin/git", "apply", "--whitespace=nowarn", "-"], input=patch,
+            [git, "apply", "--whitespace=nowarn", "-"], input=patch,
             text=True, capture_output=True, timeout=20, shell=False, cwd=root,
             check=False,
         )
+    except FileNotFoundError:
+        record_result("apply_project_patch", session["root"], duration_ms=int((time.monotonic() - started) * 1000))
+        return {"applied": False, "error": "Git was not found on PATH. Install Git for Windows and restart Laptop Bridge."}
     except subprocess.TimeoutExpired:
         record_result("apply_project_patch", session["root"], duration_ms=int((time.monotonic() - started) * 1000))
         return {"applied": False, "error": "Patch timed out"}
@@ -432,7 +443,7 @@ def apply_project_patch(session_id: str, patch: str) -> dict:
 
 
 def _coding_command_path() -> str:
-    """Return a safe PATH that also works when launchd starts the bridge.
+    """Return a safe PATH for GUI-launched developer tooling.
 
     launchd provides only the system directories by default, while developer
     tooling installed through Homebrew or npm commonly lives elsewhere.  Keep
@@ -441,16 +452,18 @@ def _coding_command_path() -> str:
     """
     home = Path.home()
     directories = os.environ.get("PATH", "").split(os.pathsep)
-    directories.extend(
-        str(path) for path in (
-            Path("/opt/homebrew/bin"),
-            Path("/opt/homebrew/sbin"),
-            Path("/usr/local/bin"),
-            home / ".local/bin",
-            home / ".npm-global/bin",
-            home / ".volta/bin",
-        )
-    )
+    if os.name == "nt":
+        local_app_data = Path(os.environ.get("LOCALAPPDATA", home / "AppData/Local"))
+        program_files = Path(os.environ.get("ProgramFiles", r"C:\\Program Files"))
+        directories.extend(str(path) for path in (
+            program_files / "nodejs", program_files / "Git" / "cmd", local_app_data / "Programs" / "Python",
+            local_app_data / "npm", home / "AppData/Roaming/npm", home / ".volta/bin",
+        ))
+    else:
+        directories.extend(str(path) for path in (
+            Path("/opt/homebrew/bin"), Path("/opt/homebrew/sbin"), Path("/usr/local/bin"),
+            home / ".local/bin", home / ".npm-global/bin", home / ".volta/bin",
+        ))
     return os.pathsep.join(dict.fromkeys(directory for directory in directories if directory))
 
 
@@ -458,7 +471,7 @@ def _resolve_executable(name: str, cwd: Path | None = None) -> str:
     candidate = Path(name).expanduser()
     if candidate.is_absolute():
         resolved = str(candidate.resolve())
-    elif "/" in name:
+    elif "/" in name or "\\" in name:
         resolved = str(((cwd or Path.cwd()) / candidate).resolve())
     else:
         resolved = shutil.which(name, path=_coding_command_path())
