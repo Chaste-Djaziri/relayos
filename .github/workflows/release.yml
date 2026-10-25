@@ -67,7 +67,6 @@ jobs:
           name: RelayOS-Windows
           path: |
             dist/installer/RelayOS-Setup-*.exe
-            dist/RelayOS-Windows-*.zip
           if-no-files-found: error
 
   publish:
