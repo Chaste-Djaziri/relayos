@@ -112,3 +112,50 @@ def test_approvals_cli_direct_deny(monkeypatch):
         row = conn.execute("SELECT status FROM requests WHERE token = ?", (token,)).fetchone()
         assert row["status"] == "denied"
 
+
+def test_approvals_cli_emergency_stop_controls(monkeypatch, capsys):
+    import json
+    from laptop_bridge import approvals
+
+    assert state.emergency_stop() is False
+
+    monkeypatch.setattr("sys.argv", ["laptop-bridge-approvals", "set-emergency-stop", "true"])
+    approvals.main()
+    out = json.loads(capsys.readouterr().out)
+    assert out["emergency_stop"] is True
+    assert state.emergency_stop() is True
+
+    monkeypatch.setattr("sys.argv", ["laptop-bridge-approvals", "emergency-stop-status"])
+    approvals.main()
+    out = json.loads(capsys.readouterr().out)
+    assert out["emergency_stop"] is True
+
+    monkeypatch.setattr("sys.argv", ["laptop-bridge-approvals", "set-emergency-stop", "false"])
+    approvals.main()
+    out = json.loads(capsys.readouterr().out)
+    assert out["emergency_stop"] is False
+    assert state.emergency_stop() is False
+
+
+def test_emergency_stop_revokes_sessions_and_cancels_work():
+    # Emergency stop must revoke active project sessions, desktop jobs, and guidance sessions
+    with state._db() as conn:
+        conn.execute("INSERT INTO project_sessions (token, root, created_at, expires_at, status) VALUES ('sess1', '/tmp', ?, ?, 'active')", (time.time(), time.time() + 3600))
+        conn.execute("INSERT INTO desktop_jobs (token, kind, payload_json, created_at, status) VALUES ('job1', 'test', '{}', ?, 'pending')", (time.time(),))
+        conn.execute("INSERT INTO guidance_sessions (token, created_at, expires_at, status) VALUES ('guide1', ?, ?, 'active')", (time.time(), time.time() + 900))
+        conn.commit()
+
+    state.set_emergency_stop(True)
+
+    with state._db() as conn:
+        sess = conn.execute("SELECT status FROM project_sessions WHERE token = 'sess1'").fetchone()
+        assert sess["status"] == "revoked"
+        job = conn.execute("SELECT status FROM desktop_jobs WHERE token = 'job1'").fetchone()
+        assert job["status"] == "cancelled"
+        guide = conn.execute("SELECT status FROM guidance_sessions WHERE token = 'guide1'").fetchone()
+        assert guide["status"] == "stopped"
+
+    with pytest.raises(PermissionError, match="Emergency stop is enabled"):
+        state.project_session("sess1")
+
+

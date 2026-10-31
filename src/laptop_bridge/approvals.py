@@ -3,7 +3,7 @@
 import argparse
 import json
 
-from .state import approve, deny, pending_requests, pending_oauth_authorizations, active_oauth_grants, active_permission_grants, revoke_permission_grant, decide_oauth_authorization, decide_request
+from .state import approve, deny, pending_requests, pending_oauth_authorizations, active_oauth_grants, active_permission_grants, revoke_permission_grant, decide_oauth_authorization, decide_request, emergency_stop, set_emergency_stop
 
 def main():
     parser = argparse.ArgumentParser(description="Approve sensitive laptop actions locally")
@@ -13,6 +13,9 @@ def main():
     sub.add_parser("list-grants")
     sub.add_parser("list-permissions")
     sub.add_parser("list-pending-json")
+    sub.add_parser("emergency-stop-status")
+    set_stop = sub.add_parser("set-emergency-stop")
+    set_stop.add_argument("state", choices=("true", "false", "on", "off"))
     decide = sub.add_parser("decide-request")
     decide.add_argument("request_id")
     decide.add_argument("duration", choices=("once", "session", "persistent", "deny"))
@@ -41,6 +44,14 @@ def main():
         return
     if args.command == "list-pending-json":
         print(json.dumps(pending_requests()))
+        return
+    if args.command == "emergency-stop-status":
+        print(json.dumps({"emergency_stop": emergency_stop()}))
+        return
+    if args.command == "set-emergency-stop":
+        enabled = args.state.lower() in ("true", "on")
+        set_emergency_stop(enabled)
+        print(json.dumps({"emergency_stop": emergency_stop()}))
         return
     if args.command == "decide-request":
         decide_request(args.request_id, args.duration)

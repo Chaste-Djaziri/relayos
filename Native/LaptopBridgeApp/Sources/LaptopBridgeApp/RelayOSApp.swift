@@ -281,7 +281,37 @@ final class BridgeModel: ObservableObject {
     }
 
     func copyEndpoint() { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(endpoint, forType: .string) }
-    func setEmergencyStop(_ value: Bool) { emergencyStop = value }
+    func setEmergencyStop(_ value: Bool) {
+        guard emergencyStop != value else { return }
+        emergencyStop = value
+        propagateEmergencyStop(value)
+    }
+
+    private func propagateEmergencyStop(_ enabled: Bool) {
+        guard let python = approvalExecutable() else { return }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: python)
+        process.arguments = ["-m", "laptop_bridge.approvals", "set-emergency-stop", enabled ? "true" : "false"]
+        setApprovalWorkingDirectory(process, executable: python)
+        try? process.run()
+        process.waitUntilExit()
+    }
+
+    nonisolated private func refreshEmergencyStop() {
+        guard let python = approvalExecutable() else { return }
+        let process = Process(); let pipe = Pipe(); process.executableURL = URL(fileURLWithPath: python)
+        process.arguments = ["-m", "laptop_bridge.approvals", "emergency-stop-status"]
+        setApprovalWorkingDirectory(process, executable: python)
+        process.standardOutput = pipe; try? process.run(); process.waitUntilExit()
+        guard let data = try? pipe.fileHandleForReading.readToEnd(),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let enabled = json["emergency_stop"] as? Bool else { return }
+        DispatchQueue.main.async { [weak self] in
+            if self?.emergencyStop != enabled {
+                self?.emergencyStop = enabled
+            }
+        }
+    }
 
     func installNgrok() {
         if FileManager.default.isExecutableFile(atPath: "/opt/homebrew/bin/ngrok") || FileManager.default.isExecutableFile(atPath: "/usr/local/bin/ngrok") {
@@ -384,6 +414,7 @@ final class BridgeModel: ObservableObject {
     nonisolated func checkOAuthApprovalsInBackground() {
         refreshConnectedClients()
         refreshPermissionGrants()
+        refreshEmergencyStop()
         checkPendingPermissionRequests()
         guard let python = approvalExecutable() else { return }
         let process = Process(); let pipe = Pipe()
@@ -533,7 +564,7 @@ struct QuickPanel: View {
                 }
             }
             Text(model.endpoint).font(.caption).textSelection(.enabled).foregroundStyle(.secondary)
-            Toggle("Emergency stop", isOn: $model.emergencyStop).tint(.red)
+            Toggle("Emergency stop", isOn: Binding(get: { model.emergencyStop }, set: { model.setEmergencyStop($0) })).tint(.red)
             HStack {
                 Button("Open RelayOS") {
                     openWindow(id: "main")
@@ -646,7 +677,7 @@ struct SettingsView: View {
                 case .ngrok:
                     Section("ngrok transport") { LabeledContent("Status", value: model.tunnelRunning ? "Connected" : "Stopped"); LabeledContent("Endpoint", value: model.endpoint); Button("Reconnect") { model.restartServices() } }
                 case .security:
-                    Section("Security") { Toggle("Emergency stop", isOn: $model.emergencyStop).tint(.red); Text("Emergency stop blocks active sessions and revokes active OAuth access.").font(.caption).foregroundStyle(.secondary) }
+                    Section("Security") { Toggle("Emergency stop", isOn: Binding(get: { model.emergencyStop }, set: { model.setEmergencyStop($0) })).tint(.red); Text("Emergency stop blocks active sessions and revokes active OAuth access.").font(.caption).foregroundStyle(.secondary) }
                 case .activity:
                     Section("Activity") { Text("Connection and tool activity is kept as local metadata only.").foregroundStyle(.secondary) }
                 }
