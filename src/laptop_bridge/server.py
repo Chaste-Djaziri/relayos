@@ -844,6 +844,10 @@ def complete_follow_up(follow_up_id: str) -> dict:
     return {"follow_up_id": follow_up_id, "status": "completed"}
 
 def main():
+    # The macOS companion authenticates its first health probe using this
+    # pre-created per-installation secret. Never require an unauthenticated
+    # request to bootstrap it after the HTTP listener has started.
+    control.control_token()
     config = load_config()
     public_url = public_base_url(config)
     capabilities = config.get("capabilities", {})
