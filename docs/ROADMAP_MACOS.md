@@ -174,3 +174,16 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [ ] Validate signed staged bundle, packaged helper recovery and controlled rollout with rollback.
 - [ ] Live app-owned ngrok/MCP crash injection (would interrupt active ChatGPT connection); test only after controlled deployment.
 - [ ] Full native app SIGKILL/orphan-child recovery, and zero-downtime tunnel continuity. The app currently owns ngrok, so restarting it necessarily causes a brief tunnel interruption; true zero-downtime handover requires a separately persistent edge/tunnel supervisor.
+
+## Sprint 03 — Native Approval Inbox and Activity History (2026-10-31)
+
+- [x] Unified local approval inbox merges project command, project session and MCP OAuth connection requests without exposing an authorization API remotely.
+- [x] Present all pending requests in a native nonblocking Approval Center with Once/Session/Always/Deny; OAuth connection approvals only permit Approve/Deny.
+- [x] Retain explicit backend expiry checks, one-time decisions, and fail-closed emergency-stop handling. Tests cover multiple requests and already decided/expired IDs.
+- [x] Replace blocking NSAlert polling with a deduplicated, bounded arrival tracker, existing approval sound, opt-in macOS notifications without sensitive command details, and a menu bar pending count.
+- [x] Add a searchable persisted metadata-only audit feed for requests, approvals, denials, expirations, executed actions and recorded outcomes; show registered OAuth client names without OAuth redirect URIs.
+- [x] Remove development-only path assumption from native permission grant refresh and avoid helper output-pipe deadlock for larger inboxes.
+- [x] Python suite: 109 passed; one pre-existing Pydantic serializer warning. Native Swift compilation/tests passed including inbox model and notification dedup tests.
+- [ ] Validate signed staging build and isolated packaged MCP start/restart smoke tests.
+- [ ] Preserve backup, perform controlled native handover and verify live MCP health and single-instance ownership.
+- [ ] Validate system notification permission prompt, audible output and multi-request inbox visually on the user's desktop; automatic tests cannot establish actual presentation.
