@@ -5,11 +5,23 @@ import Darwin
 
 final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        guard SingleInstanceCoordinator.shared.claimOrReplaceExistingInstance() else {
+            NSApplication.shared.terminate(nil)
+            return
+        }
+        BridgeModel.shared.startServices()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        BridgeModel.shared.shutdownServices()
+        SingleInstanceCoordinator.shared.release()
+    }
 }
 
 @main
 struct LaptopBridgeApp: App {
-    @StateObject private var model = BridgeModel()
+    @StateObject private var model = BridgeModel.shared
     @NSApplicationDelegateAdaptor(RelayOSApplicationDelegate.self) private var appDelegate
 
     init() {
@@ -51,7 +63,7 @@ struct LaptopBridgeApp: App {
 }
 
 @MainActor
-final class BridgeModel: ObservableObject {
+final class BridgeModel: ObservableObject {\n    static let shared = BridgeModel()
     @Published var running = false
     @Published var tunnelRunning = false
     @Published var emergencyStop = false
