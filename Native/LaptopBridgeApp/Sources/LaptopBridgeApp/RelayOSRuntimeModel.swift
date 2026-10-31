@@ -98,8 +98,7 @@ final class BridgeModel: ObservableObject {
     private nonisolated func approvalExecutable() -> String? {
         if let bundled = Bundle.main.resourceURL?.appendingPathComponent("Runtime/RelayOSApprovals").path,
            FileManager.default.isExecutableFile(atPath: bundled) { return bundled }
-        let development = FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python"
-        return FileManager.default.isExecutableFile(atPath: development) ? development : nil
+        return DevelopmentRuntimeLocator.pythonExecutable()?.path
     }
 
     private nonisolated func setApprovalWorkingDirectory(_ process: Process, executable: String) {
@@ -110,7 +109,7 @@ final class BridgeModel: ObservableObject {
         if executable.contains("/Contents/Resources/Runtime/") {
             process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
         } else {
-            process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+            process.currentDirectoryURL = DevelopmentRuntimeLocator.projectRoot()
         }
     }
 
@@ -158,13 +157,12 @@ final class BridgeModel: ObservableObject {
         let bundledHelper = Bundle.main.resourceURL?
             .appendingPathComponent("Runtime/RelayOSMCPServer")
             .path
-        let candidates = [
-            bundledHelper,
-            FileManager.default.currentDirectoryPath + "/.venv/bin/python",
-            FileManager.default.homeDirectoryForCurrentUser.path + "/Documents/GitHub/laptop-bridge/.venv/bin/python",
-            "/usr/bin/python3",
-        ].compactMap { $0 }
-        let executable = candidates.first { FileManager.default.isExecutableFile(atPath: $0) } ?? "/usr/bin/python3"
+        let candidates = [bundledHelper, DevelopmentRuntimeLocator.pythonExecutable()?.path].compactMap { $0 }
+        guard let executable = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
+            running = false
+            NSLog("RelayOS MCP helper not found. Install the packaged app or set RELAYOS_DEV_ROOT.")
+            return
+        }
         let isBundledHelper = bundledHelper == executable
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = isBundledHelper ? [] : ["-m", "laptop_bridge.server"]
@@ -172,8 +170,7 @@ final class BridgeModel: ObservableObject {
         // directory is not the repository. Set it explicitly so Python can
         // resolve the laptop_bridge package and its resources.
         if !isBundledHelper {
-            process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent("Documents/GitHub/laptop-bridge")
+            process.currentDirectoryURL = DevelopmentRuntimeLocator.projectRoot()
         }
         var environment = ProcessInfo.processInfo.environment
         // Keep the current public Python OAuth/MCP listener reachable while

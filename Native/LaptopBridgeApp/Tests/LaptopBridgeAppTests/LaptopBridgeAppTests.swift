@@ -6,6 +6,20 @@ final class LaptopBridgeAppTests: XCTestCase {
         XCTAssertTrue(true)
     }
 
+    func testDevelopmentRootIsDiscoveredFromNestedBuildDirectory() throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent("RelayOS-test-\(UUID().uuidString)")
+        defer { try? fm.removeItem(at: root) }
+        try fm.createDirectory(at: root.appendingPathComponent("src/laptop_bridge"), withIntermediateDirectories: true)
+        try Data().write(to: root.appendingPathComponent("pyproject.toml"))
+        try Data().write(to: root.appendingPathComponent("src/laptop_bridge/__init__.py"))
+        let nested = root.appendingPathComponent("Native/LaptopBridgeApp/.build/debug")
+        try fm.createDirectory(at: nested, withIntermediateDirectories: true)
+
+        XCTAssertEqual(DevelopmentRuntimeLocator.projectRoot(startingAt: [nested])?.standardizedFileURL, root.standardizedFileURL)
+        XCTAssertNil(DevelopmentRuntimeLocator.projectRoot(startingAt: [fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)]))
+    }
+
     @MainActor
     func testOldTerminationCannotClearReplacement() {
         let slot = ManagedProcessSlot()
