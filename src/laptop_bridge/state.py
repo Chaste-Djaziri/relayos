@@ -754,6 +754,24 @@ def grant_project_command(project_root, executable, argv, cwd, grant_type="once"
         if emergency_stop(connection):
             connection.rollback()
             raise PermissionError("Emergency stop is enabled")
+        # Duplicate local approvals must not inflate the permissions list.
+        # Only reuse a token when *every* part of its effective scope matches.
+        # Once grants remain fresh single-use tokens.
+        if grant_type != "once":
+            existing = connection.execute(
+                """SELECT token FROM command_grants
+                   WHERE project_root = ? AND executable = ? AND working_directory = ?
+                     AND grant_type = ? AND session_token IS ?
+                     AND argv_digest IS ? AND family_key IS ? AND prefix_json IS ?
+                     AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?)
+                   ORDER BY created_at DESC LIMIT 1""",
+                (project_root, executable, cwd, grant_type,
+                 session_id if grant_type == "session" else None, digest, family,
+                 json.dumps(prefix) if prefix is not None else None, now),
+            ).fetchone()
+            if existing:
+                connection.commit()
+                return existing["token"]
         connection.execute(
             """INSERT INTO command_grants
                (token, project_root, executable, argv_digest, working_directory, grant_type,
@@ -835,13 +853,80 @@ def consume_project_command_grant(project_root, executable, argv, cwd, grant_tok
         connection.commit()
         return "approved_reusable"
 
+def _live_command_grants(connection, now):
+    return connection.execute(
+        """SELECT token, project_root, executable, grant_type, family_key,
+                  prefix_json, argv_digest, session_token, working_directory,
+                  created_at, expires_at
+           FROM command_grants
+           WHERE grant_type IN ('always', 'session') AND revoked_at IS NULL
+             AND (expires_at IS NULL OR expires_at > ?)
+           ORDER BY created_at DESC, token DESC""",
+        (now,),
+    ).fetchall()
+
+
+def _grant_identity(row):
+    """Exact effective scope; never merge different commands or sessions."""
+    return (
+        row["project_root"], row["executable"], row["working_directory"],
+        row["grant_type"], row["session_token"],
+        row["argv_digest"], row["family_key"], row["prefix_json"],
+    )
+
+
+def _duplicate_command_grant_tokens(rows):
+    seen = set()
+    redundant = []
+    for row in rows:
+        # Invalid legacy wildcard grants are not valid permissions to merge.
+        if not (row["argv_digest"] or row["family_key"] or row["prefix_json"]):
+            continue
+        identity = _grant_identity(row)
+        if identity in seen:
+            redundant.append(row["token"])
+        else:
+            seen.add(identity)
+    return redundant
+
+
+def command_grant_duplicate_summary():
+    """Read-only preview; does not reveal command arguments or secret tokens."""
+    with _db() as connection:
+        rows = _live_command_grants(connection, time.time())
+        redundant = _duplicate_command_grant_tokens(rows)
+    return {"total": len(rows), "duplicates": len(redundant)}
+
+
+def cleanup_duplicate_command_grants():
+    """Locally invoked action only; preserve the newest grant per exact scope."""
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        redundant = _duplicate_command_grant_tokens(_live_command_grants(connection, time.time()))
+        if redundant:
+            connection.executemany(
+                "UPDATE command_grants SET revoked_at = ? WHERE token = ? AND revoked_at IS NULL",
+                [(time.time(), token) for token in redundant],
+            )
+            _record(connection, "command_grant_cleanup", "local", f"removed_{len(redundant)}")
+        connection.commit()
+    return {"removed": len(redundant)}
+
+
 def saved_command_grants():
     with _db() as connection:
-        rows = connection.execute(
-            "SELECT token, project_root, executable, grant_type, family_key, prefix_json, working_directory, created_at, expires_at FROM command_grants WHERE grant_type IN ('always', 'session') AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > strftime('%s','now')) ORDER BY created_at DESC"
-        ).fetchall()
-    return [{**dict(row), "scope_prefix": json.loads(row["prefix_json"]) if row["prefix_json"] else None} for row in rows]
-
+        rows = _live_command_grants(connection, time.time())
+    # A short digest fingerprint differentiates legacy exact scopes without
+    # retaining or disclosing the original command line (which may hold secrets).
+    result = []
+    for row in rows:
+        data = dict(row)
+        data["scope_prefix"] = json.loads(data["prefix_json"]) if data["prefix_json"] else None
+        data["scope_fingerprint"] = data["argv_digest"][:10] if data["argv_digest"] else None
+        data.pop("argv_digest")
+        data.pop("session_token")
+        result.append(data)
+    return result
 
 def revoke_command_grant(token):
     with _db() as connection:

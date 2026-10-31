@@ -21,6 +21,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 - Split the menu-bar panel, onboarding, desktop window, and settings SwiftUI screens into `RelayOSViews.swift`; the app entry point now focuses on state and services.
 
 ### Fixed
+- Saved project-command approvals are now idempotent for the same exact scope; added a local-only duplicate preview/cleanup that retains the newest grant per precise project, executable, cwd, duration, session and command scope. Legacy exact grants now expose a short non-reversible scope fingerprint for display without storing raw argument strings. Added focused regression tests.
 - Automatically suggest narrow locally approved reusable scopes for common Git, npm/pnpm/yarn, Swift, Cargo, and Go command forms when MCP clients omit `scope_prefix`; `git commit -m` now remembers the `git commit` prefix after Always allow instead of exact commit messages. Unknown or shell/interpreter commands remain exact unless explicitly scoped and locally approved. Added regression tests.
 - Hardened saved-prefix evaluation to reject malformed/null prefix records rather than interpreting them as wildcard command access; added regression coverage (97 Python tests passing).
 - Ignore stale MCP health responses after a managed server crash, preventing a response from the dead process from resetting restart cooldown or marking the new server healthy. Added a crash-generation regression test.
