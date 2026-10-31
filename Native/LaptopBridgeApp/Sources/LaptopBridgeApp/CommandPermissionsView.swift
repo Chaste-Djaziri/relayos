@@ -4,23 +4,50 @@ import SwiftUI
 struct CommandPermissionsView: View {
     @ObservedObject var model: BridgeModel
     @State private var query = ""
+    @State private var expandedGroups: Set<String> = []
     @State private var pendingRevocation: SavedCommandGrant?
+    @State private var confirmCleanup = false
+
+    private struct GrantGroup: Identifiable {
+        let id: String
+        let projectRoot: String
+        let commandName: String
+        let grants: [SavedCommandGrant]
+    }
 
     private var filtered: [SavedCommandGrant] {
         let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return model.commandGrants }
         return model.commandGrants.filter {
-            [$0.scopeTitle, $0.projectRoot, $0.workingDirectory, $0.executable]
+            [$0.scopeTitle, $0.projectRoot, $0.workingDirectory, $0.executable,
+             $0.scopeFingerprint ?? ""]
                 .contains { $0.localizedCaseInsensitiveContains(value) }
         }
     }
 
+    private var groups: [GrantGroup] {
+        Dictionary(grouping: filtered, by: \.groupingKey)
+            .map { (key, grants) in
+                GrantGroup(
+                    id: key,
+                    projectRoot: grants[0].projectRoot,
+                    commandName: grants[0].commandName,
+                    grants: grants.sorted { $0.createdAt > $1.createdAt }
+                )
+            }
+            .sorted {
+                $0.commandName == $1.commandName
+                    ? $0.projectRoot < $1.projectRoot
+                    : $0.commandName < $1.commandName
+            }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Command Permissions").font(.title2.bold())
-                    Text("Review and revoke locally approved project commands.")
+                    Text("Locally approved commands, grouped by executable and project.")
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -31,7 +58,19 @@ struct CommandPermissionsView: View {
                 }.disabled(model.commandGrantsBusy)
             }
 
-            TextField("Search commands or projects", text: $query)
+            HStack {
+                Text("\(model.commandGrants.count) saved approvals across \(groups.count) groups")
+                    .font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                if model.commandGrantDuplicateCount > 0 {
+                    Button("Remove \(model.commandGrantDuplicateCount) duplicates") {
+                        confirmCleanup = true
+                    }
+                    .disabled(model.commandGrantsBusy)
+                }
+            }
+
+            TextField("Search commands, scope or projects", text: $query)
                 .textFieldStyle(.roundedBorder)
 
             if model.commandGrantsBusy {
@@ -41,6 +80,7 @@ struct CommandPermissionsView: View {
                 Label(error, systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.red)
             }
+
             if filtered.isEmpty && !model.commandGrantsBusy {
                 ContentUnavailableView(
                     "No saved command permissions",
@@ -51,35 +91,66 @@ struct CommandPermissionsView: View {
                 )
             }
 
-            ForEach(filtered) { grant in
-                GroupBox {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(grant.scopeTitle).font(.headline).textSelection(.enabled)
-                                Text(grant.scopeDetails).font(.caption).foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Text(grant.durationTitle)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                            Button("Revoke", role: .destructive) {
-                                pendingRevocation = grant
-                            }.disabled(model.commandGrantsBusy)
+            ForEach(groups) { group in
+                DisclosureGroup(
+                    isExpanded: Binding(
+                        get: { expandedGroups.contains(group.id) },
+                        set: { expanded in
+                            if expanded { expandedGroups.insert(group.id) }
+                            else { expandedGroups.remove(group.id) }
                         }
-                        Divider()
-                        LabeledContent("Project", value: grant.projectRoot)
-                        LabeledContent("Working directory", value: grant.workingDirectory)
-                        LabeledContent("Executable", value: grant.executable)
-                        if let expires = grant.expiresAt {
-                            LabeledContent("Expires", value: Date(timeIntervalSince1970: expires).formatted())
+                    )
+                ) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(group.grants) { grant in
+                            HStack(alignment: .top, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(grant.scopeTitle).font(.subheadline.weight(.medium))
+                                        .textSelection(.enabled)
+                                    Text("\(grant.durationTitle) · \(grant.scopeDetails)")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                    if grant.workingDirectory != grant.projectRoot {
+                                        Text("Working directory: \(grant.workingDirectory)")
+                                            .font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    if let expires = grant.expiresAt {
+                                        Text("Expires: \(Date(timeIntervalSince1970: expires).formatted())")
+                                            .font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer(minLength: 8)
+                                Button("Revoke", role: .destructive) {
+                                    pendingRevocation = grant
+                                }
+                                .disabled(model.commandGrantsBusy)
+                            }
+                            Divider()
                         }
                     }
-                    .font(.callout)
-                    .textSelection(.enabled)
+                    .padding(.top, 8)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "terminal")
+                        Text(group.commandName).font(.headline)
+                        Text("· \(group.grants.count) approvals")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .help(group.projectRoot)
                 }
+                .padding(12)
+                .background(.quaternary.opacity(0.30), in: RoundedRectangle(cornerRadius: 10))
+                .overlay(alignment: .bottomLeading) {
+                    Text(group.projectRoot)
+                        .font(.caption2).foregroundStyle(.secondary)
+                        .lineLimit(1).truncationMode(.middle)
+                        .padding(.horizontal, 12)
+                        .offset(y: 9)
+                }
+                .padding(.bottom, 12)
             }
-            Text("To change an approved command scope, revoke it and approve a new request. Broader access is never granted automatically.")
+
+            Text("Similar-looking exact commands can have different arguments. A short fingerprint distinguishes them without retaining command-line secrets. Cleanup only removes identical effective scopes; broader access still requires local approval.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .padding()
@@ -101,6 +172,18 @@ struct CommandPermissionsView: View {
             if let grant = pendingRevocation {
                 Text("Revoke \(grant.scopeTitle) in \(grant.projectRoot)? Future commands matching this permission will require approval again.")
             }
+        }
+        .confirmationDialog(
+            "Remove identical saved approvals?",
+            isPresented: $confirmCleanup,
+            titleVisibility: .visible
+        ) {
+            Button("Remove duplicates", role: .destructive) {
+                model.cleanupDuplicateCommandGrants()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Only identical command scopes within the same project, working directory and approval duration will be merged. Distinct exact commands and separate coding sessions remain intact.")
         }
     }
 }

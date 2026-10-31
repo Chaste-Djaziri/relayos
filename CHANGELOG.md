@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Redesigned the native Command Permissions view into expandable project/executable groups instead of repetitive full-height rows, with privacy-preserving exact-scope fingerprints, saved-approval counts and an explicitly confirmed Remove duplicates action. Kept per-grant revocation available.
 - Approval dialogs now identify the requested command rather than the internal `project_command` kind, and clearly distinguish a reusable prefix from an exact-command grant. The saved Command Permissions view is also embedded directly in Tools & permissions so users can find and revoke approvals without locating a separate tab.
 - Added a native Command Permissions screen with searchable project-scoped grants, visible command prefixes, approved executable, working directory, duration/expiration, refresh, and confirmation-based revocation. Changing a grant's scope requires revocation and fresh local approval. Added Swift presentation-model tests.
 - Added native-helper commands for reading and revoking saved command approvals, with local CLI tests.

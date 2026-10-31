@@ -9,6 +9,7 @@ struct SavedCommandGrant: Decodable, Identifiable {
     let grantType: String
     let familyKey: String?
     let scopePrefix: [String]?
+    let scopeFingerprint: String?
     let createdAt: Double
     let expiresAt: Double?
 
@@ -21,6 +22,7 @@ struct SavedCommandGrant: Decodable, Identifiable {
         case grantType = "grant_type"
         case familyKey = "family_key"
         case scopePrefix = "scope_prefix"
+        case scopeFingerprint = "scope_fingerprint"
         case createdAt = "created_at"
         case expiresAt = "expires_at"
     }
@@ -28,12 +30,18 @@ struct SavedCommandGrant: Decodable, Identifiable {
     var scopeTitle: String {
         if let scopePrefix, !scopePrefix.isEmpty { return scopePrefix.joined(separator: " ") }
         if familyKey == "git:add" { return "git add" }
-        return "Exact command"
+        let executableName = URL(fileURLWithPath: executable).lastPathComponent
+        if let scopeFingerprint, !scopeFingerprint.isEmpty {
+            return "Exact \(executableName) · #\(scopeFingerprint.prefix(8))"
+        }
+        return "Exact \(executableName) command"
     }
     var scopeDetails: String {
         if scopePrefix?.isEmpty == false || familyKey != nil { return "Trailing arguments may vary" }
-        return "Exact arguments only; original arguments not retained"
+        return "Exact arguments only · original arguments not retained for privacy"
     }
+    var commandName: String { URL(fileURLWithPath: executable).lastPathComponent }
+    var groupingKey: String { projectRoot + "\u{1F}" + executable }
     var durationTitle: String { grantType == "always" ? "Always allowed" : "For coding session" }
     func isExpired(at date: Date = Date()) -> Bool {
         guard let expiresAt else { return false }

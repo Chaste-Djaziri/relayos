@@ -24,6 +24,7 @@ final class BridgeModel: ObservableObject {
     @Published var permissionGrants: [[String: Any]] = []
     @Published var commandGrants: [SavedCommandGrant] = []
     @Published var commandGrantsBusy = false
+    @Published var commandGrantDuplicateCount = 0
     @Published var commandGrantsError: String?
 
 
@@ -514,6 +515,66 @@ final class BridgeModel: ObservableObject {
                 DispatchQueue.main.async { [weak self] in
                     self?.commandGrants = grants
                     self?.commandGrantsBusy = false
+                    self?.refreshCommandGrantDuplicateCount()
+                }
+            } catch {
+                DispatchQueue.main.async { [weak self] in
+                    self?.commandGrantsError = error.localizedDescription
+                    self?.commandGrantsBusy = false
+                }
+            }
+        }
+    }
+
+    /// Preview genuine identical-scope duplicates; never infer duplicates
+    /// from matching executable names alone.
+    func refreshCommandGrantDuplicateCount() {
+        guard let executable = approvalExecutable() else { return }
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let process = Process()
+            let output = Pipe()
+            process.executableURL = URL(fileURLWithPath: executable)
+            process.arguments = ["-m", "laptop_bridge.approvals", "command-grant-duplicates"]
+            self?.setApprovalWorkingDirectory(process, executable: executable)
+            process.standardOutput = output
+            do {
+                try process.run()
+                process.waitUntilExit()
+                guard process.terminationStatus == 0,
+                      let data = try output.fileHandleForReading.readToEnd(),
+                      let result = try JSONSerialization.jsonObject(with: data) as? [String: Int],
+                      let duplicates = result["duplicates"] else { return }
+                DispatchQueue.main.async { [weak self] in
+                    self?.commandGrantDuplicateCount = duplicates
+                }
+            } catch {
+                // A temporary read failure must not revoke or change anything.
+            }
+        }
+    }
+
+    /// Triggered solely by the user's confirmation in CommandPermissionsView.
+    func cleanupDuplicateCommandGrants() {
+        guard let executable = approvalExecutable(), !commandGrantsBusy else { return }
+        commandGrantsBusy = true
+        commandGrantsError = nil
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let process = Process()
+            let output = Pipe()
+            process.executableURL = URL(fileURLWithPath: executable)
+            process.arguments = ["-m", "laptop_bridge.approvals", "cleanup-command-grant-duplicates"]
+            self?.setApprovalWorkingDirectory(process, executable: executable)
+            process.standardOutput = output
+            do {
+                try process.run()
+                process.waitUntilExit()
+                guard process.terminationStatus == 0 else {
+                    throw NSError(domain: "RelayOS", code: Int(process.terminationStatus),
+                                  userInfo: [NSLocalizedDescriptionKey: "Could not clean duplicate approvals."])
+                }
+                DispatchQueue.main.async { [weak self] in
+                    self?.commandGrantsBusy = false
+                    self?.refreshCommandGrants()
                 }
             } catch {
                 DispatchQueue.main.async { [weak self] in

@@ -33,7 +33,17 @@ final class SavedCommandGrantTests: XCTestCase {
         XCTAssertEqual(grants[0].scopeTitle, "git add")
         XCTAssertEqual(grants[0].durationTitle, "For coding session")
         XCTAssertTrue(grants[0].isExpired(at: Date(timeIntervalSince1970: 11)))
-        XCTAssertEqual(grants[1].scopeTitle, "Exact command")
+        XCTAssertEqual(grants[1].scopeTitle, "Exact git command")
         XCTAssertTrue(grants[1].scopeDetails.contains("not retained"))
+        let fingerprinted = """
+        {"token":"c","project_root":"/tmp","working_directory":"/tmp",
+          "executable":"/usr/bin/git","grant_type":"always","family_key":null,
+          "scope_prefix":null,"scope_fingerprint":"a1b2c3d4e5",
+          "created_at":2,"expires_at":null}
+        """
+        let grant = try JSONDecoder().decode(SavedCommandGrant.self, from: Data(fingerprinted.utf8))
+        XCTAssertEqual(grant.scopeTitle, "Exact git · #a1b2c3d4")
+        XCTAssertEqual(grant.groupingKey, "/tmp\u{1F}/usr/bin/git")
+        XCTAssertEqual(grant.commandName, "git")
     }
 }
