@@ -135,6 +135,7 @@ struct SettingsView: View {
                 Label("ngrok", systemImage: "globe").tag(SettingsTab.ngrok)
                 Label("Security", systemImage: "lock").tag(SettingsTab.security)
                 Label("Activity", systemImage: "clock.arrow.circlepath").tag(SettingsTab.activity)
+                Label("Terminal jobs", systemImage: "terminal").tag(SettingsTab.terminalJobs)
             }.listStyle(.sidebar)
         } detail: {
             Form {
@@ -180,6 +181,8 @@ struct SettingsView: View {
                     Section("Security") { Toggle("Emergency stop", isOn: Binding(get: { model.emergencyStop }, set: { model.setEmergencyStop($0) })).tint(.red); Text("Emergency stop blocks active sessions and revokes active OAuth access.").font(.caption).foregroundStyle(.secondary) }
                 case .activity:
                     ApprovalCenterView(model: model)
+                case .terminalJobs:
+                    CommandJobsView(model: model)
                 }
             }.formStyle(.grouped).padding()
         }
@@ -189,4 +192,4 @@ struct SettingsView: View {
     }
 }
 
-enum SettingsTab: Hashable { case general, approvals, connections, tools, commandPermissions, ngrok, security, activity }
+enum SettingsTab: Hashable { case general, approvals, connections, tools, commandPermissions, ngrok, security, activity, terminalJobs }
