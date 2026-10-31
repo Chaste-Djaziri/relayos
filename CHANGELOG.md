@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- The macOS command-approval dialog now explains one-time versus reusable scope, highlights **Once** by default, and labels allowlisted family permissions explicitly (for example, **Always allow git add**).
 - Updated the macOS implementation roadmap with completed Phase 01 milestones, test results, and the remaining deployment/ownership acceptance checks.
 - Development Python helpers are now located through validated repository discovery (or `RELAYOS_DEV_ROOT`) instead of a hardcoded home-directory path; installed builds still prefer their bundled helpers.
 - Moved the observable service/approval model and local Keychain helpers out of the app entry point into `RelayOSRuntimeModel.swift`, leaving `RelayOSApp.swift` responsible for application composition only.

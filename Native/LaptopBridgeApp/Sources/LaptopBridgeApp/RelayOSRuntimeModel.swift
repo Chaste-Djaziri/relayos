@@ -507,18 +507,38 @@ final class BridgeModel: ObservableObject {
         let arguments = argv.joined(separator: " ")
         let cwd = context["cwd"] as? String ?? "Not specified"
         let requested = context["requested_grant"] as? String ?? "once"
-        alert.messageText = "Approve \(kind)?"
-        alert.informativeText = "Target: \(target)\nCommand: \(arguments.isEmpty ? "(none)" : arguments)\nWorking directory: \(cwd)\nRequested duration: \(requested)\n\nOnly approve operations you recognize. The actual local selection controls the grant duration."
-        alert.addButton(withTitle: "Always allow"); alert.addButton(withTitle: "For this session"); alert.addButton(withTitle: "Once"); alert.addButton(withTitle: "Deny")
+        let family = context["command_family"] as? String
+        // Only recognized backend command families may be displayed as reusable.
+        let familyLabel = family == "git:add" ? "git add" : nil
+        let operationScope = familyLabel.map {
+            "Session / Always: any \($0) arguments in this project and working directory."
+        } ?? "Session / Always: only the exact command and working directory shown above."
+        alert.messageText = familyLabel.map { "Approve \($0)?" } ?? "Approve \(kind)?"
+        alert.informativeText = """
+        Target: \(target)
+        Command: \(arguments.isEmpty ? "(none)" : arguments)
+        Working directory: \(cwd)
+        Client requested: \(requested)
+
+        Once: approve this exact invocation only.
+        \(operationScope)
+        \(familyLabel == nil ? "No other commands are included." : "No other Git subcommands are included.")
+        Your selection here determines the actual permission duration.
+        """
+        // Make the least-privileged approval the highlighted default.
+        alert.addButton(withTitle: "Once")
+        alert.addButton(withTitle: familyLabel.map { "Allow \($0) for this session" } ?? "For this session")
+        alert.addButton(withTitle: familyLabel.map { "Always allow \($0)" } ?? "Always allow")
+        alert.addButton(withTitle: "Deny")
         let response = alert.runModal()
         let duration: String
         switch response {
         case .alertFirstButtonReturn:
-            duration = "persistent"
+            duration = "once"
         case .alertSecondButtonReturn:
             duration = "session"
         case .alertThirdButtonReturn:
-            duration = "once"
+            duration = "persistent"
         default:
             duration = "deny"
         }
