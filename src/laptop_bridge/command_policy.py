@@ -58,3 +58,42 @@ def validate_scope_prefix(executable, argv, scope_prefix):
 
 def matches_scope_prefix(argv, scope_prefix):
     return isinstance(scope_prefix, list) and len(scope_prefix) >= 2 and argv[:len(scope_prefix)] == scope_prefix
+
+
+def suggested_scope_prefix(executable, argv):
+    """Suggest an explicit, locally reviewable prefix for common command forms.
+
+    The caller's independently supplied scope_prefix takes precedence. Never
+    automatically infer an executable-wide, shell, interpreter or flag prefix.
+    A suggestion authorizes nothing until selected in a local approval dialog.
+    """
+    if len(argv) < 2 or not all(isinstance(part, str) and part for part in argv):
+        return None
+    command = Path(executable).name.lower()
+    if command in _NO_PREFIX_EXECUTABLES:
+        return None
+    if argv[1].startswith("-"):
+        return None
+
+    if command == "git":
+        if argv[1] in {
+            "commit", "status", "diff", "log", "show", "branch",
+            "tag", "fetch", "pull", "push", "restore", "switch", "checkout",
+            "reset", "stash", "merge", "rebase", "worktree",
+        }:
+            return argv[:2]
+        return None
+    if command in {"npm", "pnpm", "yarn"}:
+        if argv[1] in {"run", "run-script"}:
+            return argv[:3] if len(argv) >= 3 and not argv[2].startswith("-") else None
+        if argv[1] in {"install", "add", "remove", "uninstall", "test", "ci", "build", "exec"}:
+            return argv[:2]
+        return None
+    if command == "xcrun" and argv[1] == "swift" and len(argv) >= 3:
+        if argv[2] in {"test", "build", "package"}:
+            return argv[:3]
+    if command == "swift" and argv[1] in {"test", "build", "package"}:
+        return argv[:2]
+    if command in {"cargo", "go"} and argv[1] in {"build", "test", "check", "fmt", "run"}:
+        return argv[:2]
+    return None

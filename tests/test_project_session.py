@@ -347,6 +347,39 @@ def _approved_project_session(project_dir):
     return server.project_session_status(proposal["request_id"])["session_id"]
 
 
+def test_automatic_git_commit_prefix_is_reused_without_client_scope(project_dir):
+    sid = _approved_project_session(project_dir)
+    command = ["git", "commit", "-m", "first"]
+    pending = server.authorize_project_command(sid, command)
+    assert pending["scope_prefix"] == ["git", "commit"]
+    assert state.pending_requests()[0]["context"]["scope_prefix"] == ["git", "commit"]
+    state.decide_request(pending["request_id"], "persistent")
+    approved = server.authorize_project_command(sid, command)
+    assert approved["grant"] == "always"
+    assert approved["scope_prefix"] == ["git", "commit"]
+    different = ["git", "commit", "-m", "different message"]
+    assert server.authorize_project_command(sid, different)["reused_saved_grant"]
+    assert state.has_saved_command_grant(
+        str(project_dir), server._resolve_executable("git"), different, str(project_dir), sid)
+    assert server.run_project_command(sid, ["git", "push", "origin", "main"])["requires_authorization"]
+
+
+def test_automatic_scope_suggestions_are_narrow(project_dir):
+    from laptop_bridge.command_policy import suggested_scope_prefix
+    cases = [
+        ("/opt/homebrew/bin/npm", ["npm", "install", "one"], ["npm", "install"]),
+        ("/opt/homebrew/bin/npm", ["npm", "run", "build", "--watch"], ["npm", "run", "build"]),
+        ("/usr/bin/git", ["git", "log", "-3"], ["git", "log"]),
+        ("/usr/bin/xcrun", ["xcrun", "swift", "test", "--package-path", "."], ["xcrun", "swift", "test"]),
+        ("/bin/bash", ["bash", "-c", "echo"], None),
+        ("/usr/bin/git", ["git", "-c", "foo", "commit"], None),
+        ("/usr/bin/env", ["env", "sh", "script"], None),
+        ("/usr/bin/git", ["git", "add", "--", "file"], None),
+    ]
+    for executable, argv, expected in cases:
+        assert suggested_scope_prefix(executable, argv) == expected
+
+
 def test_explicit_commit_prefix_reuses_different_messages_without_approving_other_git_actions(project_dir):
     sid = _approved_project_session(project_dir)
     first = ["git", "commit", "-m", "initial"]
