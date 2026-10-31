@@ -45,8 +45,14 @@ final class BridgeModel: ObservableObject {
     }
     private var shouldMaintainServices = false
     private var approvalTimer: DispatchSourceTimer?
-    private var visibleApprovalID: String?
-    private var handledApprovalIDs: [String: Date] = [:]
+    @Published var approvalInbox: [ApprovalInboxItem] = []
+    @Published var approvalNavigationRequest = 0
+    func showApprovalCenter() { approvalNavigationRequest += 1 }
+    @Published var approvalActivity: [ApprovalActivityEntry] = []
+    @Published var approvalCenterError: String?
+    @Published var approvalDecisionInFlight: String?
+    private var inboxPollInFlight = false
+    private let arrivalTracker = ApprovalArrivalTracker()
     private var terminationObserver: NSObjectProtocol?
 
     init() {
@@ -417,36 +423,6 @@ final class BridgeModel: ObservableObject {
         restartServices()
     }
 
-    func checkOAuthApprovals() {
-        guard visibleApprovalID == nil else { return }
-        guard let python = approvalExecutable() else { return }
-        let process = Process(); let pipe = Pipe()
-        process.executableURL = URL(fileURLWithPath: python)
-        process.arguments = ["-m", "laptop_bridge.approvals", "list-oauth"]
-        setApprovalWorkingDirectory(process, executable: python)
-        process.standardOutput = pipe
-        try? process.run(); process.waitUntilExit()
-        guard let data = try? pipe.fileHandleForReading.readToEnd(),
-              let items = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
-              let item = items.first,
-              let requestID = item["request_id"] as? String else { return }
-        visibleApprovalID = requestID
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.window.level = .floating
-        ApprovalSound.playIfEnabled()
-        alert.messageText = "Approve MCP connection?"
-        alert.informativeText = "An MCP client is requesting access to RelayOS. Approve only if you initiated this connection."
-        alert.addButton(withTitle: "Approve")
-        alert.addButton(withTitle: "Deny")
-        let decision = alert.runModal() == .alertFirstButtonReturn ? "approve" : "deny"
-        let decisionProcess = Process(); decisionProcess.executableURL = URL(fileURLWithPath: python)
-        decisionProcess.arguments = ["-m", "laptop_bridge.approvals", "decide-oauth", requestID, decision]
-        setApprovalWorkingDirectory(decisionProcess, executable: python)
-        try? decisionProcess.run(); decisionProcess.waitUntilExit()
-        visibleApprovalID = nil
-    }
-
     nonisolated private func refreshConnectedClients() {
         guard let python = approvalExecutable() else { return }
         DispatchQueue.global(qos: .utility).async { [weak self] in
@@ -468,7 +444,7 @@ final class BridgeModel: ObservableObject {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let process = Process(); let pipe = Pipe(); process.executableURL = URL(fileURLWithPath: python)
             process.arguments = ["-m", "laptop_bridge.approvals", "list-permissions"]
-            process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/GitHub/laptop-bridge")
+            self?.setApprovalWorkingDirectory(process, executable: python)
             process.standardOutput = pipe; try? process.run(); process.waitUntilExit()
             guard let data = try? pipe.fileHandleForReading.readToEnd(), let grants = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
             DispatchQueue.main.async { [weak self] in self?.permissionGrants = grants }
@@ -691,121 +667,125 @@ final class BridgeModel: ObservableObject {
         }
     }
 
+    /// Poll through the local helper, never through the public MCP interface.
+    /// All pending requests are retained in a single inbox, not just the first.
+    func refreshApprovalInbox() {
+        guard !inboxPollInFlight, let helper = approvalExecutable() else { return }
+        inboxPollInFlight = true
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let process = Process()
+            let pipe = Pipe()
+            process.executableURL = URL(fileURLWithPath: helper)
+            process.arguments = ["-m", "laptop_bridge.approvals", "list-inbox"]
+            self?.setApprovalWorkingDirectory(process, executable: helper)
+            process.standardOutput = pipe
+            do {
+                try process.run()
+                let data = try pipe.fileHandleForReading.readToEnd() ?? Data()
+                process.waitUntilExit()
+                guard process.terminationStatus == 0 else {
+                    throw NSError(domain: "RelayOSInbox", code: 1,
+                                  userInfo: [NSLocalizedDescriptionKey: "Could not load approvals."])
+                }
+                let items = try JSONDecoder().decode([ApprovalInboxItem].self, from: data)
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    let newlyArrived = self.arrivalTracker.newlyObserved(items)
+                    self.approvalInbox = items
+                    self.approvalCenterError = nil
+                    self.inboxPollInFlight = false
+                    if !newlyArrived.isEmpty {
+                        ApprovalSound.playIfEnabled()
+                        for item in newlyArrived { ApprovalArrivalNotification.deliver(item) }
+                    }
+                }
+            } catch {
+                Task { @MainActor [weak self] in
+                    self?.approvalCenterError = error.localizedDescription
+                    self?.inboxPollInFlight = false
+                }
+            }
+        }
+    }
+
+    func refreshApprovalActivity(search: String = "") {
+        guard let helper = approvalExecutable() else { return }
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let process = Process()
+            let output = Pipe()
+            process.executableURL = URL(fileURLWithPath: helper)
+            process.arguments = ["-m", "laptop_bridge.approvals", "activity-history",
+                                 "--limit", "150", "--search", search]
+            self?.setApprovalWorkingDirectory(process, executable: helper)
+            process.standardOutput = output
+            do {
+                try process.run()
+                let data = try output.fileHandleForReading.readToEnd() ?? Data()
+                process.waitUntilExit()
+                guard process.terminationStatus == 0 else { return }
+                let events = try JSONDecoder().decode([ApprovalActivityEntry].self, from: data)
+                Task { @MainActor [weak self] in self?.approvalActivity = events }
+            } catch {
+                Task { @MainActor [weak self] in self?.approvalCenterError = error.localizedDescription }
+            }
+        }
+    }
+
+    /// Explicit local user action. A backend refusal leaves the request in the
+    /// inbox and surfaces an error; it never claims that approval succeeded.
+    func decideApproval(_ item: ApprovalInboxItem, decision: String) {
+        guard approvalDecisionInFlight == nil, !item.isExpired,
+              let helper = approvalExecutable() else {
+            approvalCenterError = "Request expired or another decision is in progress."
+            refreshApprovalInbox()
+            return
+        }
+        guard ["once", "session", "persistent", "deny"].contains(decision),
+              (!item.isOAuth || decision == "once" || decision == "deny") else { return }
+        approvalDecisionInFlight = item.id
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let process = Process()
+            let output = Pipe()
+            process.executableURL = URL(fileURLWithPath: helper)
+            process.arguments = ["-m", "laptop_bridge.approvals",
+                                 "decide-inbox", item.id, decision]
+            self?.setApprovalWorkingDirectory(process, executable: helper)
+            process.standardOutput = output
+            do {
+                try process.run()
+                process.waitUntilExit()
+                guard process.terminationStatus == 0 else {
+                    throw NSError(domain: "RelayOSInbox", code: 2,
+                                  userInfo: [NSLocalizedDescriptionKey: "Request expired, was denied, or could not be decided."])
+                }
+                Task { @MainActor [weak self] in
+                    self?.approvalDecisionInFlight = nil
+                    self?.approvalInbox.removeAll { $0.id == item.id }
+                    self?.approvalCenterError = nil
+                    self?.refreshApprovalInbox()
+                    self?.refreshApprovalActivity()
+                }
+            } catch {
+                Task { @MainActor [weak self] in
+                    self?.approvalDecisionInFlight = nil
+                    self?.approvalCenterError = error.localizedDescription
+                    self?.refreshApprovalInbox()
+                }
+            }
+        }
+    }
+
     nonisolated func checkOAuthApprovalsInBackground() {
-        Task { @MainActor [weak self] in self?.maintainServicesIfNeeded() }
+        Task { @MainActor [weak self] in
+            self?.maintainServicesIfNeeded()
+            self?.refreshApprovalInbox()
+        }
+        // Keep existing status/permission polling independent of the inbox.
         refreshConnectedClients()
         refreshPermissionGrants()
         refreshEmergencyStop()
-        checkPendingPermissionRequests()
-        guard let python = approvalExecutable() else { return }
-        let process = Process(); let pipe = Pipe()
-        process.executableURL = URL(fileURLWithPath: python)
-        process.arguments = ["-m", "laptop_bridge.approvals", "list-oauth"]
-        setApprovalWorkingDirectory(process, executable: python)
-        process.standardOutput = pipe
-        try? process.run(); process.waitUntilExit()
-        guard let data = try? pipe.fileHandleForReading.readToEnd(),
-              let items = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
-              let item = items.first,
-              let requestID = item["request_id"] as? String else { return }
-        let clientName = (item["client_name"] as? String) ?? "MCP client"
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.visibleApprovalID == nil else { return }
-            self.handledApprovalIDs = self.handledApprovalIDs.filter { Date().timeIntervalSince($0.value) < 300 }
-            guard self.handledApprovalIDs[requestID] == nil else { return }
-            self.handledApprovalIDs[requestID] = Date()
-            self.presentApproval(requestID: requestID, clientName: clientName, python: python)
-        }
     }
 
-    nonisolated private func checkPendingPermissionRequests() {
-        guard let python = approvalExecutable() else { return }
-        let process = Process(); let pipe = Pipe(); process.executableURL = URL(fileURLWithPath: python)
-        process.arguments = ["-m", "laptop_bridge.approvals", "list-pending-json"]
-        setApprovalWorkingDirectory(process, executable: python)
-        process.standardOutput = pipe; try? process.run(); process.waitUntilExit()
-        guard let data = try? pipe.fileHandleForReading.readToEnd(), let items = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]], let item = items.first, let id = item["request_id"] as? String else { return }
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.visibleApprovalID == nil, self.handledApprovalIDs[id] == nil else { return }
-            self.handledApprovalIDs[id] = Date(); self.presentPermission(requestID: id, item: item, python: python)
-        }
-    }
-
-    private func presentPermission(requestID: String, item: [String: Any], python: String) {
-        ApprovalSound.playIfEnabled()
-        NSApp.setActivationPolicy(.regular); NSApp.activate(ignoringOtherApps: true); NSApp.windows.first(where: { $0.title == "RelayOS" })?.makeKeyAndOrderFront(nil)
-        let alert = NSAlert(); alert.window.level = .floating; alert.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        let kind = item["kind"] as? String ?? "operation"; let target = item["target"] as? String ?? "requested resource"
-        let argv = item["argv"] as? [String] ?? []
-        let context = item["context"] as? [String: Any] ?? [:]
-        let arguments = argv.joined(separator: " ")
-        let cwd = context["cwd"] as? String ?? "Not specified"
-        let requested = context["requested_grant"] as? String ?? "once"
-        let family = context["command_family"] as? String
-        let prefix = context["scope_prefix"] as? [String]
-        let familyLabel = family == "git:add" ? "git add" : nil
-        let reusableLabel = prefix?.joined(separator: " ") ?? familyLabel
-        let operationScope = reusableLabel.map {
-            "Session / Always: only commands starting with '\($0)' in this project and working directory. Arguments after that prefix may change."
-        } ?? "Session / Always: only the exact command and working directory shown above."
-        let commandName = argv.first.map { URL(fileURLWithPath: $0).lastPathComponent } ?? kind
-        alert.messageText = reusableLabel.map { "Approve \($0)?" } ?? "Approve \(commandName) command?"
-        alert.informativeText = """
-        Target: \(target)
-        Exact requested command: \(arguments.isEmpty ? "(none)" : arguments)
-        Working directory: \(cwd)
-        Client requested: \(requested)
-
-        Once: approve this exact invocation only.
-        \(operationScope)
-        Your local selection determines how long the permission lasts.
-        """
-        // Make the least-privileged approval the highlighted default.
-        alert.addButton(withTitle: "Once")
-        alert.addButton(withTitle: reusableLabel.map { "Allow \($0) for this session" } ?? "Allow exact command for session")
-        alert.addButton(withTitle: reusableLabel.map { "Always allow \($0)" } ?? "Always allow exact command")
-        alert.addButton(withTitle: "Deny")
-        let response = alert.runModal()
-        let duration: String
-        switch response {
-        case .alertFirstButtonReturn:
-            duration = "once"
-        case .alertSecondButtonReturn:
-            duration = "session"
-        case .alertThirdButtonReturn:
-            duration = "persistent"
-        default:
-            duration = "deny"
-        }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: python)
-        process.arguments = ["-m", "laptop_bridge.approvals", "decide-request", requestID, duration]
-        setApprovalWorkingDirectory(process, executable: python)
-        try? process.run()
-        process.waitUntilExit()
-        visibleApprovalID = nil
-    }
-
-    private func presentApproval(requestID: String, clientName: String, python: String) {
-        ApprovalSound.playIfEnabled()
-        visibleApprovalID = requestID
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        NSApp.windows.first(where: { $0.title == "RelayOS" })?.makeKeyAndOrderFront(nil)
-        let alert = NSAlert()
-        alert.window.level = .floating
-        alert.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        alert.messageText = "Approve \(clientName) connection?"
-        alert.informativeText = "\(clientName) is requesting access to RelayOS. Approve only if you initiated this connection."
-        alert.addButton(withTitle: "Approve")
-        alert.addButton(withTitle: "Deny")
-        let decision = alert.runModal() == .alertFirstButtonReturn ? "approve" : "deny"
-        let process = Process(); process.executableURL = URL(fileURLWithPath: python)
-        process.arguments = ["-m", "laptop_bridge.approvals", "decide-oauth", requestID, decision]
-        setApprovalWorkingDirectory(process, executable: python)
-        try? process.run(); process.waitUntilExit()
-        visibleApprovalID = nil
-    }
 }
 
 enum Keychain {

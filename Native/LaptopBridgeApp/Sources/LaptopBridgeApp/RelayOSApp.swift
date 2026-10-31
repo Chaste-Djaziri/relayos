@@ -48,9 +48,15 @@ struct LaptopBridgeApp: App {
             QuickPanel(model: model)
                 .frame(width: 360)
         } label: {
-            Image(systemName: "cursorarrow")
-                .frame(width: 18, height: 18)
-                .accessibilityLabel("RelayOS")
+            HStack(spacing: 3) {
+                Image(systemName: "cursorarrow")
+                    .frame(width: 18, height: 18)
+                if !model.approvalInbox.isEmpty {
+                    Text("\(model.approvalInbox.count)")
+                        .font(.system(size: 11, weight: .bold))
+                }
+            }
+            .accessibilityLabel("RelayOS — \(model.approvalInbox.count) pending approvals")
         }
         .menuBarExtraStyle(.window)
 

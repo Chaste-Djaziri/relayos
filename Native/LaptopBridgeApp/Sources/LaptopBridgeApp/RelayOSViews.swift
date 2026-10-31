@@ -39,6 +39,13 @@ struct QuickPanel: View {
                     Button("Copy MCP endpoint") { model.copyEndpoint() }
                 }
             }
+            if !model.approvalInbox.isEmpty {
+                Button("Review \(model.approvalInbox.count) pending approvals") {
+                    model.showApprovalCenter()
+                    openWindow(id: "main")
+                    NSApp.activate(ignoringOtherApps: true)
+                }.buttonStyle(.borderedProminent)
+            }
             Text(model.endpoint).font(.caption).textSelection(.enabled).foregroundStyle(.secondary)
             Toggle("Emergency stop", isOn: Binding(get: { model.emergencyStop }, set: { model.setEmergencyStop($0) })).tint(.red)
             HStack {
@@ -116,10 +123,12 @@ struct SettingsView: View {
     @ObservedObject var model: BridgeModel
     @State private var selected: SettingsTab = .general
     @AppStorage(ApprovalSound.preferenceKey) private var approvalSoundsEnabled = true
+    @AppStorage(ApprovalArrivalNotification.enabledKey) private var approvalNotificationsEnabled = false
     var body: some View {
         NavigationSplitView {
             List(selection: $selected) {
                 Label("General", systemImage: "gearshape").tag(SettingsTab.general)
+                Label("Approvals (\(model.approvalInbox.count))", systemImage: "tray.full").tag(SettingsTab.approvals)
                 Label("MCP connections", systemImage: "link").tag(SettingsTab.connections)
                 Label("Tools & permissions", systemImage: "square.grid.2x2").tag(SettingsTab.tools)
                 Label("Command permissions", systemImage: "terminal.fill").tag(SettingsTab.commandPermissions)
@@ -130,9 +139,18 @@ struct SettingsView: View {
         } detail: {
             Form {
                 switch selected {
+                case .approvals:
+                    ApprovalCenterView(model: model)
                 case .general:
                     Section("General") { LabeledContent("MCP endpoint", value: model.endpoint); LabeledContent("Local MCP", value: model.mcpHealth.rawValue.capitalized); LabeledContent("Public MCP", value: model.tunnelHealth.label); if !model.serviceNotice.isEmpty { Text(model.serviceNotice).foregroundStyle(.orange) }; Button("Restart services") { model.restartServices() } }
-                    Section("Approval notifications") { Toggle("Play sound for new approval requests", isOn: $approvalSoundsEnabled); Text("A short sound plays once when a new command or connection approval appears.").font(.caption).foregroundStyle(.secondary) }
+                    Section("Approval notifications") {
+                        Toggle("Play sound for new approval requests", isOn: $approvalSoundsEnabled)
+                        Toggle("macOS notifications for new approval requests", isOn: $approvalNotificationsEnabled)
+                            .onChange(of: approvalNotificationsEnabled) { _, enabled in
+                                if enabled { ApprovalArrivalNotification.requestPermission() }
+                            }
+                        Text("Alerts are sent once per newly discovered request; command arguments are excluded from notifications.").font(.caption).foregroundStyle(.secondary)
+                    }
                 case .connections:
                     Section("Connected AI clients") {
                         if model.connectedClients.isEmpty { Text("No connected AI clients").foregroundStyle(.secondary) }
@@ -161,11 +179,14 @@ struct SettingsView: View {
                 case .security:
                     Section("Security") { Toggle("Emergency stop", isOn: Binding(get: { model.emergencyStop }, set: { model.setEmergencyStop($0) })).tint(.red); Text("Emergency stop blocks active sessions and revokes active OAuth access.").font(.caption).foregroundStyle(.secondary) }
                 case .activity:
-                    Section("Activity") { Text("Connection and tool activity is kept as local metadata only.").foregroundStyle(.secondary) }
+                    ApprovalCenterView(model: model)
                 }
             }.formStyle(.grouped).padding()
+        }
+        .onChange(of: model.approvalNavigationRequest) { _, _ in
+            selected = .approvals
         }
     }
 }
 
-enum SettingsTab: Hashable { case general, connections, tools, commandPermissions, ngrok, security, activity }
+enum SettingsTab: Hashable { case general, approvals, connections, tools, commandPermissions, ngrok, security, activity }
