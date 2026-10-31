@@ -414,6 +414,22 @@ def test_dynamic_prefix_survives_fresh_helper_and_can_be_revoked(project_dir):
     assert server.run_project_command(sid, ["echo", "dynamic", "changed"])["requires_authorization"]
 
 
+def test_invalid_persisted_prefix_cannot_authorize_arbitrary_commands(project_dir):
+    sid = _approved_project_session(project_dir)
+    import json
+    executable = server._resolve_executable("echo")
+    with state._db() as db:
+        db.execute(
+            """INSERT INTO command_grants
+               (token, project_root, executable, argv_digest, working_directory,
+                grant_type, created_at, prefix_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            ("invalid-prefix", str(project_dir), executable, None, str(project_dir),
+             "always", time.time(), "null"),
+        )
+    assert server.run_project_command(sid, ["echo", "anything"])["requires_authorization"]
+
+
 def test_npm_dynamic_prefix_state_matching_without_running_install(project_dir):
     from laptop_bridge.command_policy import validate_scope_prefix
     argv = ["npm", "install", "some-package"]

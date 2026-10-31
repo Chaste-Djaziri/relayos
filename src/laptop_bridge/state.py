@@ -786,7 +786,8 @@ def _reusable_command_grant(connection, project_root, executable, argv, cwd, ses
         if row["prefix_json"] is not None:
             try:
                 prefix = json.loads(row["prefix_json"])
-                validate_scope_prefix(executable, argv, prefix)
+                if validate_scope_prefix(executable, argv, prefix) is None:
+                    continue
             except (ValueError, TypeError):
                 continue
             return row
