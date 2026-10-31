@@ -231,7 +231,7 @@ struct CustomWindowAccessor: NSViewRepresentable {
             window.titlebarAppearsTransparent = true
             window.styleMask.insert(.fullSizeContentView)
             window.isMovableByWindowBackground = true
-            window.backgroundColor = NSColor(red: 0.11, green: 0.11, blue: 0.12, alpha: 1.0)
+            window.backgroundColor = NSColor(red: 0.095, green: 0.095, blue: 0.095, alpha: 1.0)
             window.standardWindowButton(.closeButton)?.isHidden = true
             window.standardWindowButton(.miniaturizeButton)?.isHidden = true
             window.standardWindowButton(.zoomButton)?.isHidden = true
@@ -593,9 +593,9 @@ struct CustomSidebarView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             CustomTrafficLightsAndNav()
-                .padding(.top, 14)
+                .padding(.top, 8)
                 .padding(.leading, 16)
-                .padding(.bottom, 12)
+                .padding(.bottom, 10)
 
             Text("Settings")
                 .font(.system(size: 18, weight: .bold))
@@ -1047,7 +1047,7 @@ struct SettingsView: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 Color.clear
-                    .frame(height: 26)
+                    .frame(height: 20)
 
                 ScrollView(.vertical) {
                     VStack(alignment: .leading, spacing: 22) {
@@ -1065,7 +1065,7 @@ struct SettingsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(red: 0.11, green: 0.11, blue: 0.12))
+            .background(Color(red: 0.095, green: 0.095, blue: 0.095))
         }
         .background(CustomWindowAccessor())
         .onChange(of: model.approvalNavigationRequest) { _, _ in
