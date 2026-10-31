@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Approval dialogs now identify the requested command rather than the internal `project_command` kind, and clearly distinguish a reusable prefix from an exact-command grant. The saved Command Permissions view is also embedded directly in Tools & permissions so users can find and revoke approvals without locating a separate tab.
 - Added a native Command Permissions screen with searchable project-scoped grants, visible command prefixes, approved executable, working directory, duration/expiration, refresh, and confirmation-based revocation. Changing a grant's scope requires revocation and fresh local approval. Added Swift presentation-model tests.
 - Added native-helper commands for reading and revoking saved command approvals, with local CLI tests.
 - Native approval dialogs now show the requested immutable command prefix versus the variable argument suffix. New command and MCP connection approval requests play a short macOS sound by default; the new General → Approval notifications setting lets users disable it. Added sound-preference regression coverage (16 Swift tests passing).

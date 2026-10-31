@@ -652,7 +652,8 @@ final class BridgeModel: ObservableObject {
         let operationScope = reusableLabel.map {
             "Session / Always: only commands starting with '\($0)' in this project and working directory. Arguments after that prefix may change."
         } ?? "Session / Always: only the exact command and working directory shown above."
-        alert.messageText = reusableLabel.map { "Approve \($0)?" } ?? "Approve \(kind)?"
+        let commandName = argv.first.map { URL(fileURLWithPath: $0).lastPathComponent } ?? kind
+        alert.messageText = reusableLabel.map { "Approve \($0)?" } ?? "Approve \(commandName) command?"
         alert.informativeText = """
         Target: \(target)
         Exact requested command: \(arguments.isEmpty ? "(none)" : arguments)
@@ -665,8 +666,8 @@ final class BridgeModel: ObservableObject {
         """
         // Make the least-privileged approval the highlighted default.
         alert.addButton(withTitle: "Once")
-        alert.addButton(withTitle: reusableLabel.map { "Allow \($0) for this session" } ?? "For this session")
-        alert.addButton(withTitle: reusableLabel.map { "Always allow \($0)" } ?? "Always allow")
+        alert.addButton(withTitle: reusableLabel.map { "Allow \($0) for this session" } ?? "Allow exact command for session")
+        alert.addButton(withTitle: reusableLabel.map { "Always allow \($0)" } ?? "Always allow exact command")
         alert.addButton(withTitle: "Deny")
         let response = alert.runModal()
         let duration: String

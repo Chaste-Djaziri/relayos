@@ -146,6 +146,7 @@ struct SettingsView: View {
                         }
                         Button("Revoke all permissions", role: .destructive) { for grant in model.permissionGrants { if let id = grant["token"] as? String { model.revokePermission(id) } } }
                     }
+                    Section("Saved command approvals") { CommandPermissionsView(model: model) }
                     Section("Permissions") { LabeledContent("Screen recording", value: "Managed by macOS"); Button("Open Privacy & Security") { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!) } }
                 case .commandPermissions:
                     CommandPermissionsView(model: model)
