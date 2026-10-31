@@ -125,3 +125,14 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Run Python tests: 97 passed, 1 existing Pydantic warning; native Swift: 16 passed.
 - [ ] Build the signed app and complete a real handover/connection-recovery check.
 - [ ] Confirm the new bundled MCP tool schema exposes `scope_prefix` and validate a two-command live reuse test after deployment.
+
+## Native Permissions Center — 2026-10-31
+
+- [x] Expose local helper commands to list and revoke reusable command-grant records without extending the remote authorization API.
+- [x] Add native Command Permissions navigation and searchable grants (project, cwd, executable, approved prefix, duration and expiration).
+- [x] Require confirmation before local revocation; scope changes must be reviewed as new approvals rather than silently broadened.
+- [x] Preserve existing persistent folder-permissions management.
+- [x] Verify backend test suite: 99 passed, one existing Pydantic serialization warning.
+- [x] Verify native test suite: 18 passed, zero failures.
+- [ ] Build signed staging bundle and run isolated packaged-helper smoke tests.
+- [ ] Deploy via controlled handover and verify list/revoke UI against real grant data.
