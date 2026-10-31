@@ -160,3 +160,17 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [ ] Build, sign and smoke-test an isolated staging bundle.
 - [ ] Controlled handover, live permissions listing, and process ownership verification.
 - [ ] Verify the native UI duplicate preview and cleanup flow interactively. Do not delete stored grants without the user's local confirmation.
+
+## Sprint 02 — Runtime reliability & connection recovery (2026-10-31)
+
+- [x] Authenticated public MCP tunnel probe checks ngrok's local inspector and verifies a remote unauthenticated HTTP 401, distinguishing a live ngrok PID from a working public endpoint.
+- [x] Validate ngrok forwards specifically to the RelayOS localhost MCP listener before adopting its URL. Repeatedly discover a tunnel instead of relying on a single inspector timer or parsing arbitrary subprocess logs.
+- [x] Add independent bounded retries for unresponsive app-owned MCP and ngrok processes, suppress overlapping and stale health checks, and leave unrelated listeners alone.
+- [x] Display local MCP health and verified public tunnel status separately in menu bar/General/ngrok screens, with a visible recovery notice.
+- [x] Extract hardened single-instance flock lease; reject symlink/foreign/insecure lock files, prevent simultaneous lock owners, and test release/reacquisition.
+- [x] Verify isolated packaged MCP helper survives a forced child crash and rebinds its own temporary port with existing local control token.
+- [x] Test a real managed child termination/replacement slot race without touching the production MCP server.
+- [x] Native Swift unit tests and complete Python suite passed (104 Python tests, one pre-existing Pydantic warning).
+- [ ] Validate signed staged bundle, packaged helper recovery and controlled rollout with rollback.
+- [ ] Live app-owned ngrok/MCP crash injection (would interrupt active ChatGPT connection); test only after controlled deployment.
+- [ ] Full native app SIGKILL/orphan-child recovery, and zero-downtime tunnel continuity. The app currently owns ngrok, so restarting it necessarily causes a brief tunnel interruption; true zero-downtime handover requires a separately persistent edge/tunnel supervisor.
