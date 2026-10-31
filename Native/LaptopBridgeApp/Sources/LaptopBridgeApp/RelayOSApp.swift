@@ -81,6 +81,7 @@ final class BridgeModel: ObservableObject {
 
     private let configURL: URL
     private var server: Process?
+    private var shouldMaintainServices = false
     private var tunnel: Process?
     private var approvalTimer: DispatchSourceTimer?
     private var visibleApprovalID: String?
@@ -113,6 +114,7 @@ final class BridgeModel: ObservableObject {
     }
 
     func shutdownServices() {
+        shouldMaintainServices = false
         approvalTimer?.cancel()
         approvalTimer = nil
         // Release the instance lock only after owned services have exited.
@@ -191,6 +193,7 @@ final class BridgeModel: ObservableObject {
     }
 
     func startServices() {
+        shouldMaintainServices = true
         guard server == nil else { return }
         if localServerIsListening() {
             running = true
@@ -463,7 +466,16 @@ final class BridgeModel: ObservableObject {
         try? process.run(); process.waitUntilExit(); refreshPermissionGrants()
     }
 
+    private func maintainServicesIfNeeded() {
+        guard shouldMaintainServices, server == nil else { return }
+        if !localServerIsListening() {
+            running = false
+            startServices()
+        }
+    }
+
     nonisolated func checkOAuthApprovalsInBackground() {
+        Task { @MainActor [weak self] in self?.maintainServicesIfNeeded() }
         refreshConnectedClients()
         refreshPermissionGrants()
         refreshEmergencyStop()
