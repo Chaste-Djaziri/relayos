@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Added an opt-in native integration test (`RELAYOS_TEST_LIVE_MCP=1`) that checks the authenticated loopback health endpoint without modifying or restarting the live MCP service.
 - Added a native `ServiceSupervisor` with bounded server/tunnel crash-retry delays, non-overlapping authenticated health probes, safe handling of stale probes during restarts, and recovery tests. The app no longer trusts an occupied MCP port without authenticating the control response, and starts the tunnel only after healthy verification.
 - Added a loopback-only authenticated MCP health monitor for the native supervisor. It validates the local token file, verifies the RelayOS control-response contract and distinguishes connection failures from unauthorized or unexpected listeners. Added four Swift health-probe tests.
 - The macOS command-approval dialog now explains one-time versus reusable scope, highlights **Once** by default, and labels allowlisted family permissions explicitly (for example, **Always allow git add**).

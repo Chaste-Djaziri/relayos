@@ -42,6 +42,14 @@ final class MCPHealthMonitorTests: XCTestCase {
         XCTAssertEqual(offlineResult, .unreachable)
     }
 
+    /// Optional integration check against the *existing* local listener. This
+    /// never restarts, modifies or disconnects the running MCP service.
+    func testLiveAuthenticatedHealthWhenExplicitlyEnabled() async {
+        guard ProcessInfo.processInfo.environment["RELAYOS_TEST_LIVE_MCP"] == "1" else { return }
+        let actual = await MCPHealthMonitor().probe()
+        XCTAssertEqual(actual, .healthy, "Expected an authenticated RelayOS control endpoint on loopback")
+    }
+
     func testProbeCanAuthenticateResponse() async {
         let body = validBody
         let monitor = MCPHealthMonitor(tokenProvider: { "long-valid-token-value" }, transport: { request in
