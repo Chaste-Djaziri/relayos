@@ -115,3 +115,13 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - Signed staged bundle built successfully in `dist/relayos-sprint01/RelayOS.app`; isolated bundled MCP helper smoke-tested on a separate loopback port with unauthenticated 401 and authenticated 200, without modifying the live deployment.
 - Remaining before production acceptance: real multi-instance launch/takeover and managed-process crash recovery.
 - Production acceptance still requires a controlled app handover and a real managed child/tunnel recovery test; unit tests alone do not certify these.
+
+## Dynamic command approvals and audible notifications — 2026-10-31
+- [x] Expose `scope_prefix` in the MCP `authorize_project_command` API. ChatGPT may choose an immutable argv prefix, e.g. `["git","commit"]`, `["npm","install"]`, or `["npm","run","build"]` and explicitly show variable suffix arguments to the local user.
+- [x] Bind local Session/Always approvals to exact project root, resolved executable, working directory and approved prefix; Once stays a single exact argv invocation.
+- [x] Deny overly broad prefixes (single token) and interpreter/shell delegation. Require a fresh local decision when the client alters the proposed prefix.
+- [x] Preserve existing `git add` saved permissions and support dynamic prefixes across database/helper restarts with explicit revocation.
+- [x] Play a native sound once when a new command or MCP client approval arrives, with a default-on Settings toggle.
+- [x] Run Python tests: 97 passed, 1 existing Pydantic warning; native Swift: 16 passed.
+- [ ] Build the signed app and complete a real handover/connection-recovery check.
+- [ ] Confirm the new bundled MCP tool schema exposes `scope_prefix` and validate a two-command live reuse test after deployment.
