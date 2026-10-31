@@ -187,3 +187,18 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [ ] Validate signed staging build and isolated packaged MCP start/restart smoke tests.
 - [ ] Preserve backup, perform controlled native handover and verify live MCP health and single-instance ownership.
 - [ ] Validate system notification permission prompt, audible output and multi-request inbox visually on the user's desktop; automatic tests cannot establish actual presentation.
+
+## Sprint 04 — Advanced Terminal & Coding Sessions (2026-10-31)
+
+- [x] Add opt-in background commands with the existing approved project/cwd/executable/argument authorization gate. Existing synchronous `run_project_command` behavior is unchanged.
+- [x] Expose start/list/read/cancel MCP tools constrained to an active approved coding session. Read uses per-stream offsets and max 8 KiB per poll, no shell.
+- [x] Persist metadata-only job history in SQLite (project, executable basename, status, timing, exit code); do not retain raw command argv or output in database.
+- [x] Enforce max four active jobs per MCP runtime, 4 MiB per-output-stream limits, bounded runtime, session expiration checks, emergency-stop and explicit cancellation with owned process-tree cleanup.
+- [x] Add authenticated local-loopback output retrieval for the native companion plus local-only CLI list/cancel commands.
+- [x] Add native Terminal Jobs screen with running/completed states, project and executable filtering, incremental output, and Cancel.
+- [x] Mark unfinished metadata as interrupted upon MCP server restart; historical job output is ephemeral and not reattached to an unrelated process.
+- [x] Test exact authorization and one-use consumption, output offsets, session isolation, cancellation, emergency stop, orphan marking, and authenticated local output endpoint.
+- [x] Run Python suite (116 passed, one pre-existing Pydantic warning) and native Swift suite (passed).
+- [ ] Verify signed staging bundle, isolated packaged MCP startup/restart, rollback copy and live handover.
+- [ ] Visually verify native task progress and cancellation using a harmless locally approved test job.
+- [ ] Future: independent job supervisor that can positively reap orphan children after an abrupt native/server SIGKILL and optionally reattach output. Current jobs are process-owned and not restart-persistent.
