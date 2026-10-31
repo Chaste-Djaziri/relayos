@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Added a native Command Permissions screen with searchable project-scoped grants, visible command prefixes, approved executable, working directory, duration/expiration, refresh, and confirmation-based revocation. Changing a grant's scope requires revocation and fresh local approval. Added Swift presentation-model tests.
 - Added native-helper commands for reading and revoking saved command approvals, with local CLI tests.
 - Native approval dialogs now show the requested immutable command prefix versus the variable argument suffix. New command and MCP connection approval requests play a short macOS sound by default; the new General → Approval notifications setting lets users disable it. Added sound-preference regression coverage (16 Swift tests passing).
 - Added client-proposed, locally approved literal `scope_prefix` for repeatable project commands (for example `git commit`, `npm install`, or `npm run build`). Reusable prefixes are constrained to the resolved executable, authorized project, working directory, local duration and immutable leading argv tokens. Once remains exact; arbitrary shells/interpreters do not support reusable prefixes. Added approval-tampering, session, revocation and database-reopen regression tests (96 Python tests passing).

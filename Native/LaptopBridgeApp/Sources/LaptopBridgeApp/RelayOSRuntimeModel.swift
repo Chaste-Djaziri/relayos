@@ -22,6 +22,10 @@ final class BridgeModel: ObservableObject {
     @Published var ngrokInstallState = ""
     @Published var connectedClients: [String] = []
     @Published var permissionGrants: [[String: Any]] = []
+    @Published var commandGrants: [SavedCommandGrant] = []
+    @Published var commandGrantsBusy = false
+    @Published var commandGrantsError: String?
+
 
     private let configURL: URL
     private let supervisor = ServiceSupervisor()
@@ -479,6 +483,83 @@ final class BridgeModel: ObservableObject {
         let process = Process(); process.executableURL = URL(fileURLWithPath: python); process.arguments = ["-m", "laptop_bridge.approvals", "revoke-permission", id]
         setApprovalWorkingDirectory(process, executable: python)
         try? process.run(); process.waitUntilExit(); refreshPermissionGrants()
+    }
+
+    /// Read-only grant inspection through the companion's bundled local helper.
+    /// The MCP client cannot change any grant through this UI.
+    func refreshCommandGrants() {
+        guard let executable = approvalExecutable() else {
+            commandGrantsError = "RelayOS approval helper could not be found."
+            return
+        }
+        guard !commandGrantsBusy else { return }
+        commandGrantsBusy = true
+        commandGrantsError = nil
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let process = Process()
+            let output = Pipe()
+            process.executableURL = URL(fileURLWithPath: executable)
+            process.arguments = ["-m", "laptop_bridge.approvals", "list-command-grants"]
+            self?.setApprovalWorkingDirectory(process, executable: executable)
+            process.standardOutput = output
+            do {
+                try process.run()
+                process.waitUntilExit()
+                let data = try output.fileHandleForReading.readToEnd() ?? Data()
+                guard process.terminationStatus == 0 else {
+                    throw NSError(domain: "RelayOS", code: Int(process.terminationStatus),
+                                  userInfo: [NSLocalizedDescriptionKey: "Could not read command grants."])
+                }
+                let grants = try JSONDecoder().decode([SavedCommandGrant].self, from: data)
+                DispatchQueue.main.async { [weak self] in
+                    self?.commandGrants = grants
+                    self?.commandGrantsBusy = false
+                }
+            } catch {
+                DispatchQueue.main.async { [weak self] in
+                    self?.commandGrantsError = error.localizedDescription
+                    self?.commandGrantsBusy = false
+                }
+            }
+        }
+    }
+
+    /// Revoke a single approved grant only after confirmation in the native view.
+    func revokeCommandGrant(_ id: String) {
+        guard let executable = approvalExecutable() else {
+            commandGrantsError = "RelayOS approval helper could not be found."
+            return
+        }
+        guard !commandGrantsBusy else { return }
+        commandGrantsBusy = true
+        commandGrantsError = nil
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: executable)
+            process.arguments = ["-m", "laptop_bridge.approvals", "revoke-command-grant", id]
+            self?.setApprovalWorkingDirectory(process, executable: executable)
+            process.standardOutput = Pipe()
+            process.standardError = Pipe()
+            do {
+                try process.run()
+                process.waitUntilExit()
+                guard process.terminationStatus == 0 else {
+                    throw NSError(domain: "RelayOS", code: Int(process.terminationStatus),
+                                  userInfo: [NSLocalizedDescriptionKey: "The approval could not be revoked."])
+                }
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    self.commandGrants.removeAll { $0.id == id }
+                    self.commandGrantsBusy = false
+                    self.refreshCommandGrants()
+                }
+            } catch {
+                DispatchQueue.main.async { [weak self] in
+                    self?.commandGrantsError = error.localizedDescription
+                    self?.commandGrantsBusy = false
+                }
+            }
+        }
     }
 
     private func maintainServicesIfNeeded() {

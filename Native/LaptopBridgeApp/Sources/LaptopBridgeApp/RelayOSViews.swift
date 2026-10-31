@@ -116,6 +116,7 @@ struct SettingsView: View {
                 Label("General", systemImage: "gearshape").tag(SettingsTab.general)
                 Label("MCP connections", systemImage: "link").tag(SettingsTab.connections)
                 Label("Tools & permissions", systemImage: "square.grid.2x2").tag(SettingsTab.tools)
+                Label("Command permissions", systemImage: "terminal.fill").tag(SettingsTab.commandPermissions)
                 Label("ngrok", systemImage: "globe").tag(SettingsTab.ngrok)
                 Label("Security", systemImage: "lock").tag(SettingsTab.security)
                 Label("Activity", systemImage: "clock.arrow.circlepath").tag(SettingsTab.activity)
@@ -146,6 +147,8 @@ struct SettingsView: View {
                         Button("Revoke all permissions", role: .destructive) { for grant in model.permissionGrants { if let id = grant["token"] as? String { model.revokePermission(id) } } }
                     }
                     Section("Permissions") { LabeledContent("Screen recording", value: "Managed by macOS"); Button("Open Privacy & Security") { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!) } }
+                case .commandPermissions:
+                    CommandPermissionsView(model: model)
                 case .ngrok:
                     Section("ngrok transport") { LabeledContent("Status", value: model.tunnelRunning ? "Connected" : "Stopped"); LabeledContent("Endpoint", value: model.endpoint); Button("Reconnect") { model.restartServices() } }
                 case .security:
@@ -158,4 +161,4 @@ struct SettingsView: View {
     }
 }
 
-enum SettingsTab: Hashable { case general, connections, tools, ngrok, security, activity }
+enum SettingsTab: Hashable { case general, connections, tools, commandPermissions, ngrok, security, activity }
