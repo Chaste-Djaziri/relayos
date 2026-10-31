@@ -23,9 +23,17 @@ final class BridgeModel: ObservableObject {
     @Published var permissionGrants: [[String: Any]] = []
 
     private let configURL: URL
-    private var server: Process?
+    private let serverSlot = ManagedProcessSlot()
+    private let tunnelSlot = ManagedProcessSlot()
+    private var server: Process? {
+        get { serverSlot.process }
+        set { serverSlot.assign(newValue) }
+    }
+    private var tunnel: Process? {
+        get { tunnelSlot.process }
+        set { tunnelSlot.assign(newValue) }
+    }
     private var shouldMaintainServices = false
-    private var tunnel: Process?
     private var approvalTimer: DispatchSourceTimer?
     private var visibleApprovalID: String?
     private var handledApprovalIDs: [String: Date] = [:]
@@ -172,29 +180,46 @@ final class BridgeModel: ObservableObject {
         // the Swift edge proxy is introduced incrementally.
         environment["LAPTOP_BRIDGE_MCP_PORT"] = "8765"
         process.environment = environment
-        process.terminationHandler = { [weak self] _ in Task { @MainActor [weak self] in self?.running = false; self?.server = nil } }
-        try? process.run()
-        server = process
-        running = process.isRunning
-        startTunnelIfConfigured()
+        process.terminationHandler = { [weak self] finished in
+            Task { @MainActor [weak self] in
+                guard let self, self.serverSlot.clearIfMatches(finished) else { return }
+                self.running = false
+            }
+        }
+        do {
+            try process.run()
+            server = process
+            running = process.isRunning
+            startTunnelIfConfigured()
+        } catch {
+            server = nil
+            running = false
+            NSLog("RelayOS could not start MCP helper: %@", error.localizedDescription)
+        }
     }
 
     func restartServices() {
         let ownsServer = server != nil
-        server?.terminate(); tunnel?.terminate(); server = nil; tunnel = nil
-        running = false; tunnelRunning = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            if ownsServer { self.startServices() }
-            else {
-                self.running = self.localServerIsListening()
-                self.startTunnelIfConfigured()
-            }
+        stopOwnedProcess(tunnel)
+        stopOwnedProcess(server)
+        server = nil
+        tunnel = nil
+        running = false
+        tunnelRunning = false
+        guard SingleInstanceCoordinator.shared.ownsLock else { return }
+        if ownsServer {
+            startServices()
+        } else {
+            running = localServerIsListening()
+            startTunnelIfConfigured()
         }
     }
 
     func restartPythonServer() {
-        server?.terminate(); server = nil; running = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self.startServices() }
+        stopOwnedProcess(server)
+        server = nil
+        running = false
+        startServices()
     }
 
     func startTunnelIfConfigured() {
@@ -220,8 +245,23 @@ final class BridgeModel: ObservableObject {
             let url = String(text[range]).trimmingCharacters(in: CharacterSet(charactersIn: "\\\"'`,"))
             Task { @MainActor [weak self] in self?.adoptNgrokEndpoint(url) }
         }
-        process.terminationHandler = { [weak self] _ in Task { @MainActor [weak self] in self?.tunnelRunning = false; self?.tunnel = nil } }
-        try? process.run(); tunnel = process; tunnelRunning = process.isRunning
+        process.terminationHandler = { [weak self] finished in
+            Task { @MainActor [weak self] in
+                guard let self, self.tunnelSlot.clearIfMatches(finished) else { return }
+                self.tunnelRunning = false
+            }
+        }
+        do {
+            try process.run()
+            tunnel = process
+            tunnelRunning = process.isRunning
+        } catch {
+            output.fileHandleForReading.readabilityHandler = nil
+            tunnel = nil
+            tunnelRunning = false
+            NSLog("RelayOS could not start ngrok: %@", error.localizedDescription)
+            return
+        }
         // The agent may emit no stdout when launched from a GUI. Ask its
         // local inspector API for the assigned free hostname as a fallback.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.refreshNgrokEndpoint() }
