@@ -115,12 +115,29 @@ final class BridgeModel: ObservableObject {
     func shutdownServices() {
         approvalTimer?.cancel()
         approvalTimer = nil
-        tunnel?.terminate()
-        server?.terminate()
+        // Release the instance lock only after owned services have exited.
+        // Otherwise the replacement might adopt a still-listening server that
+        // is about to disappear as the previous app finishes terminating.
+        stopOwnedProcess(tunnel)
+        stopOwnedProcess(server)
         tunnel = nil
         server = nil
         running = false
         tunnelRunning = false
+    }
+
+    private func stopOwnedProcess(_ process: Process?) {
+        guard let process, process.isRunning else { return }
+        process.terminate()
+        let deadline = Date().addingTimeInterval(3)
+        while process.isRunning && Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        if process.isRunning {
+            // Only signal the specific subprocess created by this instance.
+            kill(process.processIdentifier, SIGKILL)
+        }
+        process.waitUntilExit()
     }
 
     func loadConfig() {
