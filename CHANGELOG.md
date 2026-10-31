@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Added a loopback-only authenticated MCP health monitor for the native supervisor. It validates the local token file, verifies the RelayOS control-response contract and distinguishes connection failures from unauthorized or unexpected listeners. Added four Swift health-probe tests.
 - The macOS command-approval dialog now explains one-time versus reusable scope, highlights **Once** by default, and labels allowlisted family permissions explicitly (for example, **Always allow git add**).
 - Updated the macOS implementation roadmap with completed Phase 01 milestones, test results, and the remaining deployment/ownership acceptance checks.
 - Development Python helpers are now located through validated repository discovery (or `RELAYOS_DEV_ROOT`) instead of a hardcoded home-directory path; installed builds still prefer their bundled helpers.
