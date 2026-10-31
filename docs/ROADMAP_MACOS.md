@@ -136,3 +136,15 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Verify native test suite: 18 passed, zero failures.
 - [ ] Build signed staging bundle and run isolated packaged-helper smoke tests.
 - [ ] Deploy via controlled handover and verify list/revoke UI against real grant data.
+
+## Approval scope visibility and final permissions deployment — 2026-10-31
+
+- [x] Automatic locally reviewable prefix suggestions when an MCP caller omits scope_prefix, including git commit, git log, npm install, npm run build, and Swift test/build.
+- [x] Preserve exact-argument restrictions for unsafe shell/interpreter and ambiguous command forms; no legacy exact-command grant is silently widened.
+- [x] Replace internal project_command dialog title with a human-readable executable or proposed reusable prefix.
+- [x] Make the Command Permissions view available both as a dedicated sidebar item and directly within Tools & permissions.
+- [x] Verify Python: 101 passed, one existing serialization warning; Swift: 18 passed.
+- [ ] Verify signed packaged app and isolated bundled MCP helper.
+- [ ] Deploy the new signed app to dist/RelayOS.app with rollback and confirm single native/MCP/tunnel process ownership.
+- [ ] Run a real two-message git commit prefix-reuse test without making a commit as part of the test (authorization lookup only).
+- [ ] Verify permissions listing in the running native UI. Avoid revoking an existing user grant without explicit selection.
