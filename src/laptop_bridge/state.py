@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from .config import DATABASE_FILE, STATE_DIR
+from .command_policy import reusable_command_family
 
 TTL = 300
 HISTORY_RETENTION = 30 * 24 * 60 * 60
@@ -106,7 +107,7 @@ def _db():
                 executable TEXT NOT NULL, argv_digest TEXT,
                 working_directory TEXT, grant_type TEXT NOT NULL,
                 created_at REAL NOT NULL, expires_at REAL,
-                revoked_at REAL
+                revoked_at REAL, family_key TEXT, session_token TEXT
             );
             CREATE TABLE IF NOT EXISTS permission_grants (
                 token TEXT PRIMARY KEY, grant_type TEXT NOT NULL, duration TEXT NOT NULL,
@@ -133,7 +134,18 @@ def _db():
                 created_at REAL NOT NULL, expires_at REAL NOT NULL, revoked_at REAL
             );
             """)
-            # Migrate existing databases and fail closed for legacy broad executable grants.
+            # Migrate authorization metadata without broadening any legacy approval.
+            grant_columns = {row["name"] for row in connection.execute("PRAGMA table_info(command_grants)")}
+            if "family_key" not in grant_columns:
+                connection.execute("ALTER TABLE command_grants ADD COLUMN family_key TEXT")
+            if "session_token" not in grant_columns:
+                connection.execute("ALTER TABLE command_grants ADD COLUMN session_token TEXT")
+            # Old session grants were time-limited but not bound to an actual
+            # project-session token: revoke these rather than guessing scope.
+            connection.execute(
+                "UPDATE command_grants SET revoked_at = ? WHERE grant_type = 'session' AND session_token IS NULL AND revoked_at IS NULL",
+                (time.time(),),
+            )
             columns = {row["name"] for row in connection.execute("PRAGMA table_info(requests)")}
             if "context_json" not in columns:
                 connection.execute("ALTER TABLE requests ADD COLUMN context_json TEXT NOT NULL DEFAULT '{}'")
@@ -641,18 +653,24 @@ def _command_digest(argv, cwd):
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def _command_context(cwd, grant):
-    return json.dumps({"cwd": str(cwd), "requested_grant": grant}, sort_keys=True)
+def _command_context(cwd, grant, session_id=None, family_key=None):
+    """Bind a pending approval to its original session and exact command."""
+    context = {"cwd": str(cwd), "requested_grant": grant}
+    if session_id is not None:
+        context["session_id"] = session_id
+    if family_key is not None:
+        context["command_family"] = family_key
+    return json.dumps(context, sort_keys=True)
 
 
-def find_approved_command_request(project_root, executable, argv, cwd, grant, request_id=None):
-    """Find a locally approved request for this exact command, project and directory."""
+def find_approved_command_request(project_root, executable, argv, cwd, grant, request_id=None, session_id=None):
     target = f"{project_root}:{executable}"
+    family = reusable_command_family(executable, argv)
     now = time.time()
     with _db() as connection:
         connection.execute("BEGIN IMMEDIATE")
         _expire(connection, now)
-        criteria = (target, json.dumps(argv), _command_context(cwd, grant))
+        criteria = (target, json.dumps(argv), _command_context(cwd, grant, session_id, family))
         if request_id:
             row = connection.execute(
                 """SELECT token, status FROM requests WHERE token = ? AND kind = 'project_command'
@@ -674,9 +692,14 @@ def find_approved_command_request(project_root, executable, argv, cwd, grant, re
         return row["token"] if row else None
 
 
-def get_or_create_command_request(project_root, executable, argv, cwd, grant):
+def get_or_create_command_request(project_root, executable, argv, cwd, grant, session_id=None):
     target = f"{project_root}:{executable}"
+    family = reusable_command_family(executable, argv)
     context = {"cwd": str(cwd), "requested_grant": grant}
+    if session_id is not None:
+        context["session_id"] = session_id
+    if family is not None:
+        context["command_family"] = family
     now = time.time()
     with _db() as connection:
         connection.execute("BEGIN IMMEDIATE")
@@ -685,7 +708,7 @@ def get_or_create_command_request(project_root, executable, argv, cwd, grant):
             """SELECT token FROM requests WHERE kind = 'project_command' AND target = ?
                AND argv_json = ? AND context_json = ? AND status = 'pending'
                AND created_at >= ? ORDER BY created_at DESC LIMIT 1""",
-            (target, json.dumps(argv), _command_context(cwd, grant), now - TTL),
+            (target, json.dumps(argv), _command_context(cwd, grant, session_id, family), now - TTL),
         ).fetchone()
         connection.commit()
         if row:
@@ -693,14 +716,18 @@ def get_or_create_command_request(project_root, executable, argv, cwd, grant):
     return request("project_command", {"target": target, "argv": argv, "context": context})
 
 
-def grant_project_command(project_root, executable, argv, cwd, grant_type="once"):
-    """Grant only this exact argv and cwd; never an executable wildcard."""
+def grant_project_command(project_root, executable, argv, cwd, grant_type="once", session_id=None):
+    """Store local choice: exact once; exact/family reusable within same cwd/root."""
     if grant_type not in {"once", "session", "always"}:
         raise ValueError("grant_type must be once, session, or always")
+    if grant_type == "session" and not session_id:
+        raise ValueError("Session grants require the approved coding session ID")
     if emergency_stop():
         raise PermissionError("Emergency stop is enabled")
     token = secrets.token_urlsafe(24)
     now = time.time()
+    family = reusable_command_family(executable, argv) if grant_type != "once" else None
+    digest = None if family is not None else _command_digest(argv, cwd)
     with _db() as connection:
         connection.execute("BEGIN IMMEDIATE")
         if emergency_stop(connection):
@@ -708,41 +735,55 @@ def grant_project_command(project_root, executable, argv, cwd, grant_type="once"
             raise PermissionError("Emergency stop is enabled")
         connection.execute(
             """INSERT INTO command_grants
-               (token, project_root, executable, argv_digest, working_directory, grant_type, created_at, expires_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (token, project_root, executable, _command_digest(argv, cwd), cwd, grant_type,
-             now, now + 300 if grant_type == "once" else now + 3600 if grant_type == "session" else None),
+               (token, project_root, executable, argv_digest, working_directory, grant_type,
+                created_at, expires_at, family_key, session_token)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (token, project_root, executable, digest, cwd, grant_type,
+             now, now + 300 if grant_type == "once" else now + 3600 if grant_type == "session" else None,
+             family, session_id if grant_type == "session" else None),
         )
         _record(connection, "command_grant", f"{project_root}:{executable}", f"approved_{grant_type}")
         connection.commit()
     return token
 
 
-def has_saved_command_grant(project_root, executable, argv, cwd):
+def _reusable_command_grant(connection, project_root, executable, argv, cwd, session_id, now):
+    family = reusable_command_family(executable, argv)
+    return connection.execute(
+        """SELECT token, grant_type, family_key FROM command_grants
+           WHERE project_root = ? AND executable = ? AND working_directory = ?
+           AND ((family_key IS NULL AND argv_digest = ?)
+                 OR (family_key IS NOT NULL AND family_key = ?))
+           AND grant_type IN ('session', 'always')
+           AND (grant_type = 'always' OR (grant_type = 'session' AND session_token = ?))
+           AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?)
+           ORDER BY created_at DESC LIMIT 1""",
+        (project_root, executable, cwd, _command_digest(argv, cwd), family, session_id, now),
+    ).fetchone()
+
+
+def has_saved_command_grant(project_root, executable, argv, cwd, session_id=None):
     with _db() as connection:
-        return connection.execute(
-            """SELECT 1 FROM command_grants WHERE project_root = ? AND executable = ?
-               AND argv_digest = ? AND working_directory = ? AND grant_type IN ('session', 'always')
-               AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?) LIMIT 1""",
-            (project_root, executable, _command_digest(argv, cwd), cwd, time.time()),
-        ).fetchone() is not None
+        if emergency_stop(connection):
+            return False
+        return _reusable_command_grant(connection, project_root, executable, argv, cwd, session_id, time.time()) is not None
 
 
-def consume_project_command_grant(project_root, executable, argv, cwd, grant_token=None):
-    """Atomically validate a one-time token or an exact reusable command grant."""
+def consume_project_command_grant(project_root, executable, argv, cwd, grant_token=None, session_id=None):
+    """Atomically validate an exact one-use token or a locally chosen reusable scope."""
     with _db() as connection:
         connection.execute("BEGIN IMMEDIATE")
         if emergency_stop(connection):
             connection.rollback()
             raise PermissionError("Emergency stop is enabled")
         now = time.time()
-        params = (project_root, executable, _command_digest(argv, cwd), cwd)
         if grant_token:
             row = connection.execute(
                 """SELECT token FROM command_grants WHERE token = ? AND project_root = ?
                    AND executable = ? AND argv_digest = ? AND working_directory = ?
-                   AND grant_type = 'once' AND revoked_at IS NULL AND expires_at > ?""",
-                (grant_token, *params, now),
+                   AND family_key IS NULL AND grant_type = 'once'
+                   AND revoked_at IS NULL AND expires_at > ?""",
+                (grant_token, project_root, executable, _command_digest(argv, cwd), cwd, now),
             ).fetchone()
             if row is None:
                 connection.rollback()
@@ -750,24 +791,17 @@ def consume_project_command_grant(project_root, executable, argv, cwd, grant_tok
             connection.execute("DELETE FROM command_grants WHERE token = ?", (grant_token,))
             connection.commit()
             return "approved_once"
-        row = connection.execute(
-            """SELECT token FROM command_grants WHERE project_root = ? AND executable = ?
-               AND argv_digest = ? AND working_directory = ? AND grant_type IN ('session', 'always')
-               AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?)
-               ORDER BY created_at DESC LIMIT 1""",
-            (*params, now),
-        ).fetchone()
+        row = _reusable_command_grant(connection, project_root, executable, argv, cwd, session_id, now)
         if row is None:
             connection.rollback()
-            raise PermissionError("Exact command approval required")
+            raise PermissionError("Command approval required for this project and command scope")
         connection.commit()
         return "approved_reusable"
-
 
 def saved_command_grants():
     with _db() as connection:
         rows = connection.execute(
-            "SELECT token, project_root, executable, grant_type, created_at, expires_at FROM command_grants WHERE grant_type IN ('always', 'session') AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > strftime('%s','now')) ORDER BY created_at DESC"
+            "SELECT token, project_root, executable, grant_type, family_key, working_directory, created_at, expires_at FROM command_grants WHERE grant_type IN ('always', 'session') AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > strftime('%s','now')) ORDER BY created_at DESC"
         ).fetchall()
     return [dict(row) for row in rows]
 

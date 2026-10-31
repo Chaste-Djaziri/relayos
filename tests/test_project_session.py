@@ -341,6 +341,86 @@ def test_reusable_command_is_exact_and_can_be_revoked(project_dir):
     assert server.run_project_command(session_id, argv)["requires_authorization"]
 
 
+def _approved_project_session(project_dir):
+    proposal = server.propose_project_session(str(project_dir))
+    state.approve(proposal["request_id"])
+    return server.project_session_status(proposal["request_id"])["session_id"]
+
+
+def test_git_add_persistent_family_after_local_always_choice(project_dir):
+    subprocess.run(["git", "init"], cwd=project_dir, check=True, capture_output=True)
+    sid = _approved_project_session(project_dir)
+    first = ["git", "add", "--", "main.py"]
+    pending = server.authorize_project_command(sid, first)  # Client defaults to once.
+    assert pending["command_family"] == "git add"
+    assert state.pending_requests()[0]["context"]["command_family"] == "git:add"
+    state.decide_request(pending["request_id"], "persistent")  # User chooses Always.
+    granted = server.authorize_project_command(sid, first)
+    assert granted["grant"] == "always"
+    assert granted["authorization_token"] is None
+    assert granted["command_family"] == "git add"
+
+    assert server.run_project_command(sid, first)["exit_code"] == 0
+    next_command = ["git", "add", "--", "sub/module.py"]
+    assert server.authorize_project_command(sid, next_command)["reused_saved_grant"]
+    assert server.run_project_command(sid, next_command)["exit_code"] == 0
+    staged = subprocess.check_output(["git", "diff", "--cached", "--name-only"], cwd=project_dir, text=True)
+    assert "main.py" in staged and "sub/module.py" in staged
+    assert server.run_project_command(sid, ["git", "reset", "--hard"])["requires_authorization"]
+    assert server.run_project_command(sid, ["git", "commit", "-m", "unapproved"])["requires_authorization"]
+    assert server.run_project_command(sid, ["git", "-C", str(project_dir), "add", "main.py"])["requires_authorization"]
+
+
+def test_git_add_session_family_is_bound_to_approved_session(project_dir):
+    subprocess.run(["git", "init"], cwd=project_dir, check=True, capture_output=True)
+    sid = _approved_project_session(project_dir)
+    request = server.authorize_project_command(sid, ["git", "add", "--", "main.py"])
+    state.decide_request(request["request_id"], "session")
+    assert server.authorize_project_command(sid, ["git", "add", "--", "main.py"])["grant"] == "session"
+    assert server.run_project_command(sid, ["git", "add", "--", "sub/module.py"])["exit_code"] == 0
+
+    another_session = _approved_project_session(project_dir)
+    assert another_session != sid
+    assert server.run_project_command(another_session, ["git", "add", "--", "main.py"])["requires_authorization"]
+
+
+def test_git_add_once_remains_exact_even_when_family_available(project_dir):
+    subprocess.run(["git", "init"], cwd=project_dir, check=True, capture_output=True)
+    sid = _approved_project_session(project_dir)
+    first = ["git", "add", "--", "main.py"]
+    request = server.authorize_project_command(sid, first, grant="always")
+    state.decide_request(request["request_id"], "once")
+    authorization = server.authorize_project_command(sid, first, grant="always")
+    assert authorization["grant"] == "once"
+    assert authorization["command_family"] is None
+    assert server.run_project_command(sid, ["git", "add", "--", "sub/module.py"])["requires_authorization"]
+    assert server.run_project_command(sid, first, authorization_token=authorization["authorization_token"])["exit_code"] == 0
+    assert server.run_project_command(sid, first, authorization_token=authorization["authorization_token"])["requires_authorization"]
+
+
+def test_git_family_approval_requires_same_working_directory_and_executable(project_dir):
+    subprocess.run(["git", "init"], cwd=project_dir, check=True, capture_output=True)
+    sid = _approved_project_session(project_dir)
+    first = ["git", "add", "--", "main.py"]
+    request = server.authorize_project_command(sid, first)
+    state.decide_request(request["request_id"], "persistent")
+    server.authorize_project_command(sid, first)
+
+    assert server.run_project_command(sid, ["git", "add", "--", "module.py"], cwd="sub")["requires_authorization"]
+    assert server.run_project_command(sid, ["echo", "add", "main.py"])["requires_authorization"]
+    saved = server.list_saved_command_grants()
+    assert len(saved) == 1 and saved[0]["family_key"] == "git:add"
+    server.revoke_saved_command_grant(saved[0]["token"])
+    assert server.run_project_command(sid, ["git", "add", "--", "sub/module.py"])["requires_authorization"]
+
+
+def test_unlisted_git_commands_cannot_reuse_family_grants(project_dir):
+    sid = _approved_project_session(project_dir)
+    for args in (["git", "push", "origin", "main"], ["git", "commit", "--amend"], ["git", "clean", "-fd"]):
+        pending = server.authorize_project_command(sid, args)
+        assert pending["command_family"] is None
+
+
 def test_local_once_cannot_be_escalated_to_always(project_dir):
     proposal = server.propose_project_session(str(project_dir))
     state.approve(proposal["request_id"])
