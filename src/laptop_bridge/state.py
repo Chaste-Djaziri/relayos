@@ -209,7 +209,13 @@ def _db():
 
 
 def _expire(connection, now):
+    expired = connection.execute(
+        "SELECT kind, target FROM requests WHERE status = 'pending' AND created_at < ?",
+        (now - TTL,),
+    ).fetchall()
     connection.execute("UPDATE requests SET status = 'expired', decided_at = ? WHERE status = 'pending' AND created_at < ?", (now, now - TTL))
+    for row in expired:
+        _record(connection, row["kind"], row["target"], "expired")
     connection.execute("UPDATE project_sessions SET status = 'expired' WHERE status = 'active' AND expires_at <= ?", (now,))
     connection.execute("UPDATE guidance_sessions SET status = 'expired' WHERE status = 'active' AND expires_at <= ?", (now,))
     connection.execute("DELETE FROM desktop_jobs WHERE created_at < ?", (now - JOB_TTL,))
@@ -230,6 +236,7 @@ def request(kind, details):
             "INSERT INTO requests (token, kind, target, argv_json, created_at, status, context_json) VALUES (?, ?, ?, ?, ?, 'pending', ?)",
             (token, kind, details["target"], json.dumps(details["argv"]), time.time(), json.dumps(details.get("context", {}), sort_keys=True)),
         )
+        _record(connection, kind, details["target"], "requested")
         connection.commit()
     return token
 
@@ -522,11 +529,25 @@ def _oauth_digest(value):
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def _oauth_audit_name(connection, client_id):
+    row = connection.execute(
+        "SELECT metadata_json FROM oauth_clients WHERE client_id = ?", (client_id,)
+    ).fetchone()
+    metadata = json.loads(row["metadata_json"] or "{}") if row else {}
+    return str(metadata.get("client_name") or client_id)[:120]
+
+
 def _expire_oauth(connection, now):
+    expired = connection.execute(
+        "SELECT client_id FROM oauth_authorizations WHERE status = 'pending' AND created_at < ?",
+        (now - OAUTH_APPROVAL_TTL,),
+    ).fetchall()
     connection.execute(
         "UPDATE oauth_authorizations SET status = 'expired', decided_at = ? WHERE status = 'pending' AND created_at < ?",
         (now, now - OAUTH_APPROVAL_TTL),
     )
+    for row in expired:
+        _record(connection, "oauth_authorization", _oauth_audit_name(connection, row["client_id"]), "expired")
     connection.execute("DELETE FROM oauth_codes WHERE expires_at <= ? OR consumed_at IS NOT NULL", (now,))
     connection.execute("DELETE FROM oauth_tokens WHERE expires_at <= ?", (now,))
 
@@ -560,6 +581,7 @@ def create_oauth_authorization(client_id, redirect_uri, state_value, scopes, cod
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')",
             (token, client_id, redirect_uri, state_value, json.dumps(scopes), code_challenge, resource, now),
         )
+        _record(connection, "oauth_authorization", _oauth_audit_name(connection, client_id), "requested")
         connection.commit()
     return token
 
@@ -599,7 +621,7 @@ def decide_oauth_authorization(request_id, approved):
         connection.execute("BEGIN IMMEDIATE")
         now = time.time()
         _expire_oauth(connection, now)
-        row = connection.execute("SELECT status FROM oauth_authorizations WHERE token = ?", (request_id,)).fetchone()
+        row = connection.execute("SELECT status, client_id FROM oauth_authorizations WHERE token = ?", (request_id,)).fetchone()
         if row is None or row["status"] != "pending":
             connection.rollback()
             raise PermissionError("Unknown, expired, or already decided OAuth authorization")
@@ -610,7 +632,7 @@ def decide_oauth_authorization(request_id, approved):
             "UPDATE oauth_authorizations SET status = ?, decided_at = ? WHERE token = ?",
             ("approved" if approved else "denied", now, request_id),
         )
-        _record(connection, "oauth_authorization", "MCP client", "approved" if approved else "denied")
+        _record(connection, "oauth_authorization", _oauth_audit_name(connection, row["client_id"]), "approved" if approved else "denied")
         connection.commit()
 
 

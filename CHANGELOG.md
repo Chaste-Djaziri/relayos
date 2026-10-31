@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Expanded persisted metadata-only auditing to capture approval creation and expiration, and to attribute OAuth decisions to a registered client name without logging raw command arguments, callback URIs or tokens. Added privacy and expiry regression coverage (109 Python tests passed).
 - Added native Approval Center with nonblocking multi-request inbox, explicit local Once/Session/Always/Deny actions (OAuth limited to Approve/Deny), searchable persisted audit history, menu bar pending count, and optional privacy-preserving macOS notifications. Deduplicated arrival sounds/notifications across repeated polls and added Swift decoding/arrival tests. Corrected development-only working-directory assumption for permission grants.
 - Added a local-only unified approval inbox and searchable persisted metadata-only activity feed, routing command/project decisions and OAuth connection approval through fail-closed SQLite authorization. Added stale/expired, emergency-stop and independent queued-request regression tests (107 Python tests passed).
 - Added an isolated packaged MCP crash/restart smoke test (ephemeral loopback port and temporary state) and a native real-child process-slot test to ensure old termination callbacks cannot discard replacements.

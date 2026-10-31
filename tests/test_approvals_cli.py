@@ -162,3 +162,32 @@ def test_oauth_inbox_restricts_decisions_and_records_client_name(monkeypatch, ca
     assert all(i["request_id"] != req for i in call(monkeypatch, capsys, "list-inbox"))
     with pytest.raises(PermissionError):
         call(monkeypatch, capsys, "decide-inbox", req, "deny")
+
+
+def test_audit_records_request_expiry_without_leaking_command_arguments(monkeypatch, capsys):
+    import time
+    token = state.request("project_command", {
+        "target": "/tmp/test-project:/usr/bin/git",
+        "argv": ["git", "commit", "-m", "confidential-message"],
+    })
+    with state._db() as db:
+        db.execute(
+            "UPDATE requests SET created_at = ? WHERE token = ?",
+            (time.time() - state.TTL - 10, token),
+        )
+    assert call(monkeypatch, capsys, "list-inbox") == []
+    events = call(monkeypatch, capsys, "activity-history", "--search", "project_command")
+    assert {event["decision"] for event in events} >= {"requested", "expired"}
+    assert "confidential-message" not in str(events)
+
+
+def test_oauth_activity_client_name_is_searchable_without_callback_url(monkeypatch, capsys):
+    state.oauth_register_client("audit-client", {"client_name": "Trusted Chat Client"})
+    rid = state.create_oauth_authorization(
+        "audit-client", "https://private.example/callback", "csrf", ["mcp"],
+        "challenge", None,
+    )
+    call(monkeypatch, capsys, "decide-inbox", rid, "deny")
+    events = call(monkeypatch, capsys, "activity-history", "--search", "Trusted Chat Client")
+    assert {e["decision"] for e in events} >= {"requested", "denied"}
+    assert "private.example" not in str(events)
