@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Hardened native single-instance coordination with a stable, user-owned, non-symlink flock lease and tested contention/release plus rejection of insecure lock files. The takeover path still requests graceful retirement of the old app rather than killing unrelated processes.
 - Integrated authenticated periodic public tunnel checks with bounded retry/recycle of only app-owned MCP/ngrok children after repeated failures, stale-probe generation guards, and accurate local/public health labels in the menu and Settings. Removed ngrok stdout-based URL adoption and one-shot inspector discovery.
 - Added an ngrok tunnel probe that validates inspector forwarding to the RelayOS loopback MCP port and checks that the public MCP route returns the expected unauthenticated HTTP 401 (not a tunnel 404); includes strict ownership/URL parsing and isolated Swift tests.
 - Redesigned the native Command Permissions view into expandable project/executable groups instead of repetitive full-height rows, with privacy-preserving exact-scope fingerprints, saved-approval counts and an explicitly confirmed Remove duplicates action. Kept per-grant revocation available.

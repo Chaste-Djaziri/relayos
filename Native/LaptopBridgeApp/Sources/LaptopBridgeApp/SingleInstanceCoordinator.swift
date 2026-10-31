@@ -8,20 +8,16 @@ import Foundation
 final class SingleInstanceCoordinator {
     static let shared = SingleInstanceCoordinator()
     private let takeoverName = Notification.Name("rw.shangazi.relayos.requestTakeover")
-    private let lockPath = "/tmp/rw.shangazi.relayos.\(getuid()).lock"
-    private var lockFD: Int32 = -1
+    private let lease = InstanceLease(path: "/tmp/rw.shangazi.relayos.\(getuid()).lock")
     private var observer: NSObjectProtocol?
 
-    var ownsLock: Bool { lockFD >= 0 }
+    var ownsLock: Bool { lease.isHeld }
 
     private init() {}
 
     func claimOrReplaceExistingInstance() -> Bool {
-        // Never unlink the file: two apps could otherwise lock different inodes.
-        let fd = open(lockPath, O_CREAT | O_RDWR | O_CLOEXEC, mode_t(0o600))
-        guard fd >= 0 else { return false }
-        if flock(fd, LOCK_EX | LOCK_NB) == 0 {
-            lockFD = fd
+        // A stable, user-owned regular lock file prevents two native app owners.
+        if lease.tryAcquire() {
             installTakeoverObserver()
             if !retireLegacyAppInstances() { release(); return false }
             return true
@@ -34,8 +30,7 @@ final class SingleInstanceCoordinator {
         )
         let deadline = Date().addingTimeInterval(5)
         repeat {
-            if flock(fd, LOCK_EX | LOCK_NB) == 0 {
-                lockFD = fd
+            if lease.tryAcquire() {
                 installTakeoverObserver()
                 if !retireLegacyAppInstances() { release(); return false }
                 return true
@@ -43,7 +38,6 @@ final class SingleInstanceCoordinator {
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         } while Date() < deadline
 
-        close(fd)
         return false
     }
 
@@ -80,10 +74,6 @@ final class SingleInstanceCoordinator {
             DistributedNotificationCenter.default().removeObserver(observer)
             self.observer = nil
         }
-        if lockFD >= 0 {
-            flock(lockFD, LOCK_UN)
-            close(lockFD)
-            lockFD = -1
-        }
+        lease.release()
     }
 }
