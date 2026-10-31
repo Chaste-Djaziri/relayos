@@ -323,43 +323,82 @@ def test_project_relative_executable_is_resolved_from_command_cwd(project_dir):
     assert server._resolve_executable("./node_modules/.bin/tool", project_dir) == str(executable.resolve())
 
 
-def test_persistent_command_grant_allows_arguments_in_project_and_can_be_revoked(project_dir):
+def test_reusable_command_is_exact_and_can_be_revoked(project_dir):
     res = server.propose_project_session(str(project_dir))
     state.approve(res["request_id"])
     session_id = server.project_session_status(res["request_id"])["session_id"]
-
-    req = server.authorize_project_command(session_id, ["echo", "first"], grant="always")
-    state.approve(req["request_id"])
-    grant = server.authorize_project_command(session_id, ["echo", "first"], grant="always")
-    assert grant["authorization_token"] is None
-    assert server.run_project_command(session_id, ["echo", "build"])["exit_code"] == 0
-    assert server.run_project_command(session_id, ["echo", "another argument"])["exit_code"] == 0
+    argv = ["echo", "first"]
+    pending = server.authorize_project_command(session_id, argv, grant="always")
+    assert pending["requires_local_approval"] is True
+    state.decide_request(pending["request_id"], "persistent")
+    granted = server.authorize_project_command(session_id, argv, grant="always")
+    assert granted["grant"] == "always"
+    assert server.run_project_command(session_id, argv)["exit_code"] == 0
+    assert server.run_project_command(session_id, ["echo", "other"])["requires_authorization"]
     saved = server.list_saved_command_grants()
     assert len(saved) == 1
-    assert saved[0]["project_root"] == str(project_dir.resolve())
-
     server.revoke_saved_command_grant(saved[0]["token"])
-    assert server.run_project_command(session_id, ["echo", "after revoke"])["requires_authorization"] is True
+    assert server.run_project_command(session_id, argv)["requires_authorization"]
+
+
+def test_local_once_cannot_be_escalated_to_always(project_dir):
+    proposal = server.propose_project_session(str(project_dir))
+    state.approve(proposal["request_id"])
+    sid = server.project_session_status(proposal["request_id"])["session_id"]
+    argv = ["echo", "protected"]
+    pending = server.authorize_project_command(sid, argv, grant="always")
+    state.decide_request(pending["request_id"], "once")
+    approved = server.authorize_project_command(sid, argv, grant="always")
+    assert approved["grant"] == "once"
+    assert approved["authorization_token"]
+    assert server.list_saved_command_grants() == []
+    assert server.run_project_command(sid, argv, authorization_token=approved["authorization_token"])["exit_code"] == 0
+    assert server.run_project_command(sid, argv)["requires_authorization"]
+
+
+def test_command_approval_binds_cwd_and_duration(project_dir):
+    (project_dir / "subfolder").mkdir()
+    proposal = server.propose_project_session(str(project_dir))
+    state.approve(proposal["request_id"])
+    sid = server.project_session_status(proposal["request_id"])["session_id"]
+    argv = ["echo", "bound"]
+    pending = server.authorize_project_command(sid, argv, grant="once")
+    state.decide_request(pending["request_id"], "once")
+    mismatch = server.authorize_project_command(sid, argv, cwd="subfolder", grant="once", request_id=pending["request_id"])
+    assert mismatch["requires_local_approval"]
+    mismatch_duration = server.authorize_project_command(sid, argv, grant="always", request_id=pending["request_id"])
+    assert mismatch_duration["requires_local_approval"]
+
+
+def test_legacy_global_grant_is_not_honored(project_dir):
+    proposal = server.propose_project_session(str(project_dir))
+    state.approve(proposal["request_id"])
+    sid = server.project_session_status(proposal["request_id"])["session_id"]
+    with state._db() as db:
+        db.execute(
+            "INSERT INTO command_grants (token, project_root, executable, grant_type, created_at) VALUES (?, ?, ?, ?, ?)",
+            ("legacy", "/different/root", server._resolve_executable("echo"), "persistent", time.time()),
+        )
+    assert server.run_project_command(sid, ["echo", "should deny"])["requires_authorization"]
 
 
 def test_saved_command_grant_is_project_scoped_and_emergency_stop_blocks_it(project_dir, tmp_path):
-    other_root = tmp_path / "other_project"
-    other_root.mkdir()
+    other = tmp_path / "other"
+    other.mkdir()
     first = server.propose_project_session(str(project_dir))
     state.approve(first["request_id"])
-    first_session = server.project_session_status(first["request_id"])["session_id"]
-    req1 = server.authorize_project_command(first_session, ["echo", "allowed"], grant="always")
-    state.approve(req1["request_id"])
-    server.authorize_project_command(first_session, ["echo", "allowed"], grant="always")
-
-    second = server.propose_project_session(str(other_root))
+    sid = server.project_session_status(first["request_id"])["session_id"]
+    argv = ["echo", "allowed"]
+    pending = server.authorize_project_command(sid, argv, grant="always")
+    state.decide_request(pending["request_id"], "persistent")
+    server.authorize_project_command(sid, argv, grant="always")
+    second = server.propose_project_session(str(other))
     state.approve(second["request_id"])
-    second_session = server.project_session_status(second["request_id"])["session_id"]
-    assert server.run_project_command(second_session, ["echo", "not allowed"])["requires_authorization"] is True
-
+    other_sid = server.project_session_status(second["request_id"])["session_id"]
+    assert server.run_project_command(other_sid, argv)["requires_authorization"]
     state.set_emergency_stop(True)
     with pytest.raises(PermissionError, match="Emergency stop"):
-        server.run_project_command(first_session, ["echo", "blocked"])
+        server.run_project_command(sid, argv)
 
 
 def test_permission_expansion_tools_have_destructive_annotations():
