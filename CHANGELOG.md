@@ -14,6 +14,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 - Split the menu-bar panel, onboarding, desktop window, and settings SwiftUI screens into `RelayOSViews.swift`; the app entry point now focuses on state and services.
 
 ### Fixed
+- Ignore stale MCP health responses after a managed server crash, preventing a response from the dead process from resetting restart cooldown or marking the new server healthy. Added a crash-generation regression test.
 - Pre-create the authenticated loopback control token before binding the Python MCP listener so fresh native installations can verify the server without an unauthenticated bootstrap request. Added a startup-order regression test.
 - Fixed the SQLite startup migration incorrectly revoking new `git add` family grants on each approval-helper process launch. Recognized scoped family grants now survive database reinitialization while legacy executable-wide permissions remain revoked; added a fresh-process regression test.
 - Approval duration now follows the local person's Once/Session/Always decision, even when the MCP client requested once. Reusable `git add` grants cover varying file arguments only within the same project, working directory, and resolved Git executable; session grants expire with the originating coding session, while unrelated Git commands remain separately authorized. Added regression tests.

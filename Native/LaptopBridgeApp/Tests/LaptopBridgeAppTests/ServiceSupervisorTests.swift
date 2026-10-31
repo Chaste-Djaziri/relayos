@@ -48,6 +48,19 @@ final class ServiceSupervisorTests: XCTestCase {
     }
 
     @MainActor
+    func testCrashInvalidatesProbeFromDeadServer() {
+        let coordinator = ServiceSupervisor()
+        let now = Date(timeIntervalSince1970: 50)
+        XCTAssertTrue(coordinator.beginProbe(at: now))
+        let generation = coordinator.generation
+        coordinator.serverDidExit(at: now)
+        XCTAssertFalse(coordinator.finishProbe(.healthy, generation: generation))
+        XCTAssertEqual(coordinator.health, .unreachable)
+        XCTAssertTrue(coordinator.beginProbe(at: now))
+        XCTAssertFalse(coordinator.mayLaunchServer(at: now))
+    }
+
+    @MainActor
     func testStaleHealthResponseAfterManualRestartIsIgnored() {
         let coordinator = ServiceSupervisor()
         let generation = coordinator.generation

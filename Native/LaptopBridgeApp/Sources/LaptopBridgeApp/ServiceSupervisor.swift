@@ -45,6 +45,10 @@ final class ServiceSupervisor {
     }
 
     func serverDidExit(at now: Date = Date()) {
+        // A health response in flight might refer to the process that crashed.
+        generation += 1
+        probeInProgress = false
+        nextProbeAt = .distantPast
         health = .unreachable
         serverFailures += 1
         serverRetryAt = now.addingTimeInterval(Self.delay(for: serverFailures))
