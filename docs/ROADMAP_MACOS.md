@@ -148,3 +148,15 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [ ] Deploy the new signed app to dist/RelayOS.app with rollback and confirm single native/MCP/tunnel process ownership.
 - [ ] Run a real two-message git commit prefix-reuse test without making a commit as part of the test (authorization lookup only).
 - [ ] Verify permissions listing in the running native UI. Avoid revoking an existing user grant without explicit selection.
+
+## Saved-command permission deduplication and compact UI — 2026-10-31
+
+- [x] Inspect existing saved approvals: multiple grants share executable labels, but older exact argv are retained only as hashes and must not be automatically merged by executable.
+- [x] Prevent repeat local approvals for the same complete effective scope from creating new saved records. Preserve one-time tokens as unique.
+- [x] Add local-only duplicate preview and confirmed cleanup; keep the newest per exact project, executable, cwd, duration, session, and command scope. Never broaden, silently purge or conflate differing exact commands.
+- [x] Add privacy-preserving short fingerprints for legacy exact approvals without disclosing original argv.
+- [x] Group permissions by executable and project in a compact expandable native list; expose duplicate count and a confirmation-required cleanup control.
+- [x] Run Python tests: 104 passed with one pre-existing Pydantic warning; native Swift tests: 18 passed.
+- [ ] Build, sign and smoke-test an isolated staging bundle.
+- [ ] Controlled handover, live permissions listing, and process ownership verification.
+- [ ] Verify the native UI duplicate preview and cleanup flow interactively. Do not delete stored grants without the user's local confirmation.
