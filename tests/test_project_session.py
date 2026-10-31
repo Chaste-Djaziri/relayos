@@ -347,6 +347,116 @@ def _approved_project_session(project_dir):
     return server.project_session_status(proposal["request_id"])["session_id"]
 
 
+def test_explicit_commit_prefix_reuses_different_messages_without_approving_other_git_actions(project_dir):
+    sid = _approved_project_session(project_dir)
+    first = ["git", "commit", "-m", "initial"]
+    prefix = ["git", "commit"]
+    pending = server.authorize_project_command(sid, first, scope_prefix=prefix)
+    assert pending["scope_prefix"] == prefix
+    assert state.pending_requests()[0]["context"]["scope_prefix"] == prefix
+    state.decide_request(pending["request_id"], "persistent")
+    approved = server.authorize_project_command(sid, first, scope_prefix=prefix)
+    assert approved["grant"] == "always"
+    assert approved["scope_prefix"] == prefix
+    different = ["git", "commit", "-m", "next message"]
+    assert server.authorize_project_command(sid, different)["reused_saved_grant"]
+    assert state.has_saved_command_grant(str(project_dir), server._resolve_executable("git"),
+                                         different, str(project_dir), sid)
+    assert server.run_project_command(sid, ["git", "reset", "--hard"])["requires_authorization"]
+    assert server.run_project_command(sid, ["git", "push", "origin", "main"])["requires_authorization"]
+
+
+def test_dynamic_command_prefix_for_other_tools_and_session_boundary(project_dir):
+    sid = _approved_project_session(project_dir)
+    first = ["echo", "approved", "one"]
+    prefix = ["echo", "approved"]
+    pending = server.authorize_project_command(sid, first, scope_prefix=prefix, grant="once")
+    state.decide_request(pending["request_id"], "session")
+    approved = server.authorize_project_command(sid, first, scope_prefix=prefix, grant="once")
+    assert approved["grant"] == "session"
+    assert server.run_project_command(sid, ["echo", "approved", "two"])["exit_code"] == 0
+    assert server.run_project_command(sid, ["echo", "not-approved", "two"])["requires_authorization"]
+    other = _approved_project_session(project_dir)
+    assert server.run_project_command(other, ["echo", "approved", "three"])["requires_authorization"]
+
+
+def test_changing_requested_prefix_cannot_repurpose_local_approval(project_dir):
+    sid = _approved_project_session(project_dir)
+    command = ["git", "commit", "-m", "one"]
+    request = server.authorize_project_command(sid, command, scope_prefix=["git", "commit"])
+    state.decide_request(request["request_id"], "persistent")
+    attempted = server.authorize_project_command(
+        sid, command, scope_prefix=["git", "commit", "-m"], request_id=request["request_id"]
+    )
+    assert attempted["requires_local_approval"]
+    assert attempted["request_id"] != request["request_id"]
+
+
+def test_dynamic_prefix_survives_fresh_helper_and_can_be_revoked(project_dir):
+    sid = _approved_project_session(project_dir)
+    argv = ["echo", "dynamic", "original"]
+    prefix = ["echo", "dynamic"]
+    req = server.authorize_project_command(sid, argv, scope_prefix=prefix)
+    state.decide_request(req["request_id"], "persistent")
+    server.authorize_project_command(sid, argv, scope_prefix=prefix)
+    saved = server.list_saved_command_grants()
+    assert len(saved) == 1
+    assert saved[0]["scope_prefix"] == prefix
+
+    # Every standalone approval-helper process re-opens the SQLite database.
+    # It must preserve explicitly approved prefixes while revoking legacy
+    # executable-only wildcard grants.
+    state._INITIALIZED_DBS.discard(str(state.DATABASE_FILE))
+    state.pending_requests()
+    assert server.run_project_command(sid, ["echo", "dynamic", "changed"])["exit_code"] == 0
+
+    server.revoke_saved_command_grant(saved[0]["token"])
+    assert server.run_project_command(sid, ["echo", "dynamic", "changed"])["requires_authorization"]
+
+
+def test_npm_dynamic_prefix_state_matching_without_running_install(project_dir):
+    from laptop_bridge.command_policy import validate_scope_prefix
+    argv = ["npm", "install", "some-package"]
+    prefix = validate_scope_prefix("/opt/homebrew/bin/npm", argv, ["npm", "install"])
+    state.grant_project_command(
+        str(project_dir), "/opt/homebrew/bin/npm", argv, str(project_dir),
+        grant_type="always", scope_prefix=prefix
+    )
+    assert state.has_saved_command_grant(str(project_dir), "/opt/homebrew/bin/npm",
+                                         ["npm", "install", "another-package"], str(project_dir))
+    assert not state.has_saved_command_grant(str(project_dir), "/opt/homebrew/bin/npm",
+                                             ["npm", "run", "build"], str(project_dir))
+
+
+def test_literal_prefix_validation_and_exact_only_interpreters(project_dir):
+    sid = _approved_project_session(project_dir)
+    cases = [
+        (["git", "commit", "-m", "one"], ["git"]),
+        (["git", "commit", "-m", "one"], ["git", "push"]),
+        (["git", "-c", "core.hooksPath=.", "commit"], ["git", "-c"]),
+        (["bash", "-c", "echo harmless"], ["bash", "-c"]),
+        (["python3", "-c", "print(1)"], ["python3", "-c"]),
+        (["env", "GIT_CONFIG=..."], ["env", "GIT_CONFIG=..."]),
+    ]
+    for command, prefix in cases:
+        with pytest.raises(ValueError):
+            server.authorize_project_command(sid, command, scope_prefix=prefix)
+    from laptop_bridge.command_policy import validate_scope_prefix
+    assert validate_scope_prefix("/opt/homebrew/bin/npm", ["npm", "run", "build", "--", "--watch"], ["npm", "run", "build"]) == ["npm", "run", "build"]
+    assert validate_scope_prefix("/opt/homebrew/bin/npm", ["npm", "install", "left-pad"], ["npm", "install"]) == ["npm", "install"]
+
+
+def test_one_time_prefix_approval_does_not_remember_other_arguments(project_dir):
+    sid = _approved_project_session(project_dir)
+    command = ["echo", "scope", "first"]
+    request = server.authorize_project_command(sid, command, scope_prefix=["echo", "scope"])
+    state.decide_request(request["request_id"], "once")
+    result = server.authorize_project_command(sid, command, scope_prefix=["echo", "scope"])
+    assert result["grant"] == "once" and result["authorization_token"]
+    assert server.run_project_command(sid, ["echo", "scope", "other"])["requires_authorization"]
+    assert server.run_project_command(sid, command, authorization_token=result["authorization_token"])["exit_code"] == 0
+
+
 def test_git_add_persistent_family_after_local_always_choice(project_dir):
     subprocess.run(["git", "init"], cwd=project_dir, check=True, capture_output=True)
     sid = _approved_project_session(project_dir)

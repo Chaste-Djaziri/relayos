@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Added client-proposed, locally approved literal `scope_prefix` for repeatable project commands (for example `git commit`, `npm install`, or `npm run build`). Reusable prefixes are constrained to the resolved executable, authorized project, working directory, local duration and immutable leading argv tokens. Once remains exact; arbitrary shells/interpreters do not support reusable prefixes. Added approval-tampering, session, revocation and database-reopen regression tests (96 Python tests passing).
 - Added `scripts/smoke_packaged_mcp.py` to start the signed bundle's MCP helper with isolated temporary state and an ephemeral loopback port, verify anonymous rejection and authenticated status, and safely terminate only the test subprocess.
 - Added an opt-in native integration test (`RELAYOS_TEST_LIVE_MCP=1`) that checks the authenticated loopback health endpoint without modifying or restarting the live MCP service.
 - Added a native `ServiceSupervisor` with bounded server/tunnel crash-retry delays, non-overlapping authenticated health probes, safe handling of stale probes during restarts, and recovery tests. The app no longer trusts an occupied MCP port without authenticating the control response, and starts the tunnel only after healthy verification.
