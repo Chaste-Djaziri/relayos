@@ -9,6 +9,7 @@ import Darwin
 final class BridgeModel: ObservableObject {
     static let shared = BridgeModel()
     @Published var running = false
+    @Published var mcpHealth: MCPHealthStatus = .unreachable
     @Published var tunnelRunning = false
     @Published var emergencyStop = false
     @Published var endpoint = "Not configured"
@@ -23,6 +24,7 @@ final class BridgeModel: ObservableObject {
     @Published var permissionGrants: [[String: Any]] = []
 
     private let configURL: URL
+    private let supervisor = ServiceSupervisor()
     private let serverSlot = ManagedProcessSlot()
     private let tunnelSlot = ManagedProcessSlot()
     private var server: Process? {
@@ -69,6 +71,8 @@ final class BridgeModel: ObservableObject {
         server = nil
         running = false
         tunnelRunning = false
+        mcpHealth = .unreachable
+        supervisor.resetForManualRestart()
     }
 
     private func stopOwnedProcess(_ process: Process?) {
@@ -149,10 +153,13 @@ final class BridgeModel: ObservableObject {
         }
         guard server == nil else { return }
         if localServerIsListening() {
-            running = true
-            startTunnelIfConfigured()
+            // Port ownership alone is not a valid RelayOS health signal.
+            // The asynchronous authenticated health probe decides whether to
+            // adopt this listener and start ngrok.
+            running = false
             return
         }
+        guard supervisor.mayLaunchServer() else { return }
         let process = Process()
         let bundledHelper = Bundle.main.resourceURL?
             .appendingPathComponent("Runtime/RelayOSMCPServer")
@@ -181,16 +188,22 @@ final class BridgeModel: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self, self.serverSlot.clearIfMatches(finished) else { return }
                 self.running = false
+                self.mcpHealth = .unreachable
+                if self.shouldMaintainServices {
+                    self.supervisor.serverDidExit()
+                }
             }
         }
         do {
             try process.run()
             server = process
-            running = process.isRunning
-            startTunnelIfConfigured()
+            // Wait for the authenticated local status response before marking
+            // the server healthy or opening a public tunnel.
+            running = false
         } catch {
             server = nil
             running = false
+            supervisor.serverLaunchFailed()
             NSLog("RelayOS could not start MCP helper: %@", error.localizedDescription)
         }
     }
@@ -204,23 +217,29 @@ final class BridgeModel: ObservableObject {
         running = false
         tunnelRunning = false
         guard SingleInstanceCoordinator.shared.ownsLock else { return }
+        supervisor.resetForManualRestart()
+        mcpHealth = .unreachable
         if ownsServer {
             startServices()
         } else {
-            running = localServerIsListening()
-            startTunnelIfConfigured()
+            // The next health probe must authenticate the external listener.
+            running = false
         }
     }
 
     func restartPythonServer() {
+        let owned = server != nil
         stopOwnedProcess(server)
         server = nil
         running = false
-        startServices()
+        mcpHealth = .unreachable
+        supervisor.resetForManualRestart()
+        if owned { startServices() }
     }
 
     func startTunnelIfConfigured() {
-        guard SingleInstanceCoordinator.shared.ownsLock else { return }
+        guard SingleInstanceCoordinator.shared.ownsLock, mcpHealth == .healthy,
+              supervisor.mayLaunchTunnel() else { return }
         guard tunnel == nil, let token = TokenStore.read() else { return }
         let executable = ["/opt/homebrew/bin/ngrok", "/usr/local/bin/ngrok"].first { FileManager.default.isExecutableFile(atPath: $0) }
         guard let executable else { return }
@@ -246,6 +265,9 @@ final class BridgeModel: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self, self.tunnelSlot.clearIfMatches(finished) else { return }
                 self.tunnelRunning = false
+                if self.shouldMaintainServices {
+                    self.supervisor.tunnelDidExit()
+                }
             }
         }
         do {
@@ -256,6 +278,7 @@ final class BridgeModel: ObservableObject {
             output.fileHandleForReading.readabilityHandler = nil
             tunnel = nil
             tunnelRunning = false
+            supervisor.tunnelDidExit()
             NSLog("RelayOS could not start ngrok: %@", error.localizedDescription)
             return
         }
@@ -280,10 +303,17 @@ final class BridgeModel: ObservableObject {
 
     private func adoptNgrokEndpoint(_ origin: String) {
         let clean = origin.trimmingCharacters(in: CharacterSet(charactersIn: "\r\n"))
+        guard clean.hasPrefix("https://") else { return }
         endpoint = clean + "/mcp"
-        guard let data = try? Data(contentsOf: configURL), var json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return }
+        supervisor.tunnelReady()
+        guard let data = try? Data(contentsOf: configURL),
+              var json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return }
+        // A repeated inspector/log event is not a reason to restart MCP.
+        guard json["public_base_url"] as? String != clean else { return }
         json["public_base_url"] = clean
-        if let output = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]) { try? output.write(to: configURL, options: .atomic) }
+        if let output = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]) {
+            try? output.write(to: configURL, options: .atomic)
+        }
         restartPythonServer()
     }
 
@@ -451,10 +481,35 @@ final class BridgeModel: ObservableObject {
     }
 
     private func maintainServicesIfNeeded() {
-        guard shouldMaintainServices, server == nil else { return }
-        if !localServerIsListening() {
-            running = false
+        guard shouldMaintainServices, SingleInstanceCoordinator.shared.ownsLock else { return }
+
+        if supervisor.beginProbe() {
+            let observedGeneration = supervisor.generation
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let status = await self.supervisor.probe()
+                guard self.shouldMaintainServices,
+                      SingleInstanceCoordinator.shared.ownsLock,
+                      self.supervisor.finishProbe(status, generation: observedGeneration)
+                else { return }
+                self.mcpHealth = status
+                self.running = status == .healthy
+                self.recoverServicesIfNeeded()
+            }
+        }
+        recoverServicesIfNeeded()
+    }
+
+    private func recoverServicesIfNeeded() {
+        guard shouldMaintainServices, SingleInstanceCoordinator.shared.ownsLock else { return }
+        // A third-party or unauthorized local listener must never be adopted
+        // or replaced by terminating its process.
+        if server == nil, !localServerIsListening(), supervisor.mayLaunchServer() {
             startServices()
+        }
+        // Only publish a tunnel after authentication of the local MCP server.
+        if tunnel == nil, mcpHealth == .healthy, supervisor.mayLaunchTunnel() {
+            startTunnelIfConfigured()
         }
     }
 
