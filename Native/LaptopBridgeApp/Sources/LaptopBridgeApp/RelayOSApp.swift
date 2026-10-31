@@ -283,18 +283,40 @@ final class BridgeModel: ObservableObject {
     func copyEndpoint() { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(endpoint, forType: .string) }
     func setEmergencyStop(_ value: Bool) {
         guard emergencyStop != value else { return }
-        emergencyStop = value
-        propagateEmergencyStop(value)
-    }
-
-    private func propagateEmergencyStop(_ enabled: Bool) {
-        guard let python = approvalExecutable() else { return }
+        guard let python = approvalExecutable() else {
+            showSecurityError("RelayOS authorization helper is unavailable.")
+            return
+        }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: python)
-        process.arguments = ["-m", "laptop_bridge.approvals", "set-emergency-stop", enabled ? "true" : "false"]
+        process.arguments = ["-m", "laptop_bridge.approvals", "set-emergency-stop", value ? "true" : "false"]
         setApprovalWorkingDirectory(process, executable: python)
-        try? process.run()
-        process.waitUntilExit()
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        do {
+            try process.run()
+            process.waitUntilExit()
+            guard process.terminationStatus == 0,
+                  let data = try pipe.fileHandleForReading.readToEnd(),
+                  let payload = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let confirmed = payload["emergency_stop"] as? Bool,
+                  confirmed == value else {
+                showSecurityError("The agent did not confirm the requested emergency-stop state.")
+                return
+            }
+            emergencyStop = confirmed
+        } catch {
+            showSecurityError("Could not update emergency stop: \(error.localizedDescription)")
+        }
+    }
+
+    private func showSecurityError(_ message: String) {
+        let alert = NSAlert()
+        alert.alertStyle = .critical
+        alert.messageText = "RelayOS security action failed"
+        alert.informativeText = message
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 
     nonisolated private func refreshEmergencyStop() {
@@ -454,7 +476,13 @@ final class BridgeModel: ObservableObject {
         NSApp.setActivationPolicy(.regular); NSApp.activate(ignoringOtherApps: true); NSApp.windows.first(where: { $0.title == "RelayOS" })?.makeKeyAndOrderFront(nil)
         let alert = NSAlert(); alert.window.level = .floating; alert.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         let kind = item["kind"] as? String ?? "operation"; let target = item["target"] as? String ?? "requested resource"
-        alert.messageText = "Approve \(kind)?"; alert.informativeText = "The MCP client requests access to \(target). Choose how long this permission should remain active."
+        let argv = item["argv"] as? [String] ?? []
+        let context = item["context"] as? [String: Any] ?? [:]
+        let arguments = argv.joined(separator: " ")
+        let cwd = context["cwd"] as? String ?? "Not specified"
+        let requested = context["requested_grant"] as? String ?? "once"
+        alert.messageText = "Approve \(kind)?"
+        alert.informativeText = "Target: \(target)\nCommand: \(arguments.isEmpty ? "(none)" : arguments)\nWorking directory: \(cwd)\nRequested duration: \(requested)\n\nOnly approve operations you recognize. The actual local selection controls the grant duration."
         alert.addButton(withTitle: "Always allow"); alert.addButton(withTitle: "For this session"); alert.addButton(withTitle: "Once"); alert.addButton(withTitle: "Deny")
         let response = alert.runModal()
         let duration: String
