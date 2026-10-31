@@ -122,28 +122,63 @@ struct ConnectionRow: View {
 struct SettingsView: View {
     @ObservedObject var model: BridgeModel
     @State private var selected: SettingsTab = .general
+    @AppStorage("relayos.appearance") private var appearance = "system"
+    private var chosenScheme: ColorScheme? { appearance == "light" ? .light : appearance == "dark" ? .dark : nil }
+    private var pageTitle: String { switch selected { case .general: "General"; case .approvals: "Approvals"; case .connections: "MCP connections"; case .tools: "Tools & permissions"; case .commandPermissions: "Command permissions"; case .ngrok: "ngrok"; case .security: "Security"; case .activity: "Activity"; case .terminalJobs: "Terminal jobs" } }
     @AppStorage(ApprovalSound.preferenceKey) private var approvalSoundsEnabled = true
     @AppStorage(ApprovalArrivalNotification.enabledKey) private var approvalNotificationsEnabled = false
     var body: some View {
         NavigationSplitView {
             List(selection: $selected) {
-                Label("General", systemImage: "gearshape").tag(SettingsTab.general)
-                Label("Approvals (\(model.approvalInbox.count))", systemImage: "tray.full").tag(SettingsTab.approvals)
-                Label("MCP connections", systemImage: "link").tag(SettingsTab.connections)
-                Label("Tools & permissions", systemImage: "square.grid.2x2").tag(SettingsTab.tools)
-                Label("Command permissions", systemImage: "terminal.fill").tag(SettingsTab.commandPermissions)
-                Label("ngrok", systemImage: "globe").tag(SettingsTab.ngrok)
-                Label("Security", systemImage: "lock").tag(SettingsTab.security)
-                Label("Activity", systemImage: "clock.arrow.circlepath").tag(SettingsTab.activity)
-                Label("Terminal jobs", systemImage: "terminal").tag(SettingsTab.terminalJobs)
-            }.listStyle(.sidebar)
+                Section("Workspace") {
+                    Label("General", systemImage: "gearshape").tag(SettingsTab.general)
+                    Label("Approvals (\(model.approvalInbox.count))", systemImage: "tray.full").tag(SettingsTab.approvals)
+                    Label("Activity", systemImage: "clock.arrow.circlepath").tag(SettingsTab.activity)
+                }
+                Section("Connections & tools") {
+                    Label("MCP connections", systemImage: "link").tag(SettingsTab.connections)
+                    Label("ngrok", systemImage: "globe").tag(SettingsTab.ngrok)
+                    Label("Tools & permissions", systemImage: "square.grid.2x2").tag(SettingsTab.tools)
+                    Label("Command permissions", systemImage: "terminal.fill").tag(SettingsTab.commandPermissions)
+                    Label("Terminal jobs", systemImage: "terminal").tag(SettingsTab.terminalJobs)
+                }
+                Section("Privacy") {
+                    Label("Security", systemImage: "lock.shield").tag(SettingsTab.security)
+                }
+            }
+            .listStyle(.sidebar)
+            .safeAreaInset(edge: .top) {
+                HStack(spacing: 10) {
+                    Image(systemName: "square.stack.3d.up.fill")
+                        .font(.system(size: 19, weight: .semibold))
+                        .frame(width: 34, height: 34)
+                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("RelayOS").font(.headline)
+                        Text("Settings").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }.padding(16)
+            }
+            .navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 270)
         } detail: {
-            Form {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    Text(pageTitle).font(.system(size: 30, weight: .semibold)).tracking(-0.7)
+                    Form {
                 switch selected {
                 case .approvals:
                     ApprovalCenterView(model: model)
                 case .general:
-                    Section("General") { LabeledContent("MCP endpoint", value: model.endpoint); LabeledContent("Local MCP", value: model.mcpHealth.rawValue.capitalized); LabeledContent("Public MCP", value: model.tunnelHealth.label); if !model.serviceNotice.isEmpty { Text(model.serviceNotice).foregroundStyle(.orange) }; Button("Restart services") { model.restartServices() } }
+                    Section("Connections") { LabeledContent("MCP endpoint", value: model.endpoint); LabeledContent("Local MCP", value: model.mcpHealth.rawValue.capitalized); LabeledContent("Public MCP", value: model.tunnelHealth.label); if !model.serviceNotice.isEmpty { Text(model.serviceNotice).foregroundStyle(.orange) }; Button("Restart services") { model.restartServices() } }
+                    Section("Appearance") {
+                        Picker("Theme", selection: $appearance) {
+                            Text("System").tag("system")
+                            Text("Light").tag("light")
+                            Text("Dark").tag("dark")
+                        }.pickerStyle(.segmented)
+                        Text("Follow macOS automatically, or choose a light or dark appearance.").font(.caption).foregroundStyle(.secondary)
+                    }
                     Section("Approval notifications") {
                         Toggle("Play sound for new approval requests", isOn: $approvalSoundsEnabled)
                         Toggle("macOS notifications for new approval requests", isOn: $approvalNotificationsEnabled)
@@ -184,8 +219,17 @@ struct SettingsView: View {
                 case .terminalJobs:
                     CommandJobsView(model: model)
                 }
-            }.formStyle(.grouped).padding()
+                    }
+                    .formStyle(.grouped)
+                    .scrollDisabled(true)
+                }
+                .frame(maxWidth: 760, alignment: .leading)
+                .padding(.horizontal, 36)
+                .padding(.vertical, 30)
+                .frame(maxWidth: .infinity, alignment: .top)
+            }
         }
+        .preferredColorScheme(chosenScheme)
         .onChange(of: model.approvalNavigationRequest) { _, _ in
             selected = .approvals
         }

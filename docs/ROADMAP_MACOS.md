@@ -202,3 +202,12 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [ ] Verify signed staging bundle, isolated packaged MCP startup/restart, rollback copy and live handover.
 - [ ] Visually verify native task progress and cancellation using a harmless locally approved test job.
 - [ ] Future: independent job supervisor that can positively reap orphan children after an abrupt native/server SIGKILL and optionally reattach output. Current jobs are process-owned and not restart-persistent.
+
+## UI modernization sprint — 2026-10-31
+- [x] Organize native settings navigation into meaningful sections with branded sidebar header.
+- [x] Add persisted System, Light and Dark appearance selection using native SwiftUI color schemes.
+- [x] Improve settings detail typography and centered width/spacing, retaining existing security actions and screens.
+- [x] Run Swift native compilation and tests.
+- [ ] Validate appearance contrast, scrolling and layouts in the staged running UI at different window sizes.
+- [ ] Signed staging build, isolate packaged helper tests, protected handover and visual acceptance.
+- [ ] Further refine secondary panels into consistent reusable settings rows and cards after visual inspection.
