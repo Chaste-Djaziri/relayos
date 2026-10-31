@@ -371,6 +371,37 @@ def test_git_add_persistent_family_after_local_always_choice(project_dir):
     assert server.run_project_command(sid, ["git", "-C", str(project_dir), "add", "main.py"])["requires_authorization"]
 
 
+def test_git_add_grant_survives_fresh_approval_helper_database_open(project_dir):
+    subprocess.run(["git", "init"], cwd=project_dir, check=True, capture_output=True)
+    sid = _approved_project_session(project_dir)
+    original = ["git", "add", "-n", "--", "main.py"]
+    pending = server.authorize_project_command(sid, original)
+    state.decide_request(pending["request_id"], "persistent")
+    assert server.authorize_project_command(sid, original)["grant"] == "always"
+
+    with state._db() as db:
+        db.execute(
+            """INSERT INTO command_grants
+               (token, project_root, executable, grant_type, created_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            ("obsolete-wildcard", str(project_dir), server._resolve_executable("git"),
+             "always", time.time()),
+        )
+
+    # Mimic a fresh standalone RelayOSApprovals process, which re-runs the
+    # database migration on its first access.
+    state._INITIALIZED_DBS.discard(str(state.DATABASE_FILE))
+    state.pending_requests()
+
+    with state._db() as db:
+        legacy = db.execute(
+            "SELECT revoked_at FROM command_grants WHERE token = 'obsolete-wildcard'"
+        ).fetchone()
+    assert legacy["revoked_at"] is not None
+    assert any(grant["family_key"] == "git:add" for grant in server.list_saved_command_grants())
+    assert server.run_project_command(sid, ["git", "add", "-n", "--", "sub/module.py"])["exit_code"] == 0
+
+
 def test_git_add_session_family_is_bound_to_approved_session(project_dir):
     subprocess.run(["git", "init"], cwd=project_dir, check=True, capture_output=True)
     sid = _approved_project_session(project_dir)

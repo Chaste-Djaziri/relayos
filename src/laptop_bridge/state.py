@@ -151,9 +151,20 @@ def _db():
                 connection.execute("ALTER TABLE requests ADD COLUMN context_json TEXT NOT NULL DEFAULT '{}'")
             if "approved_duration" not in columns:
                 connection.execute("ALTER TABLE requests ADD COLUMN approved_duration TEXT")
+            # Family grants intentionally store NULL argv_digest. Only recognized
+            # families are valid; do not treat them as legacy executable-wide
+            # grants during initialization in a separate approval-helper process.
             connection.execute("""
                 UPDATE command_grants SET revoked_at = ?
-                WHERE revoked_at IS NULL AND (argv_digest IS NULL OR working_directory IS NULL)
+                WHERE revoked_at IS NULL AND (
+                    working_directory IS NULL
+                    OR (
+                        argv_digest IS NULL AND (
+                            family_key IS NULL OR family_key NOT IN ('git:add')
+                            OR grant_type NOT IN ('session', 'always')
+                        )
+                    )
+                )
             """, (time.time(),))
             connection.execute("CREATE INDEX IF NOT EXISTS command_grants_lookup ON command_grants(project_root, executable, grant_type, revoked_at)")
             connection.execute("CREATE INDEX IF NOT EXISTS permission_grants_scope ON permission_grants(grant_type, scope, revoked_at)")
