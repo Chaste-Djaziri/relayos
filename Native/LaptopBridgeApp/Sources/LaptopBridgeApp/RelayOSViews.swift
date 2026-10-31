@@ -122,9 +122,7 @@ struct ConnectionRow: View {
 struct SettingsView: View {
     @ObservedObject var model: BridgeModel
     @State private var selected: SettingsTab = .general
-    @AppStorage("relayos.appearance") private var appearance = "system"
-    private var chosenScheme: ColorScheme? { appearance == "light" ? .light : appearance == "dark" ? .dark : nil }
-    private var pageTitle: String { switch selected { case .general: "General"; case .approvals: "Approvals"; case .connections: "MCP connections"; case .tools: "Tools & permissions"; case .commandPermissions: "Command permissions"; case .ngrok: "ngrok"; case .security: "Security"; case .activity: "Activity"; case .terminalJobs: "Terminal jobs" } }
+    private var pageTitle: String { switch selected { case .general: "General"; case .appearance: "Appearance"; case .approvals: "Approvals"; case .connections: "MCP connections"; case .tools: "Tools & permissions"; case .commandPermissions: "Command permissions"; case .ngrok: "ngrok"; case .security: "Security"; case .activity: "Activity"; case .terminalJobs: "Terminal jobs" } }
     @AppStorage(ApprovalSound.preferenceKey) private var approvalSoundsEnabled = true
     @AppStorage(ApprovalArrivalNotification.enabledKey) private var approvalNotificationsEnabled = false
     var body: some View {
@@ -132,6 +130,7 @@ struct SettingsView: View {
             List(selection: $selected) {
                 Section("Workspace") {
                     Label("General", systemImage: "gearshape").tag(SettingsTab.general)
+                    Label("Appearance", systemImage: "paintbrush.pointed").tag(SettingsTab.appearance)
                     Label("Approvals (\(model.approvalInbox.count))", systemImage: "tray.full").tag(SettingsTab.approvals)
                     Label("Activity", systemImage: "clock.arrow.circlepath").tag(SettingsTab.activity)
                 }
@@ -167,18 +166,12 @@ struct SettingsView: View {
                     Text(pageTitle).font(.system(size: 30, weight: .semibold)).tracking(-0.7)
                     Form {
                 switch selected {
+                case .appearance:
+                    RelayOSAppearanceView()
                 case .approvals:
                     ApprovalCenterView(model: model)
                 case .general:
                     Section("Connections") { LabeledContent("MCP endpoint", value: model.endpoint); LabeledContent("Local MCP", value: model.mcpHealth.rawValue.capitalized); LabeledContent("Public MCP", value: model.tunnelHealth.label); if !model.serviceNotice.isEmpty { Text(model.serviceNotice).foregroundStyle(.orange) }; Button("Restart services") { model.restartServices() } }
-                    Section("Appearance") {
-                        Picker("Theme", selection: $appearance) {
-                            Text("System").tag("system")
-                            Text("Light").tag("light")
-                            Text("Dark").tag("dark")
-                        }.pickerStyle(.segmented)
-                        Text("Follow macOS automatically, or choose a light or dark appearance.").font(.caption).foregroundStyle(.secondary)
-                    }
                     Section("Approval notifications") {
                         Toggle("Play sound for new approval requests", isOn: $approvalSoundsEnabled)
                         Toggle("macOS notifications for new approval requests", isOn: $approvalNotificationsEnabled)
@@ -229,11 +222,10 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .top)
             }
         }
-        .preferredColorScheme(chosenScheme)
         .onChange(of: model.approvalNavigationRequest) { _, _ in
             selected = .approvals
         }
     }
 }
 
-enum SettingsTab: Hashable { case general, approvals, connections, tools, commandPermissions, ngrok, security, activity, terminalJobs }
+enum SettingsTab: Hashable { case general, appearance, approvals, connections, tools, commandPermissions, ngrok, security, activity, terminalJobs }

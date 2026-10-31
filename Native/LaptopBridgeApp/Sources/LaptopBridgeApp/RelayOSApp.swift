@@ -21,6 +21,9 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
 @main
 struct LaptopBridgeApp: App {
     @StateObject private var model = BridgeModel.shared
+    @AppStorage(RelayOSTheme.modeKey) private var appearance = "system"
+    @AppStorage(RelayOSTheme.accentKey) private var accent = "blue"
+    @AppStorage(RelayOSTheme.fontSizeKey) private var uiFontSize = 14.0
     @NSApplicationDelegateAdaptor(RelayOSApplicationDelegate.self) private var appDelegate
 
     init() {
@@ -35,6 +38,9 @@ struct LaptopBridgeApp: App {
     var body: some Scene {
         Window("RelayOS", id: "main") {
             DesktopWindowView(model: model)
+                .preferredColorScheme(RelayOSTheme.scheme(appearance))
+                .tint(RelayOSTheme.accent(accent))
+                .environment(\.font, .system(size: uiFontSize))
                 .frame(minWidth: 820, minHeight: 560)
                 .onAppear {
                     NSApp.setActivationPolicy(.regular)
@@ -46,6 +52,8 @@ struct LaptopBridgeApp: App {
         }
         MenuBarExtra {
             QuickPanel(model: model)
+                .preferredColorScheme(RelayOSTheme.scheme(appearance))
+                .tint(RelayOSTheme.accent(accent))
                 .frame(width: 360)
         } label: {
             HStack(spacing: 3) {
@@ -62,6 +70,8 @@ struct LaptopBridgeApp: App {
 
         Settings {
             SettingsView(model: model)
+                .preferredColorScheme(RelayOSTheme.scheme(appearance))
+                .tint(RelayOSTheme.accent(accent))
                 .frame(minWidth: 760, minHeight: 520)
         }
     }

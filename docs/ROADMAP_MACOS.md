@@ -211,3 +211,11 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [ ] Validate appearance contrast, scrolling and layouts in the staged running UI at different window sizes.
 - [ ] Signed staging build, isolate packaged helper tests, protected handover and visual acceptance.
 - [ ] Further refine secondary panels into consistent reusable settings rows and cards after visual inspection.
+
+## Appearance improvements — 2026-10-31
+- [x] Dedicated Appearance sidebar page and visual mode previews.
+- [x] Persist mode, accent, UI font size, reduced-motion preference and sidebar-translucency preference.
+- [x] Apply appearance and accent to main window, Settings and menu bar; apply UI text scaling to main window.
+- [x] Swift compilation and native regression suite pass.
+- [ ] Wire advanced reduce-motion and sidebar translucency preferences to every relevant native UI animation/material; currently stored only.
+- [ ] Stage signed bundle, verify and deploy with rollback; visually inspect light/dark and control contrast.

@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Dedicated Appearance page with System/Light/Dark visual mode previews, saved accent selection, UI font-size control, and advanced motion/sidebar preferences; window and menu bar share theme selection.
 - UI modernization: reorganized native settings navigation into Workspace, Connections & tools, and Privacy, added a dedicated RelayOS sidebar identity and wider settings canvas, and introduced persisted System/Light/Dark appearance selection. Native Swift tests pass. This work remains unreleased.
 - Sprint 04 macOS: added native Terminal Jobs view with live metadata polling, bounded incremental stdout/stderr display, cancellation controls, and search by executable/project/status. All native output fetches use the authenticated loopback control token; new model-decoding tests verify job state and offsets.
 - Sprint 04 backend: added opt-in approved background command jobs (no shell), session-bound list/read/cancel MCP tools, bounded 8 KiB incremental stdout/stderr reads, metadata-only local SQLite job history, emergency-stop/timeout/output-limit cancellation, and isolated local control output access. Job output is temporary in the owning MCP process; on restart previous in-progress metadata is marked interrupted. Added regression coverage (116 Python tests passed; one pre-existing Pydantic warning).
