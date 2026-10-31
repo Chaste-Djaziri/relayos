@@ -40,9 +40,17 @@ Refactor monolithic RelayOSApp.swift into App, Features, Services, Models, Compo
 - [x] Prevent old child termination handlers from dropping new process ownership, and wait for restart shutdown.
 - [x] Remove hardcoded development checkout and discover development runtime dynamically.
 - [x] Expand native regression tests from one to four passing tests.
+- [x] Add native `MCPHealthMonitor` using token-authenticated loopback control status instead of raw TCP port adoption.
+- [x] Gate tunnel startup and external-listener adoption on authenticated MCP health.
+- [x] Add `ServiceSupervisor` with bounded server/tunnel retry backoff and stale health result protection.
+- [x] Pre-create local control token before MCP listener starts on fresh installations.
+- [x] Verify 15 native Swift tests including opt-in authenticated live health probe; 89 Python tests pass (1 existing warning).
+- [ ] Run isolated real-child crash/restart and multi-app takeover integration tests before considering Phase 01 fully complete.
 - [ ] Add multi-process launch/takeover and crash-recovery integration tests.
-- [ ] Extract a dedicated service supervisor from the runtime model; authenticate any adopted listener.
-- [ ] Verify signed packaged-app clean installation, update and multi-launch handover.
+- [x] Extract a dedicated health/recovery policy coordinator, authenticate any adopted listener, and prevent overlapping/stale health probes.
+- [ ] Move remaining subprocess launch/stop implementation into the dedicated service layer.
+- [x] Verify separately packaged Sprint 01 app is signed and its bundled MCP helper passes isolated authenticated loopback smoke tests.
+- [ ] Verify real macOS app takeover, crash recovery, and the main app's managed server/tunnel handover on a deployed build.
 **Pass:** one server/tunnel owner, predictable reconnect, no duplicate agents, successful Swift build, and comprehensive lifecycle tests.
 
 ## Phase 02 — Native UI
@@ -99,3 +107,11 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - Native Swift test suite: **4 passed, 0 failures**, with successful compilation.
 - Live installed application was intentionally not replaced during these source refactors. Packaged-app handover requires a separate deployment validation.
 - Changelog maintained at root `CHANGELOG.md`.
+
+## Sprint 01 checkpoint — 2026-10-31
+- Atomic commits: `789c1f5` (authenticated health monitor), `1dc69d5` (supervisor and runtime integration), `fcc3c56` (server control-token bootstrap), `e15b537` (stale-probe crash guard), `5f84c57` (live-health integration test).
+- Native macOS build succeeded; 15 tests passed after the optional live health check was enabled. Python test suite: 89 passed, 1 known warning.
+- Authenticated status probe against the existing MCP endpoint passed without terminating the live app.
+- Signed staged bundle built successfully in `dist/relayos-sprint01/RelayOS.app`; isolated bundled MCP helper smoke-tested on a separate loopback port with unauthenticated 401 and authenticated 200, without modifying the live deployment.
+- Remaining before production acceptance: real multi-instance launch/takeover and managed-process crash recovery.
+- Production acceptance still requires a controlled app handover and a real managed child/tunnel recovery test; unit tests alone do not certify these.
