@@ -63,7 +63,8 @@ struct LaptopBridgeApp: App {
 }
 
 @MainActor
-final class BridgeModel: ObservableObject {\n    static let shared = BridgeModel()
+final class BridgeModel: ObservableObject {
+    static let shared = BridgeModel()
     @Published var running = false
     @Published var tunnelRunning = false
     @Published var emergencyStop = false
