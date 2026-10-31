@@ -11,6 +11,7 @@ DIST_DIR=${DIST_DIR:-"$ROOT_DIR/dist"}
 APP_NAME="RelayOS"
 APP_PATH="$DIST_DIR/$APP_NAME.app"
 STAGE_DIR="$DIST_DIR/.relayos-stage"
+SWIFT_BUILD_DIR="$STAGE_DIR/swift-build"
 PYTHON_BIN=${PYTHON_BIN:-"$ROOT_DIR/.venv/bin/python"}
 SIGNING_IDENTITY=${RELAYOS_SIGNING_IDENTITY:-${LAPTOP_BRIDGE_SIGNING_IDENTITY:-}}
 
@@ -32,9 +33,12 @@ rm -rf "$STAGE_DIR" "$APP_PATH"
 mkdir -p "$STAGE_DIR/runtime" "$APP_PATH/Contents/MacOS" "$APP_PATH/Contents/Resources"
 mkdir -p "$APP_PATH/Contents/Resources/Runtime"
 
-swift build -c release --package-path Native/LaptopBridgeApp
-cp Native/LaptopBridgeApp/.build/arm64-apple-macosx/release/LaptopBridgeApp "$APP_PATH/Contents/MacOS/RelayOS" 2>/dev/null || \
-  cp Native/LaptopBridgeApp/.build/out/Products/Release/LaptopBridgeApp "$APP_PATH/Contents/MacOS/RelayOS"
+# Build in this package's fresh staging area. Reusing the shared .build cache
+# can package a stale executable after SwiftUI source moves, leaving a running
+# app whose UI does not match the checked-in source.
+swift build -c release --package-path Native/LaptopBridgeApp --scratch-path "$SWIFT_BUILD_DIR"
+cp "$SWIFT_BUILD_DIR/arm64-apple-macosx/release/LaptopBridgeApp" "$APP_PATH/Contents/MacOS/RelayOS" 2>/dev/null || \
+  cp "$SWIFT_BUILD_DIR/out/Products/Release/LaptopBridgeApp" "$APP_PATH/Contents/MacOS/RelayOS"
 
 # Build only the MCP server entrypoint. PyInstaller follows the server's
 # imports directly; collecting the entire optional MCP CLI would require the
