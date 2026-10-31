@@ -299,6 +299,9 @@ def _decide(token, status, duration="once"):
         if row is None or row["status"] != "pending":
             connection.rollback()
             raise PermissionError("Unknown, expired, or already decided request")
+        if status == "approved" and emergency_stop(connection):
+            connection.rollback()
+            raise PermissionError("Emergency stop prevents approving requests")
         connection.execute(
             "UPDATE requests SET status = ?, decided_at = ?, approved_duration = ? WHERE token = ?",
             (status, now, duration if status == "approved" else None, token),
@@ -336,6 +339,74 @@ def pending_requests():
         rows = connection.execute("SELECT token, kind, target, argv_json, context_json, created_at FROM requests WHERE status = 'pending' ORDER BY created_at").fetchall()
         connection.commit()
     return [{"request_id": row["token"], "kind": row["kind"], "target": row["target"], "argv": json.loads(row["argv_json"]), "context": json.loads(row["context_json"] or "{}"), "created_at": row["created_at"]} for row in rows]
+
+
+def approval_inbox():
+    """Locally view all pending project/permission and OAuth approvals together.
+
+    Raw command argv is returned only over the local helper, never to a public
+    MCP tool. OAuth redirect URIs are excluded to avoid exposing credentials.
+    """
+    requests = pending_requests()
+    oauth = pending_oauth_authorizations()
+    result = []
+    for item in requests:
+        result.append({
+            "request_id": item["request_id"], "kind": item["kind"],
+            "target": item["target"], "argv": item["argv"],
+            "context": item["context"], "created_at": item["created_at"],
+            "expires_at": item["created_at"] + TTL,
+        })
+    for item in oauth:
+        result.append({
+            "request_id": item["request_id"], "kind": "oauth_connection",
+            "target": item["client_name"], "argv": [],
+            "context": {"client_id": item["client_id"]},
+            "created_at": item["created_at"],
+            "expires_at": item["created_at"] + OAUTH_APPROVAL_TTL,
+        })
+    return sorted(result, key=lambda item: (item["created_at"], item["request_id"]))
+
+
+def decide_inbox_request(request_id, decision):
+    """One local inbox entry, one deliberate decision; fail closed on stale IDs."""
+    if decision not in {"once", "session", "persistent", "deny"}:
+        raise ValueError("Invalid inbox decision")
+    with _db() as connection:
+        row = connection.execute(
+            "SELECT kind, status FROM requests WHERE token = ?", (request_id,)
+        ).fetchone()
+        oauth = connection.execute(
+            "SELECT status FROM oauth_authorizations WHERE token = ?", (request_id,)
+        ).fetchone() if row is None else None
+    if row is not None:
+        if not decide_request(request_id, decision):
+            raise PermissionError("Request was already decided or expired")
+        return {"request_id": request_id, "kind": row["kind"], "decision": decision}
+    if oauth is not None:
+        if decision not in {"once", "deny"}:
+            raise ValueError("OAuth connections support Approve once or Deny only")
+        decide_oauth_authorization(request_id, decision == "once")
+        return {"request_id": request_id, "kind": "oauth_connection", "decision": decision}
+    raise PermissionError("Unknown inbox request")
+
+
+def approval_activity(limit=100, search=""):
+    """Persisted, metadata-only audit entries, bounded and searchable."""
+    limit = max(1, min(int(limit), 300))
+    with _db() as connection:
+        clauses = ""
+        values = []
+        if search:
+            clauses = " WHERE (instr(lower(kind), lower(?)) > 0 OR instr(lower(target), lower(?)) > 0 OR instr(lower(decision), lower(?)) > 0)"
+            values = [search[:120]] * 3
+        rows = connection.execute(
+            """SELECT id, recorded_at, kind, target, decision, exit_code, duration_ms
+               FROM action_history""" + clauses +
+            " ORDER BY recorded_at DESC, id DESC LIMIT ?",
+            (*values, limit),
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 def recent_history(limit=100):
@@ -532,6 +603,9 @@ def decide_oauth_authorization(request_id, approved):
         if row is None or row["status"] != "pending":
             connection.rollback()
             raise PermissionError("Unknown, expired, or already decided OAuth authorization")
+        if approved and emergency_stop(connection):
+            connection.rollback()
+            raise PermissionError("Emergency stop prevents approving OAuth connections")
         connection.execute(
             "UPDATE oauth_authorizations SET status = ?, decided_at = ? WHERE token = ?",
             ("approved" if approved else "denied", now, request_id),

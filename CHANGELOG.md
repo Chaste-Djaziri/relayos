@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Added a local-only unified approval inbox and searchable persisted metadata-only activity feed, routing command/project decisions and OAuth connection approval through fail-closed SQLite authorization. Added stale/expired, emergency-stop and independent queued-request regression tests (107 Python tests passed).
 - Added an isolated packaged MCP crash/restart smoke test (ephemeral loopback port and temporary state) and a native real-child process-slot test to ensure old termination callbacks cannot discard replacements.
 - Hardened native single-instance coordination with a stable, user-owned, non-symlink flock lease and tested contention/release plus rejection of insecure lock files. The takeover path still requests graceful retirement of the old app rather than killing unrelated processes.
 - Integrated authenticated periodic public tunnel checks with bounded retry/recycle of only app-owned MCP/ngrok children after repeated failures, stale-probe generation guards, and accurate local/public health labels in the menu and Settings. Removed ngrok stdout-based URL adoption and one-shot inspector discovery.

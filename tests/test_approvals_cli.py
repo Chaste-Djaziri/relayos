@@ -102,3 +102,63 @@ def test_repeated_prefix_grant_is_idempotent_and_once_grants_stay_unique(tmp_pat
     token_a = state.grant_project_command(root, "/usr/bin/git", argv, root, "once")
     token_b = state.grant_project_command(root, "/usr/bin/git", argv, root, "once")
     assert token_a != token_b
+
+
+def test_inbox_queues_multiple_independent_requests_and_persists_audit(monkeypatch, capsys):
+    first = state.request("project_command", {
+        "target": "/tmp/project:/usr/bin/git", "argv": ["git", "commit", "-m", "test"],
+        "context": {"cwd": "/tmp/project", "scope_prefix": ["git", "commit"]},
+    })
+    second = state.request("project_session", {
+        "target": "/tmp/other-project", "argv": [],
+    })
+    inbox = call(monkeypatch, capsys, "list-inbox")
+    assert {item["request_id"] for item in inbox} == {first, second}
+    assert inbox[0]["expires_at"] > inbox[0]["created_at"]
+    assert call(monkeypatch, capsys, "decide-inbox", first, "session")["decision"] == "session"
+    remaining = call(monkeypatch, capsys, "list-inbox")
+    assert [item["request_id"] for item in remaining] == [second]
+    call(monkeypatch, capsys, "decide-inbox", second, "deny")
+    history = call(monkeypatch, capsys, "activity-history", "--search", "project_command")
+    assert any(item["decision"] == "approved" for item in history)
+    assert "argv_json" not in str(history)
+    with pytest.raises(PermissionError, match="decided or expired"):
+        call(monkeypatch, capsys, "decide-inbox", first, "persistent")
+
+
+def test_expired_and_emergency_stopped_inbox_requests_cannot_be_approved(
+    monkeypatch, capsys
+):
+    import time
+    expired = state.request("project_command", {"target": "/tmp/p:/usr/bin/git", "argv": []})
+    with state._db() as db:
+        db.execute(
+            "UPDATE requests SET created_at = ? WHERE token = ?",
+            (time.time() - state.TTL - 5, expired),
+        )
+    assert call(monkeypatch, capsys, "list-inbox") == []
+    with pytest.raises(PermissionError):
+        call(monkeypatch, capsys, "decide-inbox", expired, "once")
+    current = state.request("project_command", {"target": "/tmp/p:/usr/bin/git", "argv": []})
+    state.set_emergency_stop(True)
+    with pytest.raises(PermissionError):
+        call(monkeypatch, capsys, "decide-inbox", current, "once")
+
+
+def test_oauth_inbox_restricts_decisions_and_records_client_name(monkeypatch, capsys):
+    state.oauth_register_client("client-1", {"client_name": "Test Client"})
+    req = state.create_oauth_authorization(
+        "client-1", "https://example.org/callback", "csrf", ["mcp"],
+        "challenge", None,
+    )
+    inbox = call(monkeypatch, capsys, "list-inbox")
+    item = next(i for i in inbox if i["request_id"] == req)
+    assert item["kind"] == "oauth_connection"
+    assert item["target"] == "Test Client"
+    assert "redirect_uri" not in item
+    with pytest.raises(ValueError, match="Approve once"):
+        call(monkeypatch, capsys, "decide-inbox", req, "persistent")
+    assert call(monkeypatch, capsys, "decide-inbox", req, "once")["decision"] == "once"
+    assert all(i["request_id"] != req for i in call(monkeypatch, capsys, "list-inbox"))
+    with pytest.raises(PermissionError):
+        call(monkeypatch, capsys, "decide-inbox", req, "deny")
