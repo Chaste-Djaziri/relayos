@@ -88,7 +88,7 @@ struct QuickPanel: View {
                 get: { model.emergencyStop },
                 set: { model.setEmergencyStop($0) }
             ))
-            .tint(.red)
+            .toggleStyle(.sleekSwitch(tint: Color(red: 0.92, green: 0.26, blue: 0.26)))
 
             HStack {
                 Button("Open RelayOS") {
@@ -431,6 +431,80 @@ struct StatusBadge: View {
         case .neutral: return Color(white: 0.75)
         }
     }
+}
+
+struct SettingsToggle: View {
+    @Binding var isOn: Bool
+    var tintColor: Color = Color(red: 0.18, green: 0.52, blue: 0.98)
+    var offColor: Color = Color(red: 0.24, green: 0.24, blue: 0.26)
+
+    var body: some View {
+        Button {
+            withAnimation(.spring(response: 0.24, dampingFraction: 0.72)) {
+                isOn.toggle()
+            }
+        } label: {
+            ZStack {
+                Capsule()
+                    .fill(isOn ? tintColor : offColor)
+                    .frame(width: 40, height: 23)
+                    .overlay(
+                        Capsule()
+                            .stroke(isOn ? tintColor.opacity(0.85) : Color(white: 0.32), lineWidth: 0.8)
+                    )
+
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 17, height: 17)
+                    .shadow(color: Color.black.opacity(0.35), radius: 1.5, x: 0, y: 1)
+                    .frame(maxWidth: 40, alignment: isOn ? .trailing : .leading)
+                    .padding(.horizontal, 3)
+            }
+            .frame(width: 40, height: 23)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct SleekSwitchToggleStyle: ToggleStyle {
+    var tint: Color = Color(red: 0.18, green: 0.52, blue: 0.98)
+    var offColor: Color = Color(red: 0.24, green: 0.24, blue: 0.26)
+
+    func makeBody(configuration: Configuration) -> some View {
+        HStack {
+            configuration.label
+            Spacer()
+            Button {
+                withAnimation(.spring(response: 0.24, dampingFraction: 0.72)) {
+                    configuration.isOn.toggle()
+                }
+            } label: {
+                ZStack {
+                    Capsule()
+                        .fill(configuration.isOn ? tint : offColor)
+                        .frame(width: 40, height: 23)
+                        .overlay(
+                            Capsule()
+                                .stroke(configuration.isOn ? tint.opacity(0.85) : Color(white: 0.32), lineWidth: 0.8)
+                        )
+
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 17, height: 17)
+                        .shadow(color: Color.black.opacity(0.35), radius: 1.5, x: 0, y: 1)
+                        .frame(maxWidth: 40, alignment: configuration.isOn ? .trailing : .leading)
+                        .padding(.horizontal, 3)
+                }
+                .frame(width: 40, height: 23)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+extension ToggleStyle where Self == SleekSwitchToggleStyle {
+    static var sleekSwitch: SleekSwitchToggleStyle { SleekSwitchToggleStyle() }
+    static func sleekSwitch(tint: Color) -> SleekSwitchToggleStyle { SleekSwitchToggleStyle(tint: tint) }
 }
 
 struct SettingsCard<Content: View>: View {
@@ -781,12 +855,13 @@ private struct GeneralDetailView: View {
                     subtitle: "Immediately blocks active sessions, cancels terminal jobs, and revokes OAuth tokens. Enforced at SQLite authorization boundary.",
                     showDivider: false
                 ) {
-                    Toggle("", isOn: Binding(
-                        get: { model.emergencyStop },
-                        set: { model.setEmergencyStop($0) }
-                    ))
-                    .tint(.red)
-                    .labelsHidden()
+                    SettingsToggle(
+                        isOn: Binding(
+                            get: { model.emergencyStop },
+                            set: { model.setEmergencyStop($0) }
+                        ),
+                        tintColor: Color(red: 0.92, green: 0.26, blue: 0.26)
+                    )
                 }
             }
 
@@ -795,9 +870,7 @@ private struct GeneralDetailView: View {
                     title: "Sound alerts",
                     subtitle: "Play sound effect when a new tool approval request arrives"
                 ) {
-                    Toggle("", isOn: $approvalSoundsEnabled)
-                        .tint(.blue)
-                        .labelsHidden()
+                    SettingsToggle(isOn: $approvalSoundsEnabled)
                 }
 
                 SettingsCardRow(
@@ -805,9 +878,7 @@ private struct GeneralDetailView: View {
                     subtitle: "Display notification banner on arrival. Alerts are sent once per newly discovered request; command arguments are excluded.",
                     showDivider: false
                 ) {
-                    Toggle("", isOn: $approvalNotificationsEnabled)
-                        .tint(.blue)
-                        .labelsHidden()
+                    SettingsToggle(isOn: $approvalNotificationsEnabled)
                         .onChange(of: approvalNotificationsEnabled) { _, enabled in
                             if enabled { ApprovalArrivalNotification.requestPermission() }
                         }
@@ -828,12 +899,13 @@ private struct SecurityDetailView: View {
                     subtitle: "Blocks all command execution, revokes active OAuth tokens, and refuses incoming MCP tool calls. Persisted directly in RelayOS SQLite database.",
                     showDivider: false
                 ) {
-                    Toggle("", isOn: Binding(
-                        get: { model.emergencyStop },
-                        set: { model.setEmergencyStop($0) }
-                    ))
-                    .tint(.red)
-                    .labelsHidden()
+                    SettingsToggle(
+                        isOn: Binding(
+                            get: { model.emergencyStop },
+                            set: { model.setEmergencyStop($0) }
+                        ),
+                        tintColor: Color(red: 0.92, green: 0.26, blue: 0.26)
+                    )
                 }
             }
 
@@ -954,9 +1026,7 @@ private struct ToolsDetailView: View {
                     title: "Project tools",
                     subtitle: "Enable workspace filesystem and development tools for connected AI clients"
                 ) {
-                    Toggle("", isOn: $model.projectTools)
-                        .tint(.blue)
-                        .labelsHidden()
+                    SettingsToggle(isOn: $model.projectTools)
                 }
 
                 SettingsCardRow(

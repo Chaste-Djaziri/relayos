@@ -70,7 +70,9 @@ struct RelayOSAppearanceView: View {
             DisclosureGroup("Advanced", isExpanded: $showAdvanced) {
                 VStack(alignment: .leading, spacing: 14) {
                     Toggle("Reduce motion", isOn: $reduceMotion)
+                        .toggleStyle(.sleekSwitch)
                     Toggle("Use translucent sidebar", isOn: $sidebarTransparency)
+                        .toggleStyle(.sleekSwitch)
                     Text("Reduce motion minimizes optional UI animation. macOS accessibility preferences still take priority.")
                         .font(.caption).foregroundStyle(.secondary)
                 }.padding(.top, 12)
