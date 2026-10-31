@@ -6,6 +6,11 @@ struct ApprovalCenterView: View {
     @State private var showingHistory = false
     @State private var search = ""
 
+    init(model: BridgeModel, initialShowingHistory: Bool = false) {
+        self.model = model
+        self._showingHistory = State(initialValue: initialShowingHistory)
+    }
+
     private var visibleInbox: [ApprovalInboxItem] {
         guard !search.isEmpty else { return model.approvalInbox }
         return model.approvalInbox.filter {
