@@ -15,7 +15,7 @@ def main():
     sub.add_parser("list-pending-json")
     decide = sub.add_parser("decide-request")
     decide.add_argument("request_id")
-    decide.add_argument("duration", choices=("once", "session", "persistent"))
+    decide.add_argument("duration", choices=("once", "session", "persistent", "deny"))
     revoke_perm = sub.add_parser("revoke-permission")
     revoke_perm.add_argument("grant_id")
     oauth = sub.add_parser("decide-oauth")
@@ -23,6 +23,8 @@ def main():
     oauth.add_argument("decision", choices=("approve", "deny"))
     approve = sub.add_parser("approve")
     approve.add_argument("request_id")
+    deny_parser = sub.add_parser("deny")
+    deny_parser.add_argument("request_id")
     args = parser.parse_args()
     if args.command == "list":
         for item in pending_requests():
@@ -42,6 +44,9 @@ def main():
         return
     if args.command == "decide-request":
         decide_request(args.request_id, args.duration)
+        return
+    if args.command == "deny":
+        deny(args.request_id)
         return
     if args.command == "revoke-permission":
         revoke_permission_grant(args.grant_id)

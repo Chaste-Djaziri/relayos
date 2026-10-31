@@ -425,8 +425,24 @@ final class BridgeModel: ObservableObject {
         let kind = item["kind"] as? String ?? "operation"; let target = item["target"] as? String ?? "requested resource"
         alert.messageText = "Approve \(kind)?"; alert.informativeText = "The MCP client requests access to \(target). Choose how long this permission should remain active."
         alert.addButton(withTitle: "Always allow"); alert.addButton(withTitle: "For this session"); alert.addButton(withTitle: "Once"); alert.addButton(withTitle: "Deny")
-        let response = alert.runModal(); let duration = response == .alertFirstButtonReturn ? "persistent" : response == .alertSecondButtonReturn ? "session" : response == .alertThirdButtonReturn ? "once" : nil
-        if let duration { let process = Process(); process.executableURL = URL(fileURLWithPath: python); process.arguments = ["-m", "laptop_bridge.approvals", "decide-request", requestID, duration]; setApprovalWorkingDirectory(process, executable: python); try? process.run(); process.waitUntilExit() } else { let process = Process(); process.executableURL = URL(fileURLWithPath: python); process.arguments = ["-m", "laptop_bridge.approvals", "decide-request", requestID, "once"]; setApprovalWorkingDirectory(process, executable: python); try? process.run(); process.waitUntilExit() }
+        let response = alert.runModal()
+        let duration: String
+        switch response {
+        case .alertFirstButtonReturn:
+            duration = "persistent"
+        case .alertSecondButtonReturn:
+            duration = "session"
+        case .alertThirdButtonReturn:
+            duration = "once"
+        default:
+            duration = "deny"
+        }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: python)
+        process.arguments = ["-m", "laptop_bridge.approvals", "decide-request", requestID, duration]
+        setApprovalWorkingDirectory(process, executable: python)
+        try? process.run()
+        process.waitUntilExit()
         visibleApprovalID = nil
     }
 

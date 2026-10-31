@@ -75,3 +75,40 @@ def test_history_contains_metadata_not_argv_and_purges_old_entries():
         connection.execute("UPDATE action_history SET recorded_at = 0")
     state.record_result("open_app", "editor")
     assert len(state.recent_history()) == 1
+
+
+def test_decide_request_explicit_deny():
+    token = create_request()
+    assert state.decide_request(token, "deny") is True
+    with pytest.raises(PermissionError):
+        state.consume(token)
+    with state._db() as conn:
+        row = conn.execute("SELECT status FROM requests WHERE token = ?", (token,)).fetchone()
+        assert row["status"] == "denied"
+    # Further decide calls on a denied request return False
+    assert state.decide_request(token, "once") is False
+
+
+def test_approvals_cli_decide_request_deny(monkeypatch):
+    from laptop_bridge import approvals
+    token = create_request()
+    monkeypatch.setattr("sys.argv", ["laptop-bridge-approvals", "decide-request", token, "deny"])
+    approvals.main()
+    with pytest.raises(PermissionError):
+        state.consume(token)
+    with state._db() as conn:
+        row = conn.execute("SELECT status FROM requests WHERE token = ?", (token,)).fetchone()
+        assert row["status"] == "denied"
+
+
+def test_approvals_cli_direct_deny(monkeypatch):
+    from laptop_bridge import approvals
+    token = create_request()
+    monkeypatch.setattr("sys.argv", ["laptop-bridge-approvals", "deny", token])
+    approvals.main()
+    with pytest.raises(PermissionError):
+        state.consume(token)
+    with state._db() as conn:
+        row = conn.execute("SELECT status FROM requests WHERE token = ?", (token,)).fetchone()
+        assert row["status"] == "denied"
+
