@@ -12,6 +12,8 @@ final class SingleInstanceCoordinator {
     private var lockFD: Int32 = -1
     private var observer: NSObjectProtocol?
 
+    var ownsLock: Bool { lockFD >= 0 }
+
     private init() {}
 
     func claimOrReplaceExistingInstance() -> Bool {

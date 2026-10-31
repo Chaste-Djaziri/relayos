@@ -99,14 +99,6 @@ final class BridgeModel: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor [weak self] in self?.shutdownServices() }
         }
-        startServices()
-        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
-        timer.schedule(deadline: .now() + 1, repeating: 1)
-        timer.setEventHandler { [weak self] in self?.checkOAuthApprovalsInBackground() }
-        timer.resume()
-        approvalTimer = timer
-        refreshConnectedClients()
-        refreshPermissionGrants()
     }
 
     deinit {
@@ -193,7 +185,18 @@ final class BridgeModel: ObservableObject {
     }
 
     func startServices() {
+        // A losing app instance must never launch the MCP server, tunnel, or approval workers.
+        guard SingleInstanceCoordinator.shared.ownsLock else { return }
         shouldMaintainServices = true
+        if approvalTimer == nil {
+            let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
+            timer.schedule(deadline: .now() + 1, repeating: 1)
+            timer.setEventHandler { [weak self] in self?.checkOAuthApprovalsInBackground() }
+            timer.resume()
+            approvalTimer = timer
+            refreshConnectedClients()
+            refreshPermissionGrants()
+        }
         guard server == nil else { return }
         if localServerIsListening() {
             running = true
@@ -252,6 +255,7 @@ final class BridgeModel: ObservableObject {
     }
 
     func startTunnelIfConfigured() {
+        guard SingleInstanceCoordinator.shared.ownsLock else { return }
         guard tunnel == nil, let token = TokenStore.read() else { return }
         let executable = ["/opt/homebrew/bin/ngrok", "/usr/local/bin/ngrok"].first { FileManager.default.isExecutableFile(atPath: $0) }
         guard let executable else { return }
