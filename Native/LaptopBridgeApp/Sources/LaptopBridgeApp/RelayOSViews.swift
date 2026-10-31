@@ -7,7 +7,13 @@ struct QuickPanel: View {
     @Environment(\ .openWindow) private var openWindow
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack { Image(systemName: "computermouse.fill").font(.title2).foregroundStyle(.blue).frame(width: 24, height: 24); VStack(alignment: .leading) { Text("RelayOS").font(.headline); Text(model.running ? "Running locally" : "Server stopped").font(.caption).foregroundStyle(.secondary) }; Spacer() }
+            HStack { Image(systemName: "computermouse.fill").font(.title2).foregroundStyle(.blue).frame(width: 24, height: 24); VStack(alignment: .leading) { Text("RelayOS").font(.headline); Text(model.running ? "MCP healthy" : "MCP offline or restarting").font(.caption).foregroundStyle(.secondary) }; Spacer() }
+            LabeledContent("Public tunnel", value: model.tunnelHealth.label)
+                .font(.caption)
+            if !model.serviceNotice.isEmpty {
+                Label(model.serviceNotice, systemImage: "arrow.triangle.2.circlepath")
+                    .font(.caption).foregroundStyle(.orange)
+            }
             if model.endpoint == "Not configured" {
                 GroupBox("First-run setup") {
                     VStack(alignment: .leading, spacing: 8) {
@@ -125,7 +131,7 @@ struct SettingsView: View {
             Form {
                 switch selected {
                 case .general:
-                    Section("General") { LabeledContent("MCP endpoint", value: model.endpoint); LabeledContent("Local server", value: model.running ? "Running" : "Stopped"); Button("Restart services") { model.restartServices() } }
+                    Section("General") { LabeledContent("MCP endpoint", value: model.endpoint); LabeledContent("Local MCP", value: model.mcpHealth.rawValue.capitalized); LabeledContent("Public MCP", value: model.tunnelHealth.label); if !model.serviceNotice.isEmpty { Text(model.serviceNotice).foregroundStyle(.orange) }; Button("Restart services") { model.restartServices() } }
                     Section("Approval notifications") { Toggle("Play sound for new approval requests", isOn: $approvalSoundsEnabled); Text("A short sound plays once when a new command or connection approval appears.").font(.caption).foregroundStyle(.secondary) }
                 case .connections:
                     Section("Connected AI clients") {
@@ -151,7 +157,7 @@ struct SettingsView: View {
                 case .commandPermissions:
                     CommandPermissionsView(model: model)
                 case .ngrok:
-                    Section("ngrok transport") { LabeledContent("Status", value: model.tunnelRunning ? "Connected" : "Stopped"); LabeledContent("Endpoint", value: model.endpoint); Button("Reconnect") { model.restartServices() } }
+                    Section("ngrok transport") { LabeledContent("Process", value: model.tunnelRunning ? "Running" : "Stopped"); LabeledContent("Public endpoint", value: model.tunnelHealth.label); LabeledContent("MCP endpoint", value: model.endpoint); Text("Public health is verified by unauthenticated HTTP 401; a running ngrok process alone does not prove connectivity.").font(.caption).foregroundStyle(.secondary); Button("Reconnect") { model.restartServices() } }
                 case .security:
                     Section("Security") { Toggle("Emergency stop", isOn: Binding(get: { model.emergencyStop }, set: { model.setEmergencyStop($0) })).tint(.red); Text("Emergency stop blocks active sessions and revokes active OAuth access.").font(.caption).foregroundStyle(.secondary) }
                 case .activity:

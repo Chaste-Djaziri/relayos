@@ -8,6 +8,17 @@ enum TunnelHealthStatus: String, Equatable {
     case inspectorUnavailable
     case remoteUnavailable
     case unexpectedEndpoint
+
+    var label: String {
+        switch self {
+        case .stopped: return "Stopped"
+        case .connecting: return "Connecting"
+        case .healthy: return "Verified public MCP (401)"
+        case .inspectorUnavailable: return "Inspector unavailable"
+        case .remoteUnavailable: return "Public endpoint unreachable"
+        case .unexpectedEndpoint: return "Unrecognized tunnel"
+        }
+    }
 }
 
 struct NgrokTunnelProbe: Equatable {

@@ -74,6 +74,51 @@ final class ServiceSupervisorTests: XCTestCase {
     }
 
     @MainActor
+    func testOwnedServerNeedsFiveUnreachableProbesBeforeRecycle() {
+        let coordinator = ServiceSupervisor()
+        for _ in 0..<4 {
+            coordinator.finishProbe(.unreachable)
+            XCTAssertFalse(coordinator.shouldRecycleOwnedServer)
+        }
+        coordinator.finishProbe(.unreachable)
+        XCTAssertTrue(coordinator.shouldRecycleOwnedServer)
+        coordinator.serverDidExit()
+        XCTAssertFalse(coordinator.shouldRecycleOwnedServer)
+    }
+
+    @MainActor
+    func testUnauthorizedAndUnexpectedListenerNeverTriggerRecycle() {
+        let coordinator = ServiceSupervisor()
+        for _ in 0..<10 {
+            coordinator.finishProbe(.unauthorized)
+            coordinator.finishProbe(.unexpectedService)
+        }
+        XCTAssertFalse(coordinator.shouldRecycleOwnedServer)
+    }
+
+    @MainActor
+    func testTunnelHealthRecoveryAndStaleResults() {
+        let coordinator = ServiceSupervisor()
+        coordinator.markTunnelStarting()
+        let generation = coordinator.tunnelGeneration
+        XCTAssertTrue(coordinator.beginTunnelProbe())
+        XCTAssertFalse(coordinator.beginTunnelProbe())
+        coordinator.tunnelDidExit(at: Date(timeIntervalSince1970: 10))
+        XCTAssertFalse(coordinator.finishTunnelProbe(.healthy, generation: generation))
+        XCTAssertEqual(coordinator.tunnelHealth, .stopped)
+        coordinator.markTunnelStarting()
+        for _ in 0..<4 {
+            coordinator.finishTunnelProbe(.remoteUnavailable, generation: coordinator.tunnelGeneration)
+            XCTAssertFalse(coordinator.shouldRecycleOwnedTunnel)
+        }
+        coordinator.finishTunnelProbe(.remoteUnavailable, generation: coordinator.tunnelGeneration)
+        XCTAssertTrue(coordinator.shouldRecycleOwnedTunnel)
+        coordinator.finishTunnelProbe(.healthy, generation: coordinator.tunnelGeneration)
+        XCTAssertFalse(coordinator.shouldRecycleOwnedTunnel)
+        XCTAssertEqual(coordinator.tunnelHealth, .healthy)
+    }
+
+    @MainActor
     func testHealthProbesDoNotOverlap() {
         let coordinator = ServiceSupervisor()
         let now = Date(timeIntervalSince1970: 100)
