@@ -230,7 +230,7 @@ def decide_request(token, duration="once"):
     if duration not in {"once", "session", "persistent", "deny"}:
         raise ValueError("duration must be once, session, persistent, or deny")
     with _db() as connection:
-        row = connection.execute("SELECT kind, target, status FROM requests WHERE token = ?", (token,)).fetchone()
+        row = connection.execute("SELECT kind, target, argv_json, status FROM requests WHERE token = ?", (token,)).fetchone()
     if row is None or row["status"] != "pending":
         return False
     if duration == "deny":
@@ -241,6 +241,11 @@ def decide_request(token, duration="once"):
     _decide(token, "approved")
     if row["kind"] == "project_session":
         activate_project_session(token)
+    elif duration == "persistent" and row["kind"] == "project_command":
+        if ":" in row["target"]:
+            project_root, executable = row["target"].split(":", 1)
+            argv = json.loads(row["argv_json"]) if row["argv_json"] else []
+            grant_project_command(project_root, executable, argv, project_root, "always")
     return True
 
 
@@ -312,8 +317,13 @@ def activate_project_session(request_id):
     except PermissionError:
         with _db() as connection:
             existing = connection.execute("SELECT token, root, created_at, expires_at FROM project_sessions WHERE request_id = ? AND status = 'active' AND expires_at > ?", (request_id, time.time())).fetchone()
-        if existing:
-            return {"session_id": existing["token"], "root": existing["root"], "created_at": existing["created_at"], "expires_at": existing["expires_at"]}
+            if existing:
+                return {"session_id": existing["token"], "root": existing["root"], "created_at": existing["created_at"], "expires_at": existing["expires_at"]}
+            row = connection.execute("SELECT status FROM requests WHERE token = ?", (request_id,)).fetchone()
+            if row and row["status"] == "pending":
+                raise PermissionError("Project session has not been approved locally. Please approve the request in the RelayOS companion app or via laptop-bridge-approvals.")
+            if row and row["status"] == "denied":
+                raise PermissionError("Project session request was denied locally.")
         raise
     if item["kind"] != "project_session":
         raise PermissionError("Request is not a project-session approval")
@@ -613,6 +623,51 @@ def revoke_oauth_grant(grant_id):
 def _command_digest(argv, cwd):
     payload = json.dumps([argv, cwd], ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def find_approved_command_request(project_root, executable, argv, request_id=None):
+    target = f"{project_root}:{executable}"
+    argv_json = json.dumps(argv)
+    now = time.time()
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        _expire(connection, now)
+        if request_id:
+            row = connection.execute(
+                "SELECT token, status FROM requests WHERE token = ? AND kind = 'project_command' AND target = ? AND argv_json = ?",
+                (request_id, target, argv_json),
+            ).fetchone()
+            if row and row["status"] == "denied":
+                connection.commit()
+                raise PermissionError("Command authorization request was denied locally")
+            if row and row["status"] == "approved":
+                connection.commit()
+                return row["token"]
+            connection.commit()
+            return None
+        row = connection.execute(
+            "SELECT token FROM requests WHERE kind = 'project_command' AND target = ? AND argv_json = ? AND status = 'approved' AND created_at >= ? ORDER BY created_at DESC LIMIT 1",
+            (target, argv_json, now - TTL),
+        ).fetchone()
+        connection.commit()
+        return row["token"] if row else None
+
+
+def get_or_create_command_request(project_root, executable, argv):
+    target = f"{project_root}:{executable}"
+    argv_json = json.dumps(argv)
+    now = time.time()
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        _expire(connection, now)
+        row = connection.execute(
+            "SELECT token FROM requests WHERE kind = 'project_command' AND target = ? AND argv_json = ? AND status = 'pending' AND created_at >= ? ORDER BY created_at DESC LIMIT 1",
+            (target, argv_json, now - TTL),
+        ).fetchone()
+        connection.commit()
+        if row:
+            return row["token"]
+    return request("project_command", {"target": target, "argv": argv})
 
 
 def grant_project_command(project_root, executable, argv, cwd, grant_type="once"):

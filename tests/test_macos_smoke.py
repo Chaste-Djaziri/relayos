@@ -85,6 +85,8 @@ def test_macos_end_to_end_smoke(tmp_path, qapp, monkeypatch):
 
     # 5. Non-interactive command execution
     argv = ["python3", "-c", "import app; print(app.run())"]
+    auth_req = server.authorize_project_command(session_id, argv)
+    state.approve(auth_req["request_id"])
     authorization = server.authorize_project_command(session_id, argv)
     cmd_out = server.run_project_command(session_id, argv, authorization_token=authorization["authorization_token"])
     assert cmd_out["exit_code"] == 0

@@ -52,6 +52,13 @@ def test_project_session_approval_and_activation(project_dir):
 def test_approve_project_session_is_idempotent_after_reconnect(project_dir):
     proposal = server.propose_project_session(str(project_dir))
 
+    # Reject without independent local approval
+    with pytest.raises(PermissionError, match="Project session has not been approved locally"):
+        server.approve_project_session(proposal["request_id"])
+
+    # Local user approves on the laptop
+    state.approve(proposal["request_id"])
+
     first = server.approve_project_session(proposal["request_id"])
     second = server.approve_project_session(proposal["request_id"])
 
@@ -257,11 +264,15 @@ def test_run_project_command_security_and_caps(project_dir):
         with pytest.raises(PermissionError, match="Privilege escalation"):
             server.run_project_command(session_id, evil)
 
-    # Commands require an exact one-use ChatGPT approval before execution.
+    # Commands require independent local approval before execution.
     argv = ["echo", "test-bridge"]
     unapproved = server.run_project_command(session_id, argv)
     assert unapproved["executed"] is False
     assert unapproved["requires_authorization"] is True
+    req = server.authorize_project_command(session_id, argv)
+    assert req["requires_local_approval"] is True
+    assert req["authorization_token"] is None
+    state.approve(req["request_id"])
     permission = server.authorize_project_command(session_id, argv)
     cmd_res = server.run_project_command(session_id, argv, authorization_token=permission["authorization_token"])
     assert cmd_res["exit_code"] == 0
@@ -269,6 +280,8 @@ def test_run_project_command_security_and_caps(project_dir):
 
     # Output capping at 8192 chars
     long_output_cmd = ["python3", "-c", "print('x' * 10000)"]
+    req = server.authorize_project_command(session_id, long_output_cmd)
+    state.approve(req["request_id"])
     permission = server.authorize_project_command(session_id, long_output_cmd)
     cap_res = server.run_project_command(session_id, long_output_cmd, authorization_token=permission["authorization_token"])
     assert len(cap_res["stdout"]) <= 8192
@@ -289,6 +302,8 @@ def test_one_use_command_grant_is_exact_and_single_use(project_dir):
     state.approve(res["request_id"])
     session_id = server.project_session_status(res["request_id"])["session_id"]
     argv = ["echo", "approved"]
+    req = server.authorize_project_command(session_id, argv)
+    state.approve(req["request_id"])
     authorization = server.authorize_project_command(session_id, argv)
     token = authorization["authorization_token"]
 
@@ -313,6 +328,8 @@ def test_persistent_command_grant_allows_arguments_in_project_and_can_be_revoked
     state.approve(res["request_id"])
     session_id = server.project_session_status(res["request_id"])["session_id"]
 
+    req = server.authorize_project_command(session_id, ["echo", "first"], grant="always")
+    state.approve(req["request_id"])
     grant = server.authorize_project_command(session_id, ["echo", "first"], grant="always")
     assert grant["authorization_token"] is None
     assert server.run_project_command(session_id, ["echo", "build"])["exit_code"] == 0
@@ -331,6 +348,8 @@ def test_saved_command_grant_is_project_scoped_and_emergency_stop_blocks_it(proj
     first = server.propose_project_session(str(project_dir))
     state.approve(first["request_id"])
     first_session = server.project_session_status(first["request_id"])["session_id"]
+    req1 = server.authorize_project_command(first_session, ["echo", "allowed"], grant="always")
+    state.approve(req1["request_id"])
     server.authorize_project_command(first_session, ["echo", "allowed"], grant="always")
 
     second = server.propose_project_session(str(other_root))
@@ -376,3 +395,39 @@ def test_concurrent_project_operations(project_dir):
     assert errors == []
     files = server.list_project_files(session_id, ".")
     assert len(files) >= 6
+
+
+def test_command_authorization_requires_independent_local_approval(project_dir):
+    res = server.propose_project_session(str(project_dir))
+    state.approve(res["request_id"])
+    session_id = server.project_session_status(res["request_id"])["session_id"]
+    argv = ["echo", "untrusted"]
+
+    # Calling authorize_project_command without local approval does not grant an authorization token
+    auth_req = server.authorize_project_command(session_id, argv)
+    assert auth_req["requires_local_approval"] is True
+    assert auth_req["authorization_token"] is None
+
+    # Calling run_project_command without token fails
+    unapproved = server.run_project_command(session_id, argv)
+    assert unapproved["requires_authorization"] is True
+
+    # Denying locally prevents command execution
+    state.deny(auth_req["request_id"])
+    with pytest.raises(PermissionError, match="Command authorization request was denied"):
+        server.authorize_project_command(session_id, argv, request_id=auth_req["request_id"])
+
+    # A new request approved locally succeeds
+    new_req = server.authorize_project_command(session_id, argv)
+    state.approve(new_req["request_id"])
+    granted = server.authorize_project_command(session_id, argv)
+    assert granted["authorization_token"] is not None
+    executed = server.run_project_command(session_id, argv, authorization_token=granted["authorization_token"])
+    assert executed["exit_code"] == 0
+
+
+def test_approve_project_session_without_local_approval_fails(project_dir):
+    proposal = server.propose_project_session(str(project_dir))
+    with pytest.raises(PermissionError, match="Project session has not been approved locally"):
+        server.approve_project_session(proposal["request_id"])
+

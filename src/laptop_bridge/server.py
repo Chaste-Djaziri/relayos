@@ -29,7 +29,7 @@ from .config import authorized_path, load_config, public_base_url
 from .oauth import LocalApprovalOAuthProvider, approval_redirect
 from . import control
 from .state import (
-    activate_project_session, approve as approve_request, consume, desktop_job_result, emergency_stop,
+    activate_project_session, consume, desktop_job_result, emergency_stop,
     project_session, queue_desktop_job, record_result, request,
     complete_follow_up as complete_follow_up_state, create_follow_up, pending_follow_ups,
     start_guidance_session as start_guidance_session_state,
@@ -38,6 +38,7 @@ from .state import (
     get_guidance_clicks,
     folder_granted, activate_granted_project_session,
     grant_project_command, consume_project_command_grant,
+    find_approved_command_request, get_or_create_command_request,
     saved_command_grants, revoke_command_grant,
     oauth_authorization_status, consume_oauth_authorization,
 )
@@ -380,18 +381,12 @@ def propose_project_session(project_path: str) -> dict:
 
 @mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False))
 def approve_project_session(request_id: str) -> dict:
-    """Approve and activate the exact pending 60-minute folder session in ChatGPT.
+    """Activate an approved 60-minute folder session in ChatGPT.
 
-    Clients may replay a confirmation after reconnecting.  Activation is
-    idempotent, so return the existing active session rather than treating a
-    repeated approval as a transport-breaking tool error.
+    Requires independent evidence of local user approval on this laptop.
+    Clients may replay a confirmation after reconnecting. Activation is
+    idempotent, returning the existing active session rather than failing.
     """
-    try:
-        approve_request(request_id)
-    except PermissionError:
-        # activate_project_session returns an existing active session for this
-        # request, and still rejects an unknown or expired request.
-        return activate_project_session(request_id)
     return activate_project_session(request_id)
 
 
@@ -507,12 +502,14 @@ def authorize_project_command(
     argv: list[str],
     cwd: str = ".",
     grant: str = "once",
+    request_id: str | None = None,
 ) -> dict:
-    """Approve an exact command once, or remember its executable for this project.
+    """Authorize an exact command once, or remember its executable for this project.
 
-    ChatGPT should request confirmation before calling. 'always' allows every
-    argument to this executable in this project until revoked. Commands run with
-    the Mac user's permissions and may access files outside the project.
+    Requires independent evidence of local user approval on this laptop.
+    If no local approval has been granted yet, creates a pending approval request
+    and instructs the user to approve it in RelayOS or via laptop-bridge-approvals.
+    Once approved locally, this tool issues the authorization token.
     """
     if not argv or not all(isinstance(part, str) and part for part in argv):
         raise ValueError("argv must be a nonempty list of nonempty strings")
@@ -522,14 +519,42 @@ def authorize_project_command(
     if not directory.is_dir():
         raise ValueError("cwd must be a directory")
     executable = _resolve_executable(argv[0], directory)
-    token = grant_project_command(session["root"], executable, argv, str(directory), grant)
+
+    saved = [g for g in saved_command_grants() if g["project_root"] == session["root"] and g["executable"] == executable]
+    if saved:
+        return {
+            "authorization_token": None,
+            "grant": "always",
+            "executable": executable,
+            "project_root": session["root"],
+            "working_directory": str(directory),
+            "reused_saved_grant": True,
+            "message": "This executable is already allowed with any arguments in this project until revoked. You can call run_project_command directly.",
+        }
+
+    approved_token = find_approved_command_request(session["root"], executable, argv, request_id)
+    if approved_token:
+        consume(approved_token)
+        token = grant_project_command(session["root"], executable, argv, str(directory), grant)
+        return {
+            "authorization_token": token if grant == "once" else None,
+            "grant": grant,
+            "executable": executable,
+            "project_root": session["root"],
+            "working_directory": str(directory),
+            "message": "Now call run_project_command immediately with this authorization_token and the identical argv/cwd." if grant == "once" else "This executable is allowed with any arguments in this project until revoked. It runs with the Mac user's permissions.",
+        }
+
+    pending_token = get_or_create_command_request(session["root"], executable, argv)
     return {
-        "authorization_token": token if grant == "once" else None,
+        "requires_local_approval": True,
+        "request_id": pending_token,
+        "authorization_token": None,
         "grant": grant,
         "executable": executable,
         "project_root": session["root"],
         "working_directory": str(directory),
-        "message": "Now call run_project_command immediately with this authorization_token and the identical argv/cwd." if grant == "once" else "This executable is allowed with any arguments in this project until revoked. It runs with the Mac user's permissions.",
+        "message": f"Local user approval required on the laptop. Please approve request '{pending_token}' in RelayOS or run 'laptop-bridge-approvals approve {pending_token}' on the laptop, then call authorize_project_command again to receive the authorization token.",
     }
 
 
