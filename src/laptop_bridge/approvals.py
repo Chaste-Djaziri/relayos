@@ -3,6 +3,8 @@
 import argparse
 import json
 
+from . import state
+
 from .state import approve, deny, pending_requests, pending_oauth_authorizations, active_oauth_grants, active_permission_grants, revoke_permission_grant, decide_oauth_authorization, decide_request, emergency_stop, set_emergency_stop, saved_command_grants, revoke_command_grant, command_grant_duplicate_summary, cleanup_duplicate_command_grants, approval_inbox, decide_inbox_request, approval_activity
 
 def main():
@@ -13,6 +15,9 @@ def main():
     sub.add_parser("list-grants")
     sub.add_parser("list-permissions")
     sub.add_parser("list-command-grants")
+    sub.add_parser("list-command-jobs")
+    cancel_job = sub.add_parser("cancel-command-job")
+    cancel_job.add_argument("job_id")
     sub.add_parser("command-grant-duplicates")
     sub.add_parser("cleanup-command-grant-duplicates")
     revoke_command = sub.add_parser("revoke-command-grant")
@@ -53,6 +58,13 @@ def main():
         return
     if args.command == "list-permissions":
         print(json.dumps(active_permission_grants()))
+        return
+    if args.command == "list-command-jobs":
+        print(json.dumps(state.list_command_jobs(limit=60)))
+        return
+    if args.command == "cancel-command-job":
+        state.request_command_job_cancel(args.job_id)
+        print(json.dumps({"job_id": args.job_id, "cancellation_requested": True}))
         return
     if args.command == "list-command-grants":
         print(json.dumps(saved_command_grants()))

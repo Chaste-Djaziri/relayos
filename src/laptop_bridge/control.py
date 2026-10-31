@@ -16,7 +16,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from . import keychain, state
-from . import ngrok
+from . import ngrok, command_jobs
 from .config import CONFIG_FILE, STATE_DIR, load_config, save_config
 
 TOKEN_FILE = STATE_DIR / "control.token"
@@ -125,6 +125,19 @@ async def handle(request: Request):
         return JSONResponse({"permissions": state.saved_command_grants()})
     if method == "GET" and path == "/control/pending-approvals":
         return JSONResponse({"oauth": state.pending_oauth_authorizations(), "actions": state.pending_requests()})
+    if method == "GET" and path.startswith("/control/command-job-output/"):
+        job_id = path.removeprefix("/control/command-job-output/")
+        job = state.command_job(job_id)
+        if not job:
+            return JSONResponse({"error": "Unknown command job"}, status_code=404)
+        try:
+            stdout_offset = int(request.query_params.get("stdout_offset", "0"))
+            stderr_offset = int(request.query_params.get("stderr_offset", "0"))
+            output = command_jobs.manager.output(job_id, stdout_offset=stdout_offset,
+                                                  stderr_offset=stderr_offset)
+        except ValueError:
+            return JSONResponse({"error": "Invalid output offset"}, status_code=400)
+        return JSONResponse({**job, **output})
     if method == "GET" and path == "/control/activity":
         return JSONResponse({"activity": state.recent_history(100)})
     if method == "POST" and path == "/control/decide":

@@ -30,7 +30,7 @@ from starlette.responses import HTMLResponse, RedirectResponse
 from .config import authorized_path, load_config, public_base_url
 from .command_policy import reusable_command_family, command_family_label, validate_scope_prefix, suggested_scope_prefix
 from .oauth import LocalApprovalOAuthProvider, approval_redirect
-from . import control
+from . import control, command_jobs, state
 from .state import (
     activate_project_session, consume, desktop_job_result, emergency_stop,
     project_session, queue_desktop_job, record_result, request,
@@ -718,6 +718,79 @@ async def _run_project_command_tool(
     return await asyncio.to_thread(run_project_command, session_id, argv, cwd, authorization_token)
 
 
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False))
+def start_project_command_job(
+    session_id: str, argv: list[str], cwd: str = ".",
+    authorization_token: str | None = None,
+) -> dict:
+    """Start an approved command as a bounded background job; no shell or implicit approval.
+
+    To authorize, use authorize_project_command with identical session/argv/cwd,
+    then pass the once token, or rely on an already approved saved command scope.
+    """
+    if not argv or not all(isinstance(part, str) and part for part in argv):
+        raise ValueError("argv must contain nonempty strings")
+    if argv[0] in {"sudo", "su", "doas"}:
+        raise PermissionError("Privilege escalation is not allowed")
+    session, directory = _session_path(session_id, cwd)
+    if not directory.is_dir():
+        raise ValueError("cwd must be a directory")
+    executable = _resolve_executable(argv[0], directory)
+    try:
+        consume_project_command_grant(
+            session["root"], executable, argv, str(directory), authorization_token,
+            session_id=session_id,
+        )
+    except PermissionError as error:
+        if str(error) == "Emergency stop is enabled":
+            raise
+        return {"started": False, "requires_authorization": True, "error": str(error)}
+    if emergency_stop():
+        raise PermissionError("Emergency stop is enabled")
+    job_id = state.create_command_job(
+        session_id, session["root"], str(directory), Path(executable).name,
+    )
+    environment = os.environ.copy()
+    environment["PATH"] = _coding_command_path()
+    try:
+        command_jobs.manager.launch(job_id, session_id, executable, argv, directory, environment)
+    except (RuntimeError, OSError) as error:
+        state.finish_command_job(job_id, "failed", reason="capacity_or_launch")
+        return {"started": False, "error": str(error)}
+    return {"started": True, "job_id": job_id, "status": "queued",
+            "message": "Poll read_project_command_job for output, status and offsets."}
+
+
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True))
+def list_project_command_jobs(session_id: str, limit: int = 30) -> list[dict]:
+    """List the current project's command jobs; requires an active project session."""
+    project_session(session_id)
+    return state.list_command_jobs(session_id, limit)
+
+
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True))
+def read_project_command_job(
+    session_id: str, job_id: str, stdout_offset: int = 0, stderr_offset: int = 0,
+) -> dict:
+    """Read up to 8 KiB of new stdout/stderr per stream and current job status."""
+    project_session(session_id)
+    job = state.command_job(job_id, session_id)
+    if job is None:
+        raise PermissionError("Unknown job for this coding session")
+    output = command_jobs.manager.output(
+        job_id, stdout_offset=stdout_offset, stderr_offset=stderr_offset,
+    )
+    return {**job, **output}
+
+
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=True))
+def cancel_project_command_job(session_id: str, job_id: str) -> dict:
+    """Request termination of a background job belonging to this coding session."""
+    project_session(session_id)
+    state.request_command_job_cancel(job_id, session_id)
+    return {"job_id": job_id, "cancellation_requested": True}
+
+
 @mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=False))
 def screen_snapshot() -> list:
     """Capture the active display once through the visible local companion; no screenshot is retained."""
@@ -855,6 +928,9 @@ def complete_follow_up(follow_up_id: str) -> dict:
     return {"follow_up_id": follow_up_id, "status": "completed"}
 
 def main():
+    # Mark jobs owned by a prior MCP runtime as interrupted; never attach
+    # to orphaned OS processes or pretend their output remains available.
+    state.interrupt_orphan_command_jobs()
     # The macOS companion authenticates its first health probe using this
     # pre-created per-installation secret. Never require an unauthenticated
     # request to bootstrap it after the HTTP listener has started.
@@ -867,7 +943,7 @@ def main():
             if mcp._tool_manager.get_tool(name):
                 mcp._tool_manager.remove_tool(name)
     if not capabilities.get("project_tools", False):
-        for name in ("propose_project_session", "approve_project_session", "project_session_status", "list_project_files", "read_project_file", "write_project_file", "apply_project_patch", "authorize_project_command", "run_project_command", "list_saved_command_grants", "revoke_saved_command_grant"):
+        for name in ("propose_project_session", "approve_project_session", "project_session_status", "list_project_files", "read_project_file", "write_project_file", "apply_project_patch", "authorize_project_command", "run_project_command", "list_saved_command_grants", "revoke_saved_command_grant", "start_project_command_job", "list_project_command_jobs", "read_project_command_job", "cancel_project_command_job"):
             if mcp._tool_manager.get_tool(name):
                 mcp._tool_manager.remove_tool(name)
     security = None

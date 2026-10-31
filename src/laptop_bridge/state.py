@@ -102,6 +102,14 @@ def _db():
                 button TEXT NOT NULL, modifiers_json TEXT NOT NULL,
                 occurred_at REAL NOT NULL, consumed_at REAL
             );
+            CREATE TABLE IF NOT EXISTS command_jobs (
+                id TEXT PRIMARY KEY, session_id TEXT NOT NULL, project_root TEXT NOT NULL,
+                working_directory TEXT NOT NULL, executable_name TEXT NOT NULL,
+                status TEXT NOT NULL, created_at REAL NOT NULL, finished_at REAL,
+                exit_code INTEGER, output_bytes INTEGER NOT NULL DEFAULT 0,
+                error_reason TEXT, cancel_requested INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE INDEX IF NOT EXISTS command_jobs_created ON command_jobs(created_at DESC);
             CREATE TABLE IF NOT EXISTS command_grants (
                 token TEXT PRIMARY KEY, project_root TEXT NOT NULL,
                 executable TEXT NOT NULL, argv_digest TEXT,
@@ -414,6 +422,118 @@ def approval_activity(limit=100, search=""):
             (*values, limit),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def create_command_job(session_id, project_root, cwd, executable_name):
+    """Persist metadata only; never persist argv, tokens or command output."""
+    job_id = secrets.token_urlsafe(18)
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        if emergency_stop(connection):
+            raise PermissionError("Emergency stop is enabled")
+        now = time.time()
+        connection.execute(
+            """INSERT INTO command_jobs
+               (id, session_id, project_root, working_directory, executable_name, status, created_at)
+               VALUES (?, ?, ?, ?, ?, 'queued', ?)""",
+            (job_id, session_id, project_root, cwd, executable_name, now),
+        )
+        _record(connection, "command_job", project_root, "queued")
+        connection.commit()
+    return job_id
+
+
+def command_job(job_id, session_id=None):
+    with _db() as connection:
+        where = "id = ?" if session_id is None else "id = ? AND session_id = ?"
+        values = (job_id,) if session_id is None else (job_id, session_id)
+        row = connection.execute(
+            """SELECT id, session_id, project_root, working_directory, executable_name,
+                      status, created_at, finished_at, exit_code, output_bytes,
+                      error_reason, cancel_requested
+               FROM command_jobs WHERE """ + where, values
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def list_command_jobs(session_id=None, limit=50):
+    limit = max(1, min(int(limit), 100))
+    with _db() as connection:
+        if session_id is None:
+            rows = connection.execute(
+                """SELECT * FROM command_jobs ORDER BY created_at DESC LIMIT ?""",
+                (limit,),
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                """SELECT * FROM command_jobs WHERE session_id = ?
+                   ORDER BY created_at DESC LIMIT ?""", (session_id, limit)
+            ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def request_command_job_cancel(job_id, session_id=None):
+    """Local UI can cancel any job; MCP clients must pass their session ID."""
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        where = "id = ?" if session_id is None else "id = ? AND session_id = ?"
+        args = (job_id,) if session_id is None else (job_id, session_id)
+        row = connection.execute(
+            "SELECT status FROM command_jobs WHERE " + where, args
+        ).fetchone()
+        if row is None:
+            connection.rollback()
+            raise PermissionError("Unknown command job or session")
+        if row["status"] in ("queued", "running"):
+            connection.execute(
+                "UPDATE command_jobs SET cancel_requested = 1 WHERE " + where, args
+            )
+        connection.commit()
+    return True
+
+
+def finish_command_job(job_id, status, exit_code=None, output_bytes=0, reason=None):
+    if status not in {"completed", "failed", "cancelled", "timed_out", "output_limit", "interrupted"}:
+        raise ValueError("Invalid terminal job status")
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        row = connection.execute(
+            "SELECT project_root, status FROM command_jobs WHERE id = ?", (job_id,)
+        ).fetchone()
+        if row and row["status"] in ("queued", "running"):
+            connection.execute(
+                """UPDATE command_jobs SET status = ?, finished_at = ?, exit_code = ?,
+                   output_bytes = ?, error_reason = ? WHERE id = ?""",
+                (status, time.time(), exit_code, output_bytes, reason, job_id),
+            )
+            _record(connection, "command_job", row["project_root"], status, exit_code)
+        connection.commit()
+
+
+def mark_command_job_running(job_id):
+    with _db() as connection:
+        connection.execute(
+            """UPDATE command_jobs SET status = 'running' WHERE id = ?
+               AND status = 'queued'""", (job_id,),
+        )
+
+
+def interrupt_orphan_command_jobs():
+    """Startup recovery: never claim a dead server's subprocess is active."""
+    with _db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        rows = connection.execute(
+            "SELECT id, project_root FROM command_jobs WHERE status IN ('queued', 'running')"
+        ).fetchall()
+        for row in rows:
+            connection.execute(
+                """UPDATE command_jobs SET status = 'interrupted', finished_at = ?,
+                   error_reason = 'server_restarted' WHERE id = ?""",
+                (time.time(), row["id"]),
+            )
+            _record(connection, "command_job", row["project_root"], "interrupted")
+        connection.commit()
+    return len(rows)
 
 
 def recent_history(limit=100):
