@@ -3,7 +3,7 @@
 import argparse
 import json
 
-from .state import approve, deny, pending_requests, pending_oauth_authorizations, active_oauth_grants, active_permission_grants, revoke_permission_grant, decide_oauth_authorization, decide_request, emergency_stop, set_emergency_stop
+from .state import approve, deny, pending_requests, pending_oauth_authorizations, active_oauth_grants, active_permission_grants, revoke_permission_grant, decide_oauth_authorization, decide_request, emergency_stop, set_emergency_stop, saved_command_grants, revoke_command_grant
 
 def main():
     parser = argparse.ArgumentParser(description="Approve sensitive laptop actions locally")
@@ -12,6 +12,9 @@ def main():
     sub.add_parser("list-oauth")
     sub.add_parser("list-grants")
     sub.add_parser("list-permissions")
+    sub.add_parser("list-command-grants")
+    revoke_command = sub.add_parser("revoke-command-grant")
+    revoke_command.add_argument("grant_id")
     sub.add_parser("list-pending-json")
     sub.add_parser("emergency-stop-status")
     set_stop = sub.add_parser("set-emergency-stop")
@@ -41,6 +44,13 @@ def main():
         return
     if args.command == "list-permissions":
         print(json.dumps(active_permission_grants()))
+        return
+    if args.command == "list-command-grants":
+        print(json.dumps(saved_command_grants()))
+        return
+    if args.command == "revoke-command-grant":
+        revoke_command_grant(args.grant_id)
+        print(json.dumps({"grant_id": args.grant_id, "revoked": True}))
         return
     if args.command == "list-pending-json":
         print(json.dumps(pending_requests()))

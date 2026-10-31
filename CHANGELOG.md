@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Added native-helper commands for reading and revoking saved command approvals, with local CLI tests.
 - Native approval dialogs now show the requested immutable command prefix versus the variable argument suffix. New command and MCP connection approval requests play a short macOS sound by default; the new General → Approval notifications setting lets users disable it. Added sound-preference regression coverage (16 Swift tests passing).
 - Added client-proposed, locally approved literal `scope_prefix` for repeatable project commands (for example `git commit`, `npm install`, or `npm run build`). Reusable prefixes are constrained to the resolved executable, authorized project, working directory, local duration and immutable leading argv tokens. Once remains exact; arbitrary shells/interpreters do not support reusable prefixes. Added approval-tampering, session, revocation and database-reopen regression tests (96 Python tests passing).
 - Added `scripts/smoke_packaged_mcp.py` to start the signed bundle's MCP helper with isolated temporary state and an ephemeral loopback port, verify anonymous rejection and authenticated status, and safely terminate only the test subprocess.
