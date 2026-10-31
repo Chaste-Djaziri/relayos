@@ -21,6 +21,7 @@ final class SingleInstanceCoordinator {
         if flock(fd, LOCK_EX | LOCK_NB) == 0 {
             lockFD = fd
             installTakeoverObserver()
+            if !retireLegacyAppInstances() { release(); return false }
             return true
         }
 
@@ -34,6 +35,7 @@ final class SingleInstanceCoordinator {
             if flock(fd, LOCK_EX | LOCK_NB) == 0 {
                 lockFD = fd
                 installTakeoverObserver()
+                if !retireLegacyAppInstances() { release(); return false }
                 return true
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
@@ -41,6 +43,23 @@ final class SingleInstanceCoordinator {
 
         close(fd)
         return false
+    }
+
+    /// Older releases did not implement the shared lock. Identify only the
+    /// RelayOS app bundle; never terminate by executable name or port.
+    private func retireLegacyAppInstances() -> Bool {
+        let others = NSWorkspace.shared.runningApplications.filter { candidate in
+            candidate.processIdentifier != getpid()
+                && candidate.bundleIdentifier == "rw.shangazi.relayos"
+        }
+        for app in others {
+            guard app.terminate() else { return false }
+        }
+        let deadline = Date().addingTimeInterval(5)
+        while others.contains(where: { !$0.isTerminated }) && Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return others.allSatisfy(\.isTerminated)
     }
 
     private func installTakeoverObserver() {
