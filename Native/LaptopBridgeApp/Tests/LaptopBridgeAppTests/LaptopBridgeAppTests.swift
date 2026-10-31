@@ -36,6 +36,33 @@ final class LaptopBridgeAppTests: XCTestCase {
     }
 
     @MainActor
+    func testRealChildCrashCannotClearReplacementSlot() throws {
+        let slot = ManagedProcessSlot()
+        let original = Process()
+        original.executableURL = URL(fileURLWithPath: "/bin/sleep")
+        original.arguments = ["30"]
+        let replacement = Process()
+        replacement.executableURL = URL(fileURLWithPath: "/bin/sleep")
+        replacement.arguments = ["30"]
+
+        try original.run()
+        defer { if original.isRunning { original.terminate() }; original.waitUntilExit() }
+        slot.assign(original)
+        try replacement.run()
+        defer { if replacement.isRunning { replacement.terminate() }; replacement.waitUntilExit() }
+        slot.assign(replacement)
+
+        original.terminate()
+        original.waitUntilExit()
+        XCTAssertFalse(slot.clearIfMatches(original))
+        XCTAssertTrue(slot.process === replacement)
+        replacement.terminate()
+        replacement.waitUntilExit()
+        XCTAssertTrue(slot.clearIfMatches(replacement))
+        XCTAssertNil(slot.process)
+    }
+
+    @MainActor
     func testServicesDoNotStartBeforeInstanceLock() {
         let model = BridgeModel()
         model.startServices()

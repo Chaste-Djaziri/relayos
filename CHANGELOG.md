@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Added an isolated packaged MCP crash/restart smoke test (ephemeral loopback port and temporary state) and a native real-child process-slot test to ensure old termination callbacks cannot discard replacements.
 - Hardened native single-instance coordination with a stable, user-owned, non-symlink flock lease and tested contention/release plus rejection of insecure lock files. The takeover path still requests graceful retirement of the old app rather than killing unrelated processes.
 - Integrated authenticated periodic public tunnel checks with bounded retry/recycle of only app-owned MCP/ngrok children after repeated failures, stale-probe generation guards, and accurate local/public health labels in the menu and Settings. Removed ngrok stdout-based URL adoption and one-shot inspector discovery.
 - Added an ngrok tunnel probe that validates inspector forwarding to the RelayOS loopback MCP port and checks that the public MCP route returns the expected unauthenticated HTTP 401 (not a tunnel 404); includes strict ownership/URL parsing and isolated Swift tests.
