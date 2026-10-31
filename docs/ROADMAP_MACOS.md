@@ -1,5 +1,5 @@
 # RelayOS macOS-First Implementation Roadmap
-Status: In progress — Phase 00 security foundation
+Status: Phase 01 native runtime foundation in progress (2026-10-31)
 Scope: /Users/chastedjaziri/Documents/GitHub/laptop-bridge
 
 ## Product direction
@@ -25,7 +25,8 @@ RelayOS is a persistent, locally controlled macOS agent exposing approved tools 
 - [x] Wire Swift emergency stop to backend response, with error reporting.
 - [x] Monitor managed commands and cancel their process group on emergency stop.
 - [x] Show exact command and working directory in local permission dialog.
-- [x] Run Python full test suite: 82 passed, 1 warning (Pydantic OAuth callback serialization).\n- [ ] Run native Swift build successfully on the user's Mac (tool execution was blocked; not verified).
+- [x] Run Python full test suite: 82 passed, 1 warning (Pydantic OAuth callback serialization).
+- [x] Verify native Swift build and tests on the user's Mac: 4 native tests passed.
 - [ ] Verify emergency stop during a real long-running process and test child process cleanup.
 - [ ] Verify no capability escalation with concurrent approvals.
 - [ ] Audit remaining write/patch tools and authorization-scoped endpoints.
@@ -33,6 +34,15 @@ RelayOS is a persistent, locally controlled macOS agent exposing approved tools 
 
 ## Phase 01 — Native runtime foundation
 Refactor monolithic RelayOSApp.swift into App, Features, Services, Models, Components, and Tests. Remove development hardcoded paths. Consolidate supervisor ownership and state synchronization.
+- [x] Gate helper/tunnel/approval startup on exclusive application ownership.
+- [x] Extract SwiftUI views from app entry point.
+- [x] Isolate the observable runtime model.
+- [x] Prevent old child termination handlers from dropping new process ownership, and wait for restart shutdown.
+- [x] Remove hardcoded development checkout and discover development runtime dynamically.
+- [x] Expand native regression tests from one to four passing tests.
+- [ ] Add multi-process launch/takeover and crash-recovery integration tests.
+- [ ] Extract a dedicated service supervisor from the runtime model; authenticate any adopted listener.
+- [ ] Verify signed packaged-app clean installation, update and multi-launch handover.
 **Pass:** one server/tunnel owner, predictable reconnect, no duplicate agents, successful Swift build, and comprehensive lifecycle tests.
 
 ## Phase 02 — Native UI
@@ -83,3 +93,9 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - Updated `tests/test_project_session.py` with approval escalation and scope regression tests.
 - All Python tests: **82 passed, 1 warning**. Native build: **not verified**; the execution tool blocked the request.
 - Do not claim Phase 00 completed until native build and live process-tree cancellation tests pass. The running background MCP server may need a controlled restart to load these changes.
+
+## Phase 01 checkpoint — 2026-10-31
+- Atomic local commits: `39ece47`, `3c672d5`, `8231695`, `78f9c86`, `d82e30c`.
+- Native Swift test suite: **4 passed, 0 failures**, with successful compilation.
+- Live installed application was intentionally not replaced during these source refactors. Packaged-app handover requires a separate deployment validation.
+- Changelog maintained at root `CHANGELOG.md`.
