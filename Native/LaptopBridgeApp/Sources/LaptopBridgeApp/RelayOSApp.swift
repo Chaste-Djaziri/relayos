@@ -38,10 +38,10 @@ struct LaptopBridgeApp: App {
     var body: some Scene {
         Window("RelayOS", id: "main") {
             DesktopWindowView(model: model)
-                .preferredColorScheme(RelayOSTheme.scheme(appearance))
+                .preferredColorScheme(.dark)
                 .tint(RelayOSTheme.accent(accent))
                 .environment(\.font, .system(size: uiFontSize))
-                .frame(minWidth: 820, minHeight: 560)
+                .frame(minWidth: 920, minHeight: 620)
                 .onAppear {
                     NSApp.setActivationPolicy(.regular)
                     NSApp.activate(ignoringOtherApps: true)
@@ -50,6 +50,7 @@ struct LaptopBridgeApp: App {
                     }
                 }
         }
+        .windowStyle(.hiddenTitleBar)
         MenuBarExtra {
             QuickPanel(model: model)
                 .preferredColorScheme(RelayOSTheme.scheme(appearance))
