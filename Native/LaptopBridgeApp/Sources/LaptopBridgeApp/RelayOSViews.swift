@@ -109,6 +109,7 @@ struct ConnectionRow: View {
 struct SettingsView: View {
     @ObservedObject var model: BridgeModel
     @State private var selected: SettingsTab = .general
+    @AppStorage(ApprovalSound.preferenceKey) private var approvalSoundsEnabled = true
     var body: some View {
         NavigationSplitView {
             List(selection: $selected) {
@@ -124,6 +125,7 @@ struct SettingsView: View {
                 switch selected {
                 case .general:
                     Section("General") { LabeledContent("MCP endpoint", value: model.endpoint); LabeledContent("Local server", value: model.running ? "Running" : "Stopped"); Button("Restart services") { model.restartServices() } }
+                    Section("Approval notifications") { Toggle("Play sound for new approval requests", isOn: $approvalSoundsEnabled); Text("A short sound plays once when a new command or connection approval appears.").font(.caption).foregroundStyle(.secondary) }
                 case .connections:
                     Section("Connected AI clients") {
                         if model.connectedClients.isEmpty { Text("No connected AI clients").foregroundStyle(.secondary) }

@@ -433,6 +433,7 @@ final class BridgeModel: ObservableObject {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.window.level = .floating
+        ApprovalSound.playIfEnabled()
         alert.messageText = "Approve MCP connection?"
         alert.informativeText = "An MCP client is requesting access to RelayOS. Approve only if you initiated this connection."
         alert.addButton(withTitle: "Approve")
@@ -554,6 +555,7 @@ final class BridgeModel: ObservableObject {
     }
 
     private func presentPermission(requestID: String, item: [String: Any], python: String) {
+        ApprovalSound.playIfEnabled()
         NSApp.setActivationPolicy(.regular); NSApp.activate(ignoringOtherApps: true); NSApp.windows.first(where: { $0.title == "RelayOS" })?.makeKeyAndOrderFront(nil)
         let alert = NSAlert(); alert.window.level = .floating; alert.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         let kind = item["kind"] as? String ?? "operation"; let target = item["target"] as? String ?? "requested resource"
@@ -563,27 +565,27 @@ final class BridgeModel: ObservableObject {
         let cwd = context["cwd"] as? String ?? "Not specified"
         let requested = context["requested_grant"] as? String ?? "once"
         let family = context["command_family"] as? String
-        // Only recognized backend command families may be displayed as reusable.
+        let prefix = context["scope_prefix"] as? [String]
         let familyLabel = family == "git:add" ? "git add" : nil
-        let operationScope = familyLabel.map {
-            "Session / Always: any \($0) arguments in this project and working directory."
+        let reusableLabel = prefix?.joined(separator: " ") ?? familyLabel
+        let operationScope = reusableLabel.map {
+            "Session / Always: only commands starting with '\($0)' in this project and working directory. Arguments after that prefix may change."
         } ?? "Session / Always: only the exact command and working directory shown above."
-        alert.messageText = familyLabel.map { "Approve \($0)?" } ?? "Approve \(kind)?"
+        alert.messageText = reusableLabel.map { "Approve \($0)?" } ?? "Approve \(kind)?"
         alert.informativeText = """
         Target: \(target)
-        Command: \(arguments.isEmpty ? "(none)" : arguments)
+        Exact requested command: \(arguments.isEmpty ? "(none)" : arguments)
         Working directory: \(cwd)
         Client requested: \(requested)
 
         Once: approve this exact invocation only.
         \(operationScope)
-        \(familyLabel == nil ? "No other commands are included." : "No other Git subcommands are included.")
-        Your selection here determines the actual permission duration.
+        Your local selection determines how long the permission lasts.
         """
         // Make the least-privileged approval the highlighted default.
         alert.addButton(withTitle: "Once")
-        alert.addButton(withTitle: familyLabel.map { "Allow \($0) for this session" } ?? "For this session")
-        alert.addButton(withTitle: familyLabel.map { "Always allow \($0)" } ?? "Always allow")
+        alert.addButton(withTitle: reusableLabel.map { "Allow \($0) for this session" } ?? "For this session")
+        alert.addButton(withTitle: reusableLabel.map { "Always allow \($0)" } ?? "Always allow")
         alert.addButton(withTitle: "Deny")
         let response = alert.runModal()
         let duration: String
@@ -607,6 +609,7 @@ final class BridgeModel: ObservableObject {
     }
 
     private func presentApproval(requestID: String, clientName: String, python: String) {
+        ApprovalSound.playIfEnabled()
         visibleApprovalID = requestID
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
