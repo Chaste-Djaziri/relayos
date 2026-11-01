@@ -147,6 +147,7 @@ final class NotchPanelPlacementTests: XCTestCase {
         XCTAssertEqual(bounds.maxY, 38, accuracy: 0.01)
     }
 
+    @MainActor
     func testSavedNotchSubpageRestoresAndInvalidValueFallsBackToActivity() {
         let suite = "RelayOS.NotchPanelPlacementTests.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suite) else {
