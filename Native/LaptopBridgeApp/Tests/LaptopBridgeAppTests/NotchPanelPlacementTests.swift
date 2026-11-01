@@ -42,10 +42,35 @@ final class NotchPanelPlacementTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(NotchPanelCoordinator.hoverCollapseDelayMilliseconds, 600)
     }
 
-    func testApprovalIsAFirstClassNotchDestination() {
-        XCTAssertEqual(NotchSubpage.approvals.title, "Approve")
+    func testNotchHasExactlyThreePermanentNavigationTabs() {
+        XCTAssertEqual(NotchSubpage.navigationOrder, [.terminal, .approvals, .settings])
+        XCTAssertEqual(NotchSubpage.allCases.count, 3)
+        XCTAssertEqual(NotchSubpage.navigationOrder.map(\.title),
+                       ["Terminal", "Approvals", "Settings"])
         XCTAssertEqual(NotchSubpage.approvals.icon, "checkmark.shield.fill")
         XCTAssertGreaterThanOrEqual(NotchPanelPhase.expanded.trayHeight, 170)
+    }
+
+
+    func testExpandedHeaderFitsThreeTextTabsOnNotchedMacBooks() {
+        XCTAssertGreaterThanOrEqual(NotchPanelPlacement.preferredWidth, 800)
+        for (width, height, menuHeight, notchWidth) in [
+            (1512.0, 982.0, 38.0, 185.0),
+            (2056.0, 1329.0, 39.0, 220.0)
+        ] {
+            let display = CGRect(x: 0, y: 0, width: width, height: height)
+            let visible = CGRect(x: 0, y: 0, width: width, height: height - menuHeight)
+            let layout = NotchPanelPlacement.layout(
+                displayFrame: display,
+                visibleFrame: visible,
+                hardwareNotchWidth: notchWidth,
+                phase: .expanded
+            )
+            XCTAssertGreaterThanOrEqual(layout.rightWidth, 305)
+            XCTAssertGreaterThanOrEqual(layout.centerGap, notchWidth + 12)
+            XCTAssertEqual(layout.frame.midX, display.midX, accuracy: 0.01)
+            XCTAssertEqual(layout.frame.maxY, display.maxY, accuracy: 0.01)
+        }
     }
 
     func testLiveActivityCollapsedRevealsLeftAndRightStatusWings() {
@@ -166,11 +191,17 @@ final class NotchPanelPlacementTests: XCTestCase {
         }
         defer { defaults.removePersistentDomain(forName: suite) }
 
-        XCTAssertEqual(NotchPanelCoordinator.restoredSubpage(from: defaults), .activity)
-        defaults.set(NotchSubpage.music.rawValue, forKey: "relayos.notch.selected-subpage")
-        XCTAssertEqual(NotchPanelCoordinator.restoredSubpage(from: defaults), .music)
+        XCTAssertEqual(NotchPanelCoordinator.restoredSubpage(from: defaults), .terminal)
+        defaults.set("music", forKey: "relayos.notch.selected-subpage")
+        XCTAssertEqual(NotchPanelCoordinator.restoredSubpage(from: defaults), .terminal)
+        defaults.set("activity", forKey: "relayos.notch.selected-subpage")
+        XCTAssertEqual(NotchPanelCoordinator.restoredSubpage(from: defaults), .terminal)
+        defaults.set("services", forKey: "relayos.notch.selected-subpage")
+        XCTAssertEqual(NotchPanelCoordinator.restoredSubpage(from: defaults), .settings)
+        defaults.set(NotchSubpage.approvals.rawValue, forKey: "relayos.notch.selected-subpage")
+        XCTAssertEqual(NotchPanelCoordinator.restoredSubpage(from: defaults), .approvals)
         defaults.set("unknown-page", forKey: "relayos.notch.selected-subpage")
-        XCTAssertEqual(NotchPanelCoordinator.restoredSubpage(from: defaults), .activity)
+        XCTAssertEqual(NotchPanelCoordinator.restoredSubpage(from: defaults), .terminal)
     }
 
     @MainActor

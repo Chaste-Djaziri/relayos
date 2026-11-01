@@ -37,28 +37,36 @@ enum NotchPanelPhase: String, CaseIterable {
 
 /// Extensible sub-pages hosted inside the expanded notch tray.
 enum NotchSubpage: String, CaseIterable, Identifiable {
-    case activity
+    case terminal
     case approvals
-    case music
-    case services
+    case settings
 
     var id: String { rawValue }
 
+    static let navigationOrder: [NotchSubpage] = [.terminal, .approvals, .settings]
+
     var title: String {
         switch self {
-        case .activity: "Activity"
-        case .approvals: "Approve"
-        case .music: "Music"
-        case .services: "System"
+        case .terminal: "Terminal"
+        case .approvals: "Approvals"
+        case .settings: "Settings"
         }
     }
 
     var icon: String {
         switch self {
-        case .activity: "terminal.fill"
+        case .terminal: "terminal.fill"
         case .approvals: "checkmark.shield.fill"
-        case .music: "music.note"
-        case .services: "slider.horizontal.3"
+        case .settings: "gearshape.fill"
+        }
+    }
+
+    /// Map older saved tab selections to the current three-tab interface.
+    static func restore(_ raw: String?) -> NotchSubpage {
+        switch raw {
+        case "activity", "music": .terminal
+        case "services": .settings
+        default: NotchSubpage(rawValue: raw ?? "") ?? .terminal
         }
     }
 }
@@ -160,7 +168,9 @@ enum NotchPanelPlacement {
         }
     }
 
-    static let preferredWidth: CGFloat = 540
+    // Enough room for all three labeled tabs alongside the camera cutout.
+    // The hardware exclusion size and collapsed/hovered widths are unchanged.
+    static let preferredWidth: CGFloat = 820
     static let trayHeight: CGFloat = NotchPanelPhase.expanded.trayHeight
 
     static func layout(
@@ -221,7 +231,7 @@ enum NotchPanelPlacement {
 
         case .expanded:
             let minGap = realNotchWidth + 12
-            let requestedBody = max(preferredWidth, minGap + 310)
+            let requestedBody = max(preferredWidth, minGap + 510)
             let bodyWidth = min(requestedBody, maxBodyWidth)
             let gap = min(minGap, max(1, bodyWidth - 140))
             let sides = max(0, bodyWidth - gap)
@@ -785,9 +795,8 @@ final class NotchPanelCoordinator: ObservableObject {
 
     var hasLiveActivity: Bool {
         let hasActiveJobs = model?.commandJobs.contains(where: \.active) ?? false
-        let isMusicPlaying = NotchMediaController.shared.hasRunningPlayer && !NotchMediaController.shared.trackTitle.isEmpty
         let hasApprovals = model.map { $0.isSwiftOnly ? $0.nativePendingCount > 0 : !$0.approvalInbox.isEmpty } ?? false
-        return hasActiveJobs || isMusicPlaying || hasApprovals
+        return hasActiveJobs || hasApprovals
     }
 
     private init() {
@@ -796,7 +805,7 @@ final class NotchPanelCoordinator: ObservableObject {
 
     static func restoredSubpage(from defaults: UserDefaults) -> NotchSubpage {
         let saved = defaults.string(forKey: selectedSubpageDefaultsKey)
-        return NotchSubpage(rawValue: saved ?? "") ?? .activity
+        return NotchSubpage.restore(saved)
     }
 
     func registerOpenMainWindow(_ handler: @escaping () -> Void) {
@@ -823,7 +832,6 @@ final class NotchPanelCoordinator: ObservableObject {
         self.openMainWindow = openMainWindow
         isEnabled = true
         bindActivityObservers(model: model)
-        NotchMediaController.shared.startMonitoring()
 
         if let panel, panel.isVisible {
             reposition()
@@ -846,7 +854,6 @@ final class NotchPanelCoordinator: ObservableObject {
         window.contentView = NSHostingView(rootView: NotchPanelView(
             model: model,
             coordinator: self,
-            media: NotchMediaController.shared,
             onClose: { [weak self] in
                 self?.isEnabled = false
                 self?.dismiss()
@@ -890,14 +897,6 @@ final class NotchPanelCoordinator: ObservableObject {
 
         model.$commandJobs
             .map { $0.contains(where: \.active) }
-            .removeDuplicates()
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.reposition(animated: true)
-            }
-            .store(in: &cancellables)
-
-        NotchMediaController.shared.$isPlaying
             .removeDuplicates()
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
@@ -968,13 +967,8 @@ final class NotchPanelCoordinator: ObservableObject {
             transition(to: .expanded, haptic: true)
             return
         }
-        let hasActiveJobs = model?.commandJobs.contains(where: \.active) ?? false
-        // Prefer an active terminal job when one exists. Otherwise retain the
-        // user's page choice, except for the first music activity after launch.
-        if !hasActiveJobs && NotchMediaController.shared.hasRunningPlayer,
-           UserDefaults.standard.object(forKey: Self.selectedSubpageDefaultsKey) == nil {
-            selectedSubpage = .music
-        }
+        // Preserve the user's selected tab unless an approval needs review.
+        // A running build naturally remains visible on the Terminal tab.
         transition(to: .expanded, haptic: true)
     }
 
@@ -1018,7 +1012,6 @@ final class NotchPanelCoordinator: ObservableObject {
         pendingCollapse?.cancel()
         pendingCollapse = nil
         cancellables.removeAll()
-        NotchMediaController.shared.stopMonitoring()
         panel?.orderOut(nil)
         panel?.close()
         panel = nil
@@ -1038,7 +1031,6 @@ final class NotchPanelCoordinator: ObservableObject {
 struct NotchPanelView: View {
     @ObservedObject var model: BridgeModel
     @ObservedObject var coordinator: NotchPanelCoordinator
-    @ObservedObject var media: NotchMediaController = .shared
     let onClose: () -> Void
     let onOpenMain: () -> Void
 
@@ -1057,9 +1049,7 @@ struct NotchPanelView: View {
     }
     private var primaryJob: CommandJobEntry? { jobs.first }
     private var isRunningJob: Bool { !jobs.isEmpty }
-    private var isPlayingMusic: Bool { media.isPlaying }
-    private var hasMusicTrack: Bool { media.hasRunningPlayer && !media.trackTitle.isEmpty }
-    private var hasLiveActivity: Bool { isRunningJob || hasMusicTrack || pendingApprovalsCount > 0 }
+    private var hasLiveActivity: Bool { isRunningJob || pendingApprovalsCount > 0 }
     private var pendingApprovalsCount: Int {
         model.isSwiftOnly ? model.nativePendingCount : model.approvalInbox.count
     }
@@ -1083,12 +1073,8 @@ struct NotchPanelView: View {
     }
 
     private let muted = Color.white.opacity(0.62)
-    private var visibleTabs: [NotchSubpage] {
-        var tabs: [NotchSubpage] = [.activity]
-        if pendingApprovalsCount > 0 || displayedSubpage == .approvals { tabs.append(.approvals) }
-        tabs += [.music, .services]
-        return tabs
-    }
+    // All three destinations remain visible, even with no pending approvals.
+    private var visibleTabs: [NotchSubpage] { NotchSubpage.navigationOrder }
 
     var body: some View {
         let shape = NotchShape(
@@ -1176,13 +1162,6 @@ struct NotchPanelView: View {
                         Text(primaryJob?.executableName ?? "Running")
                             .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
                             .lineLimit(1)
-                    } else if hasMusicTrack {
-                        Image(systemName: media.isPlaying ? "waveform" : "pause.fill")
-                            .font(.system(size: 10.5, weight: .semibold))
-                            .foregroundStyle(.pink)
-                        Text(media.trackTitle.isEmpty ? media.playerName : media.trackTitle)
-                            .font(.system(size: 10.5, weight: .semibold))
-                            .lineLimit(1)
                     }
                     Spacer(minLength: 0)
                 }
@@ -1218,14 +1197,6 @@ struct NotchPanelView: View {
                                 .padding(.vertical, 2)
                                 .background(Color.white.opacity(0.14), in: Capsule())
                         }
-                    } else if hasMusicTrack {
-                        Text(media.artistName.isEmpty ? (media.isPlaying ? "Playing" : "Paused") : media.artistName)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(muted)
-                            .lineLimit(1)
-                        Image(systemName: "music.note")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.pink)
                     }
                 }
                 .padding(.leading, 4)
@@ -1273,8 +1244,9 @@ struct NotchPanelView: View {
                 .frame(width: layout.centerGap)
                 .accessibilityHidden(true)
 
-            // Right header ear: Sub-page tabs + Collapse button
-            HStack(spacing: 4) {
+            // Right header ear: three permanent tabs plus Collapse.
+            // Compact layouts keep all destinations visible as icons.
+            HStack(spacing: 5) {
                 Spacer(minLength: 0)
                 ForEach(visibleTabs) { page in
                     Button {
@@ -1283,12 +1255,14 @@ struct NotchPanelView: View {
                         HStack(spacing: 4) {
                             Image(systemName: page.icon)
                                 .font(.system(size: 9.5, weight: .semibold))
-                            Text(page.title)
-                                .font(.system(size: 9.5, weight: .semibold))
-                                .lineLimit(1)
+                            if layout.rightWidth >= 305 {
+                                Text(page.title)
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .fixedSize(horizontal: true, vertical: false)
+                            }
                         }
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, layout.rightWidth >= 305 ? 8 : 9)
+                        .padding(.vertical, 5)
                         .background(
                             displayedSubpage == page
                                 ? Color.white.opacity(0.18)
@@ -1298,6 +1272,8 @@ struct NotchPanelView: View {
                         .foregroundStyle(displayedSubpage == page ? .white : muted)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("\(page.title) notch tab")
+                    .accessibilityAddTraits(displayedSubpage == page ? [.isSelected] : [])
                 }
 
                 Button {
@@ -1328,13 +1304,11 @@ struct NotchPanelView: View {
 
             Group {
                 switch displayedSubpage {
-                case .activity:
+                case .terminal:
                     activitySubpageView
                 case .approvals:
                     approvalsSubpageView
-                case .music:
-                    musicSubpageView
-                case .services:
+                case .settings:
                     servicesSubpageView
                 }
             }
@@ -1508,10 +1482,6 @@ struct NotchPanelView: View {
                 .foregroundStyle(color)
         }
         .buttonStyle(.plain)
-    }
-
-    private var musicSubpageView: some View {
-        NotchMusicControlsView(media: media)
     }
 
     private var servicesSubpageView: some View {
@@ -1799,15 +1769,6 @@ struct NotchMusicControlsView: View {
 }
 
 
-
-#if DEBUG
-#Preview("Music · Not Playing") {
-    NotchMusicControlsView(media: .shared)
-        .frame(width: 490, height: 146)
-        .padding(16)
-        .background(Color.black, in: RoundedRectangle(cornerRadius: 18))
-}
-#endif
 
 #if DEBUG
 #Preview("Notch · Idle Collapsed") {
