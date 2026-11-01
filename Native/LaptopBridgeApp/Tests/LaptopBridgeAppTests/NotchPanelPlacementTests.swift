@@ -37,6 +37,7 @@ final class NotchPanelPlacementTests: XCTestCase {
         )
     }
 
+    @MainActor
     func testHoverExitGracePeriodAvoidsAccidentalCollapse() {
         XCTAssertGreaterThanOrEqual(NotchPanelCoordinator.hoverCollapseDelayMilliseconds, 600)
     }
