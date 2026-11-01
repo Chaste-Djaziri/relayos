@@ -1,15 +1,11 @@
 // Path: Native/LaptopBridgeApp/Sources/LaptopBridgeApp/ApprovalCenterView.swift
 import SwiftUI
 
+// MARK: - Approval Requests Page (Pending Inbox)
+
 struct ApprovalCenterView: View {
     @ObservedObject var model: BridgeModel
-    @State private var showingHistory = false
     @State private var search = ""
-
-    init(model: BridgeModel, initialShowingHistory: Bool = false) {
-        self.model = model
-        self._showingHistory = State(initialValue: initialShowingHistory)
-    }
 
     private var visibleInbox: [ApprovalInboxItem] {
         guard !search.isEmpty else { return model.approvalInbox }
@@ -20,101 +16,120 @@ struct ApprovalCenterView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Approval Center").font(.title2.bold())
-                    Text("Decisions are enforced locally and recorded in RelayOS.")
-                        .foregroundStyle(.secondary).font(.caption)
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color(white: 0.5))
+                    TextField("Search pending requests", text: $search)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white)
+                    if !search.isEmpty {
+                        Button { search = "" } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color(white: 0.5))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                Spacer()
-                Button {
+                .padding(.horizontal, 10)
+                .frame(height: 30)
+                .background(Color(white: 0.16), in: RoundedRectangle(cornerRadius: 8))
+
+                SettingsButton(title: "Refresh", icon: "arrow.clockwise", style: .secondary) {
                     model.refreshApprovalInbox()
-                    model.refreshApprovalActivity(search: search)
-                } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
                 }
             }
-
-            Picker("View", selection: $showingHistory) {
-                Text("Inbox (\(model.approvalInbox.count))").tag(false)
-                Text("Activity").tag(true)
-            }.pickerStyle(.segmented)
-            TextField("Search commands, projects, clients or activity", text: $search)
-                .textFieldStyle(.roundedBorder)
-                .onSubmit { if showingHistory { model.refreshApprovalActivity(search: search) } }
 
             if let error = model.approvalCenterError {
-                Label(error, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(.red).font(.caption)
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
             }
 
-            if showingHistory {
-                if model.approvalActivity.isEmpty {
-                    ContentUnavailableView("No activity recorded", systemImage: "clock.arrow.circlepath",
-                        description: Text("Approved, denied, executed and failed actions appear here."))
+            if visibleInbox.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "checkmark.shield")
+                        .font(.system(size: 38))
+                        .foregroundStyle(Color(white: 0.45))
+                    Text("No pending approvals")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Text("New local command and MCP connection requests from AI clients will appear here for your review.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color(white: 0.55))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 380)
                 }
-                ForEach(model.approvalActivity) { event in
-                    HStack(alignment: .top) {
-                        Image(systemName: event.decision == "denied" ? "xmark.shield" : "checkmark.shield")
-                            .foregroundColor(event.decision == "denied" ? Color.red : Color.secondary)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("\(event.kind.replacingOccurrences(of: "_", with: " ")) · \(event.decision)")
-                                .font(.callout.weight(.medium))
-                            Text(event.target).font(.caption).foregroundStyle(.secondary)
-                                .lineLimit(2).textSelection(.enabled)
-                            Text(Date(timeIntervalSince1970: event.recordedAt).formatted())
-                                .font(.caption2).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if let code = event.exitCode {
-                            Text("Exit \(code)").font(.caption)
-                                .foregroundColor(code == 0 ? Color.secondary : Color.red)
-                        }
-                    }
-                    Divider()
-                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 48)
+                .background(Color(red: 0.14, green: 0.14, blue: 0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 11))
+                .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color(white: 0.19), lineWidth: 1))
             } else {
-                if visibleInbox.isEmpty {
-                    ContentUnavailableView("No pending approvals", systemImage: "checkmark.shield",
-                        description: Text("New local command and MCP connection requests will appear here."))
-                }
                 ForEach(visibleInbox) { item in
-                    GroupBox {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                Image(systemName: item.isOAuth ? "link" : "terminal")
-                                Text(item.title).font(.headline)
-                                Spacer()
-                                Text(item.isOAuth ? "Connection" : "Local request")
-                                    .font(.caption).foregroundStyle(.secondary)
+                    SettingsCard(title: item.isOAuth ? "OAuth Connection Request" : "Command Execution Request") {
+                        SettingsCardRow(
+                            title: item.title,
+                            subtitle: item.scopeDescription
+                        ) {
+                            StatusBadge(
+                                text: item.isOAuth ? "Connection" : "Local request",
+                                status: .warning
+                            )
+                        }
+
+                        SettingsCardRow(
+                            title: "Target & Working Directory",
+                            subtitle: item.context.cwd != nil ? "Dir: \(item.context.cwd!)" : item.target
+                        ) {
+                            Text(item.target)
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(Color(white: 0.7))
+                                .lineLimit(1)
+                        }
+
+                        if !item.argv.isEmpty {
+                            SettingsCardRow(
+                                title: "Command Arguments",
+                                subtitle: item.argv.joined(separator: " ")
+                            ) {
+                                EmptyView()
                             }
-                            Text(item.target).font(.caption).foregroundStyle(.secondary)
-                                .textSelection(.enabled).lineLimit(2)
-                            if !item.argv.isEmpty {
-                                Text(item.argv.joined(separator: " "))
-                                    .font(.system(.caption, design: .monospaced))
-                                    .textSelection(.enabled)
-                            }
-                            if let cwd = item.context.cwd {
-                                Text("Directory: \(cwd)").font(.caption)
-                                    .foregroundStyle(.secondary).textSelection(.enabled)
-                            }
-                            Text(item.scopeDescription).font(.caption).foregroundStyle(.secondary)
-                            Text("Expires: \(Date(timeIntervalSince1970: item.expiresAt).formatted())")
-                                .font(.caption2).foregroundStyle(.secondary)
-                            HStack {
-                                Button(item.isOAuth ? "Approve" : "Once") {
+                        }
+
+                        SettingsCardRow(
+                            title: "Expires",
+                            subtitle: Date(timeIntervalSince1970: item.expiresAt).formatted(),
+                            showDivider: false
+                        ) {
+                            HStack(spacing: 8) {
+                                SettingsButton(
+                                    title: item.isOAuth ? "Approve" : "Once",
+                                    style: .primary
+                                ) {
                                     model.decideApproval(item, decision: "once")
-                                }.buttonStyle(.borderedProminent)
-                                if !item.isOAuth {
-                                    Button("Session") { model.decideApproval(item, decision: "session") }
-                                    Button("Always") { model.decideApproval(item, decision: "persistent") }
                                 }
-                                Button("Deny", role: .destructive) {
+
+                                if !item.isOAuth {
+                                    SettingsButton(title: "Session", style: .secondary) {
+                                        model.decideApproval(item, decision: "session")
+                                    }
+                                    SettingsButton(title: "Always", style: .secondary) {
+                                        model.decideApproval(item, decision: "persistent")
+                                    }
+                                }
+
+                                SettingsButton(title: "Deny", style: .destructive) {
                                     model.decideApproval(item, decision: "deny")
                                 }
-                                Spacer()
                             }
                             .disabled(item.isExpired || model.approvalDecisionInFlight != nil)
                         }
@@ -122,13 +137,101 @@ struct ApprovalCenterView: View {
                 }
             }
         }
-        .padding()
         .onAppear {
             model.refreshApprovalInbox()
-            model.refreshApprovalActivity()
         }
-        .onChange(of: showingHistory) { _, value in
-            if value { model.refreshApprovalActivity(search: search) }
+    }
+}
+
+// MARK: - Activity History Page (Audit Trail)
+
+struct ActivityHistoryView: View {
+    @ObservedObject var model: BridgeModel
+    @State private var search = ""
+
+    private var filteredActivity: [ApprovalActivityEntry] {
+        guard !search.isEmpty else { return model.approvalActivity }
+        return model.approvalActivity.filter {
+            [$0.kind, $0.target, $0.decision]
+                .contains { $0.localizedCaseInsensitiveContains(search) }
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color(white: 0.5))
+                    TextField("Search activity by command, target, or decision", text: $search)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white)
+                    if !search.isEmpty {
+                        Button { search = "" } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color(white: 0.5))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 10)
+                .frame(height: 30)
+                .background(Color(white: 0.16), in: RoundedRectangle(cornerRadius: 8))
+
+                SettingsButton(title: "Refresh", icon: "arrow.clockwise", style: .secondary) {
+                    model.refreshApprovalActivity(search: search)
+                }
+            }
+
+            if filteredActivity.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 38))
+                        .foregroundStyle(Color(white: 0.45))
+                    Text("No activity recorded")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Text("Approved, denied, and executed actions will appear here with timestamps and exit codes.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color(white: 0.55))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 380)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 48)
+                .background(Color(red: 0.14, green: 0.14, blue: 0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 11))
+                .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color(white: 0.19), lineWidth: 1))
+            } else {
+                SettingsCard(title: "Audit Trail (\(filteredActivity.count))") {
+                    ForEach(Array(filteredActivity.enumerated()), id: \.element.id) { index, event in
+                        SettingsCardRow(
+                            title: "\(event.kind.replacingOccurrences(of: "_", with: " ").capitalized) · \(event.decision.capitalized)",
+                            subtitle: "\(event.target) · \(Date(timeIntervalSince1970: event.recordedAt).formatted())",
+                            showDivider: index < filteredActivity.count - 1
+                        ) {
+                            HStack(spacing: 8) {
+                                if let code = event.exitCode {
+                                    StatusBadge(
+                                        text: "Exit \(code)",
+                                        status: code == 0 ? .healthy : .offline
+                                    )
+                                }
+                                StatusBadge(
+                                    text: event.decision.capitalized,
+                                    status: event.decision == "denied" ? .offline : .healthy
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .onAppear {
+            model.refreshApprovalActivity(search: search)
         }
     }
 }
