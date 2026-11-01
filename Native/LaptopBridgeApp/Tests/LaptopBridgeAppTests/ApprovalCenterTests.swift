@@ -47,4 +47,29 @@ final class ApprovalCenterTests: XCTestCase {
         XCTAssertEqual(record.id, 12)
         XCTAssertEqual(record.decision, "approved")
     }
+
+    func testDecodesFileWriteAndCommandActivityDetails() throws {
+        let writeJson = """
+        {"id":15,"recorded_at":300,"kind":"write_project_file","target":"/repo:src/app.py",
+         "decision":"executed","exit_code":0,"duration_ms":0,
+         "detail_json":"{\\"path\\":\\"src/app.py\\",\\"is_new\\":false,\\"diff\\":\\"--- a/src/app.py\\\\n+++ b/src/app.py\\\\n@@ -1 +1 @@\\\\n-old\\\\n+new\\\\n\\",\\"lines_added\\":1,\\"lines_removed\\":1,\\"bytes_written\\":4}"}
+        """
+        let writeEntry = try JSONDecoder().decode(ApprovalActivityEntry.self, from: Data(writeJson.utf8))
+        XCTAssertEqual(writeEntry.summaryTitle, "Edited src/app.py")
+        XCTAssertEqual(writeEntry.details?.linesAdded, 1)
+        XCTAssertEqual(writeEntry.details?.linesRemoved, 1)
+        XCTAssertEqual(writeEntry.details?.path, "src/app.py")
+        XCTAssertTrue(writeEntry.details?.diff?.contains("+new") == true)
+
+        let cmdJson = """
+        {"id":16,"recorded_at":310,"kind":"run_project_command","target":"/repo:npm test",
+         "decision":"executed","exit_code":0,"duration_ms":1450,
+         "detail_json":"{\\"argv\\":[\\"npm\\",\\"test\\"],\\"command\\":\\"npm test\\",\\"working_directory\\":\\"/repo\\",\\"stdout\\":\\"Tests passed\\\\n\\",\\"stderr\\":\\"\\"}"}
+        """
+        let cmdEntry = try JSONDecoder().decode(ApprovalActivityEntry.self, from: Data(cmdJson.utf8))
+        XCTAssertEqual(cmdEntry.summaryTitle, "Ran npm test")
+        XCTAssertEqual(cmdEntry.details?.command, "npm test")
+        XCTAssertEqual(cmdEntry.details?.stdout, "Tests passed\n")
+        XCTAssertEqual(cmdEntry.formattedDuration, "1.45 s")
+    }
 }

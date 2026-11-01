@@ -56,6 +56,36 @@ struct ApprovalInboxItem: Decodable, Identifiable, Equatable {
     }
 }
 
+struct ActivityDetailData: Decodable, Equatable {
+    let path: String?
+    let isNew: Bool?
+    let diff: String?
+    let linesAdded: Int?
+    let linesRemoved: Int?
+    let bytesWritten: Int?
+    let argv: [String]?
+    let command: String?
+    let executable: String?
+    let workingDirectory: String?
+    let stdout: String?
+    let stderr: String?
+    let patch: String?
+    let applied: Bool?
+    let error: String?
+    let reason: String?
+    let jobID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case path, diff, argv, command, executable, stdout, stderr, patch, applied, error, reason
+        case isNew = "is_new"
+        case linesAdded = "lines_added"
+        case linesRemoved = "lines_removed"
+        case bytesWritten = "bytes_written"
+        case workingDirectory = "working_directory"
+        case jobID = "job_id"
+    }
+}
+
 struct ApprovalActivityEntry: Decodable, Identifiable, Equatable {
     let id: Int
     let recordedAt: TimeInterval
@@ -64,13 +94,37 @@ struct ApprovalActivityEntry: Decodable, Identifiable, Equatable {
     let decision: String
     let exitCode: Int?
     let durationMS: Int?
+    let detailJSON: String?
 
     static func == (lhs: ApprovalActivityEntry, rhs: ApprovalActivityEntry) -> Bool {
         lhs.id == rhs.id
     }
 
+    var details: ActivityDetailData? {
+        guard let json = detailJSON, let data = json.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(ActivityDetailData.self, from: data)
+    }
+
     var summaryTitle: String {
         switch kind {
+        case "write_project_file":
+            if let details = details, let path = details.path {
+                return (details.isNew == true) ? "Created \(path)" : "Edited \(path)"
+            }
+            if target.contains(":") {
+                let split = target.split(separator: ":", maxSplits: 1).map(String.init)
+                if split.count == 2 {
+                    return "Edited \(split[1])"
+                }
+            }
+            return "File Written"
+        case "apply_project_patch":
+            return "Applied Patch"
+        case "run_project_command":
+            if let cmd = details?.command ?? parsedExecutable {
+                return "Ran \(cmd)"
+            }
+            return "Command Executed"
         case "project_command":
             switch decision {
             case "executed": return "Command Executed"
@@ -117,11 +171,16 @@ struct ApprovalActivityEntry: Decodable, Identifiable, Equatable {
 
     var summarySubtitle: String {
         var parts: [String] = []
-        if kind == "project_command" && target.contains(":") {
+        if let details = details {
+            if let cmd = details.command {
+                parts.append(cmd)
+            } else if let path = details.path {
+                parts.append(path)
+            }
+        } else if (kind == "project_command" || kind == "run_project_command" || kind == "write_project_file") && target.contains(":") {
             let split = target.split(separator: ":", maxSplits: 1).map(String.init)
             if split.count == 2 {
-                let executable = URL(fileURLWithPath: split[1]).lastPathComponent
-                parts.append(executable)
+                parts.append(split[1])
                 parts.append(split[0])
             } else {
                 parts.append(target)
@@ -139,7 +198,11 @@ struct ApprovalActivityEntry: Decodable, Identifiable, Equatable {
 
     var systemIcon: String {
         switch kind {
-        case "project_command":
+        case "write_project_file":
+            return "doc.text"
+        case "apply_project_patch":
+            return "arrow.triangle.pull"
+        case "run_project_command", "project_command":
             return "terminal"
         case "oauth_authorization", "oauth_connection":
             return "link"
@@ -167,6 +230,9 @@ struct ApprovalActivityEntry: Decodable, Identifiable, Equatable {
     }
 
     var parsedProjectDirectory: String? {
+        if let dir = details?.workingDirectory {
+            return dir
+        }
         if target.contains(":") {
             let split = target.split(separator: ":", maxSplits: 1).map(String.init)
             if split.count == 2 {
@@ -180,6 +246,9 @@ struct ApprovalActivityEntry: Decodable, Identifiable, Equatable {
     }
 
     var parsedExecutable: String? {
+        if let exe = details?.executable {
+            return exe
+        }
         if target.contains(":") {
             let split = target.split(separator: ":", maxSplits: 1).map(String.init)
             if split.count == 2 {
@@ -194,5 +263,6 @@ struct ApprovalActivityEntry: Decodable, Identifiable, Equatable {
         case recordedAt = "recorded_at"
         case exitCode = "exit_code"
         case durationMS = "duration_ms"
+        case detailJSON = "detail_json"
     }
 }
