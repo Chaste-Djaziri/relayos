@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FA1010101010101010101010 /* NotchPanelPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90909090909090909090909 /* NotchPanelPlacementTests.swift */; };
+		F80808080808080808080808 /* NotchPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F70707070707070707070707 /* NotchPanel.swift */; };
 		F60606060606060606060606 /* NativeGuidanceSessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50505050505050505050505 /* NativeGuidanceSessions.swift */; };
 		F40404040404040404040404 /* NativeMCPVisual.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30303030303030303030303 /* NativeMCPVisual.swift */; };
 		F20202020202020202020202 /* NativeMCPOAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10101010101010101010101 /* NativeMCPOAuthTests.swift */; };
@@ -105,6 +107,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F90909090909090909090909 /* NotchPanelPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchPanelPlacementTests.swift; sourceTree = "<group>"; };
+		F70707070707070707070707 /* NotchPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchPanel.swift; sourceTree = "<group>"; };
 		F50505050505050505050505 /* NativeGuidanceSessions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeGuidanceSessions.swift; sourceTree = "<group>"; };
 		F30303030303030303030303 /* NativeMCPVisual.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPVisual.swift; sourceTree = "<group>"; };
 		F10101010101010101010101 /* NativeMCPOAuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPOAuthTests.swift; sourceTree = "<group>"; };
@@ -310,6 +314,7 @@
 				A60F66F1777D669CF509C134 /* NativeMCPAuthorizationTests.swift */,
 				F0C0C0C0C0C0C0C0C0C0C0C0 /* NativeMCPActionTests.swift */,
 				F10101010101010101010101 /* NativeMCPOAuthTests.swift */,
+				F90909090909090909090909 /* NotchPanelPlacementTests.swift */,
 				FA5E94A049DF259A6CE6DB7E /* NgrokTunnelMonitorTests.swift */,
 				4FA09765A5DC85740382BB61 /* SavedCommandGrantTests.swift */,
 				FF6B093555EF31A324DD474A /* ServiceSupervisorTests.swift */,
@@ -353,6 +358,7 @@
 			children = (
 				F5910DC8365E4FB254B2A822 /* ConnectionRow.swift */,
 				A3184FA7CCA10909266F6728 /* QuickPanel.swift */,
+				F70707070707070707070707 /* NotchPanel.swift */,
 			);
 			path = QuickPanel;
 			sourceTree = "<group>";
@@ -562,6 +568,7 @@
 				ABFFDF73F9860D8409937064 /* PermissionGuidePanel.swift in Sources */,
 				5CA2F14A7E880C022DDBD8CE /* PreviewSupport.swift in Sources */,
 				AC7B0895AC93C77ABA1A3B32 /* QuickPanel.swift in Sources */,
+				F80808080808080808080808 /* NotchPanel.swift in Sources */,
 				61A9F7371A3D7905FB4C6988 /* RelayOSApp.swift in Sources */,
 				921010956D0573613A2CE1D0 /* RelayOSTheme.swift in Sources */,
 				10C20CCAA3DBA57333534A8D /* SavedCommandGrant.swift in Sources */,
@@ -601,6 +608,7 @@
 				39ADF6F4C8CDD27B05E22BBD /* NativeMCPAuthorizationTests.swift in Sources */,
 				F0D0D0D0D0D0D0D0D0D0D0D0 /* NativeMCPActionTests.swift in Sources */,
 				F20202020202020202020202 /* NativeMCPOAuthTests.swift in Sources */,
+				FA1010101010101010101010 /* NotchPanelPlacementTests.swift in Sources */,
 				DA2031F59D8084379EA893B3 /* NgrokTunnelMonitorTests.swift in Sources */,
 				2ABB0556B126CE0EB68FF233 /* SavedCommandGrantTests.swift in Sources */,
 				9E4D8D3F612F8FFE5A46A568 /* ServiceSupervisorTests.swift in Sources */,

@@ -2,6 +2,8 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var model: BridgeModel
+    @ObservedObject private var notch = NotchPanelCoordinator.shared
+    @Environment(\.openWindow) private var openWindow
     @State private var selected: SettingsTab = .general
     @State private var searchText: String = ""
 
@@ -33,6 +35,43 @@ struct SettingsView: View {
 
                 ScrollView(.vertical) {
                     VStack(alignment: .leading, spacing: 22) {
+                        HStack(spacing: 12) {
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(model.running ? Color.green : Color.orange)
+                                    .frame(width: 7, height: 7)
+                                Text(model.running ? "Local MCP available" : "Local MCP unavailable")
+                                    .font(.system(size: 11 * scale))
+                                    .foregroundStyle(theme.textSecondary)
+                            }
+                            Spacer()
+                            Button {
+                                model.showApprovalCenter()
+                            } label: {
+                                Label("Approvals", systemImage: "tray.full")
+                                    .font(.system(size: 11 * scale))
+                                    .overlay(alignment: .topTrailing) {
+                                        if !model.approvalInbox.isEmpty {
+                                            Circle().fill(.orange).frame(width: 6, height: 6)
+                                                .offset(x: 5, y: -3)
+                                        }
+                                    }
+                            }
+                            .buttonStyle(.borderless)
+                            Button {
+                                notch.toggle(model: model) {
+                                    openWindow(id: "main")
+                                    NSApp.activate(ignoringOtherApps: true)
+                                }
+                            } label: {
+                                Label(notch.isVisible ? "Hide notch" : "Notch panel",
+                                      systemImage: "rectangle.topthird.inset.filled")
+                                    .font(.system(size: 11 * scale))
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                        .padding(.bottom, 2)
+
                         Text(pageTitle)
                             .font(.system(size: 30 * scale, weight: .semibold))
                             .tracking(-0.7)
@@ -72,8 +111,16 @@ struct SettingsView: View {
                 isDark: colorScheme == .dark
             )
         )
-        .onChange(of: model.approvalNavigationRequest) { _, _ in
-            selected = .approvals
+        .onAppear {
+            // A menu-bar/notch action can request the inbox before this window
+            // is recreated. Honor that intent on first display as well.
+            if model.approvalNavigationRequest > 0 {
+                selected = model.isSwiftOnly ? .general : .approvals
+            }
+        }
+        .onChange(of: model.approvalNavigationRequest) { _, newValue in
+            guard newValue > 0 else { return }
+            selected = model.isSwiftOnly ? .general : .approvals
         }
     }
 

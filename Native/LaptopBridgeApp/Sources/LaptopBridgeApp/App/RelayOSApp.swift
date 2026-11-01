@@ -57,6 +57,7 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         nativeExperiment?.stop()
         nativeExperiment = nil
+        BridgeModel.shared.stopNativeInboxPolling()
         guard !Self.isXcodeUIPreview else { return }
         if Self.isXcodeDevelopment {
             BridgeModel.shared.stopDevelopmentObservation()
@@ -74,6 +75,7 @@ struct RelayOSApp: App {
     @AppStorage(RelayOSTheme.accentKey) private var accent = "blue"
     @AppStorage(RelayOSTheme.fontSizeKey) private var uiFontSize = 14.0
     @NSApplicationDelegateAdaptor(RelayOSApplicationDelegate.self) private var appDelegate
+    @Environment(\.openWindow) private var openWindow
 
     init() {
         #if DEBUG
@@ -107,22 +109,46 @@ struct RelayOSApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
+        .commands {
+            CommandMenu("RelayOS Controls") {
+                Button("Open Control Center") {
+                    openWindow(id: "main")
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+                .keyboardShortcut("o", modifiers: [.command, .option])
+
+                Button("Toggle Notch Panel") {
+                    NotchPanelCoordinator.shared.toggle(model: model) {
+                        openWindow(id: "main")
+                        NSApp.activate(ignoringOtherApps: true)
+                    }
+                }
+                .keyboardShortcut("n", modifiers: [.command, .option])
+
+                Divider()
+                Button("Review Approvals") {
+                    model.showApprovalCenter()
+                    openWindow(id: "main")
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+            }
+        }
         MenuBarExtra {
             QuickPanel(model: model)
-                .allowsHitTesting(!model.isPreview && !model.isSwiftOnly)
+                .allowsHitTesting(!model.isPreview)
                 .preferredColorScheme(RelayOSTheme.scheme(appearance))
                 .tint(RelayOSTheme.accent(accent))
-                .frame(width: 360)
+                .frame(width: 384)
         } label: {
             HStack(spacing: 3) {
-                Image(systemName: "cursorarrow")
+                Image(systemName: "square.stack.3d.up.fill")
                     .frame(width: 18, height: 18)
-                if !model.approvalInbox.isEmpty {
-                    Text("\(model.approvalInbox.count)")
+                if (model.isSwiftOnly ? model.nativePendingCount : model.approvalInbox.count) > 0 {
+                    Text("\(model.isSwiftOnly ? model.nativePendingCount : model.approvalInbox.count)")
                         .font(.system(size: 11, weight: .bold))
                 }
             }
-            .accessibilityLabel("RelayOS — \(model.approvalInbox.count) pending approvals")
+            .accessibilityLabel("RelayOS — \(model.isSwiftOnly ? model.nativePendingCount : model.approvalInbox.count) pending approvals")
         }
         .menuBarExtraStyle(.window)
 

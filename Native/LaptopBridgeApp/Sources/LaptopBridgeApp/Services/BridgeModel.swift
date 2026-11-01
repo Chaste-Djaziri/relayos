@@ -44,6 +44,7 @@ final class BridgeModel: ObservableObject {
     @Published var commandGrantDuplicateCount = 0
     @Published var commandGrantsError: String?
     @Published var approvalInbox: [ApprovalInboxItem] = []
+    @Published var nativePendingCount = 0
     @Published var approvalNavigationRequest = 0
     @Published var approvalActivity: [ApprovalActivityEntry] = []
     @Published var approvalCenterError: String?
@@ -67,6 +68,7 @@ final class BridgeModel: ObservableObject {
     var preserveTunnelOnTermination = false
     var approvalTimer: DispatchSourceTimer?
     var developmentTimer: DispatchSourceTimer?
+    private var nativeInboxTimer: DispatchSourceTimer?
     private var developmentProbeInFlight = false
     var inboxPollInFlight = false
     let arrivalTracker = ApprovalArrivalTracker()
@@ -119,7 +121,8 @@ final class BridgeModel: ObservableObject {
         running = false
         tunnelHealth = .stopped
         tunnelRunning = false
-        serviceNotice = "Checking native Swift MCP on localhost:18765. OAuth onboarding and command tools are not implemented."
+        serviceNotice = "Checking native Swift MCP on localhost:18765."
+        startNativeInboxPolling()
         Task { @MainActor [weak self] in
             guard let self, let url = URL(string: "http://127.0.0.1:18765/health") else { return }
             var verified = false
@@ -141,6 +144,27 @@ final class BridgeModel: ObservableObject {
                 ? "Swift-only MCP verified at localhost:18765. No Python or ngrok was started."
                 : "The Swift-only listener did not answer its local health probe."
         }
+    }
+
+    private func startNativeInboxPolling() {
+        guard isSwiftOnly, nativeInboxTimer == nil else { return }
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
+        timer.schedule(deadline: .now(), repeating: .seconds(2))
+        timer.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, self.isSwiftOnly else { return }
+                self.nativePendingCount = (try? NativeMCPApprovalStore(
+                    databaseURL: NativeMCPDevelopmentStore().databaseURL
+                ).pending().count) ?? 0
+            }
+        }
+        timer.resume()
+        nativeInboxTimer = timer
+    }
+
+    func stopNativeInboxPolling() {
+        nativeInboxTimer?.cancel()
+        nativeInboxTimer = nil
     }
 
     // MARK: - Xcode development runtime (observe-only service supervision)
