@@ -174,3 +174,211 @@ struct NativeMCPDevelopmentStore {
         guard sqlite3_step(query) == SQLITE_DONE else { throw StoreError.storage }
     }
 }
+
+/// Native, local-only approval state.  This is deliberately separate from the
+/// installed application's Python state until a reversible migration has been
+/// validated.  Remote MCP requests may enqueue an approval, but only the
+/// companion UI is allowed to call `decide`.
+struct NativeMCPApprovalStore {
+    enum Decision: String, CaseIterable {
+        case once, session, always, deny
+    }
+
+    struct Request: Equatable {
+        let id: String
+        let kind: String
+        let target: String
+        let createdAt: Date
+        let expiresAt: Date
+    }
+
+    struct ApprovedRequest: Equatable {
+        let id: String
+        let kind: String
+        let target: String
+        let decision: Decision
+    }
+
+    enum StoreError: Error, Equatable {
+        case unavailable
+        case invalidRequest
+        case expiredOrDecided
+        case emergencyStop
+    }
+
+    private let databaseURL: URL
+    private let approvalLifetime: TimeInterval
+
+    init(databaseURL: URL, approvalLifetime: TimeInterval = 300) {
+        self.databaseURL = databaseURL
+        self.approvalLifetime = approvalLifetime
+    }
+
+    private func connect() throws -> OpaquePointer {
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(databaseURL.path, &db,
+                              SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,
+                              nil) == SQLITE_OK, let db else {
+            if db != nil { sqlite3_close(db) }
+            throw StoreError.unavailable
+        }
+        sqlite3_busy_timeout(db, 2_000)
+        return db
+    }
+
+    private func execute(_ db: OpaquePointer, _ sql: String) throws {
+        guard sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK else { throw StoreError.unavailable }
+    }
+
+    private func bind(_ value: String, _ statement: OpaquePointer, _ index: Int32) throws {
+        let result = value.withCString {
+            sqlite3_bind_text(statement, index, $0, -1,
+                              unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        }
+        guard result == SQLITE_OK else { throw StoreError.unavailable }
+    }
+
+    private func prepare(_ db: OpaquePointer, _ sql: String) throws -> OpaquePointer {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK,
+              let statement else { throw StoreError.unavailable }
+        return statement
+    }
+
+    private func setup(_ db: OpaquePointer) throws {
+        try execute(db, """
+            CREATE TABLE IF NOT EXISTS native_approval_requests (
+                id TEXT PRIMARY KEY, kind TEXT NOT NULL, target TEXT NOT NULL,
+                created_at REAL NOT NULL, expires_at REAL NOT NULL,
+                status TEXT NOT NULL, decision TEXT, decided_at REAL, consumed_at REAL
+            );
+            CREATE TABLE IF NOT EXISTS native_approval_audit (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, request_id TEXT NOT NULL,
+                event TEXT NOT NULL, recorded_at REAL NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS native_approval_pending
+                ON native_approval_requests(status, expires_at, created_at);
+        """)
+    }
+
+    private func isEmergencyStopped(_ db: OpaquePointer) throws -> Bool {
+        let statement = try prepare(db, "SELECT value FROM settings WHERE key = 'emergency_stop'")
+        defer { sqlite3_finalize(statement) }
+        guard sqlite3_step(statement) == SQLITE_ROW,
+              let value = sqlite3_column_text(statement, 0) else { return false }
+        return String(cString: value) == "true"
+    }
+
+    private func expire(_ db: OpaquePointer, now: Date) throws {
+        let statement = try prepare(db, """
+            UPDATE native_approval_requests
+               SET status = 'expired', decided_at = ?
+             WHERE status = 'pending' AND expires_at <= ?
+        """)
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_double(statement, 1, now.timeIntervalSince1970)
+        sqlite3_bind_double(statement, 2, now.timeIntervalSince1970)
+        guard sqlite3_step(statement) == SQLITE_DONE else { throw StoreError.unavailable }
+    }
+
+    @discardableResult
+    func enqueue(kind: String, target: String, now: Date = Date()) throws -> Request {
+        guard !kind.isEmpty, !target.isEmpty, kind.utf8.count <= 128, target.utf8.count <= 4_096 else {
+            throw StoreError.invalidRequest
+        }
+        let request = Request(id: UUID().uuidString.lowercased(), kind: kind, target: target,
+                              createdAt: now, expiresAt: now.addingTimeInterval(approvalLifetime))
+        let db = try connect()
+        defer { sqlite3_close(db) }
+        try setup(db)
+        try execute(db, "BEGIN IMMEDIATE")
+        do {
+            if try isEmergencyStopped(db) { throw StoreError.emergencyStop }
+            let statement = try prepare(db, """
+                INSERT INTO native_approval_requests
+                    (id, kind, target, created_at, expires_at, status)
+                VALUES (?, ?, ?, ?, ?, 'pending')
+            """)
+            defer { sqlite3_finalize(statement) }
+            try bind(request.id, statement, 1); try bind(kind, statement, 2); try bind(target, statement, 3)
+            sqlite3_bind_double(statement, 4, now.timeIntervalSince1970)
+            sqlite3_bind_double(statement, 5, request.expiresAt.timeIntervalSince1970)
+            guard sqlite3_step(statement) == SQLITE_DONE else { throw StoreError.unavailable }
+            try execute(db, "COMMIT")
+            return request
+        } catch {
+            try? execute(db, "ROLLBACK")
+            throw error
+        }
+    }
+
+    /// Atomically records exactly one local decision.  A stale or concurrent
+    /// decision cannot overwrite an already approved/denied request.
+    func decide(id: String, decision: Decision, now: Date = Date()) throws {
+        let db = try connect()
+        defer { sqlite3_close(db) }
+        try setup(db)
+        try execute(db, "BEGIN IMMEDIATE")
+        do {
+            try expire(db, now: now)
+            if decision != .deny, try isEmergencyStopped(db) { throw StoreError.emergencyStop }
+            let statement = try prepare(db, """
+                UPDATE native_approval_requests
+                   SET status = ?, decision = ?, decided_at = ?
+                 WHERE id = ? AND status = 'pending' AND expires_at > ?
+            """)
+            defer { sqlite3_finalize(statement) }
+            let status = decision == .deny ? "denied" : "approved"
+            try bind(status, statement, 1); try bind(decision.rawValue, statement, 2)
+            sqlite3_bind_double(statement, 3, now.timeIntervalSince1970)
+            try bind(id, statement, 4); sqlite3_bind_double(statement, 5, now.timeIntervalSince1970)
+            guard sqlite3_step(statement) == SQLITE_DONE, sqlite3_changes(db) == 1 else {
+                throw StoreError.expiredOrDecided
+            }
+            try execute(db, "COMMIT")
+        } catch {
+            try? execute(db, "ROLLBACK")
+            throw error
+        }
+    }
+
+    /// Consumes an approval once, in the same transaction used to validate it.
+    /// This is the replay barrier before a permission-expanding operation runs.
+    func consume(id: String, now: Date = Date()) throws -> ApprovedRequest {
+        let db = try connect()
+        defer { sqlite3_close(db) }
+        try setup(db)
+        try execute(db, "BEGIN IMMEDIATE")
+        do {
+            if try isEmergencyStopped(db) { throw StoreError.emergencyStop }
+            try expire(db, now: now)
+            let select = try prepare(db, """
+                SELECT kind, target, decision FROM native_approval_requests
+                 WHERE id = ? AND status = 'approved' AND consumed_at IS NULL AND expires_at > ?
+            """)
+            defer { sqlite3_finalize(select) }
+            try bind(id, select, 1); sqlite3_bind_double(select, 2, now.timeIntervalSince1970)
+            guard sqlite3_step(select) == SQLITE_ROW,
+                  let kind = sqlite3_column_text(select, 0),
+                  let target = sqlite3_column_text(select, 1),
+                  let rawDecision = sqlite3_column_text(select, 2),
+                  let decision = Decision(rawValue: String(cString: rawDecision)) else {
+                throw StoreError.expiredOrDecided
+            }
+            let update = try prepare(db, """
+                UPDATE native_approval_requests SET status = 'consumed', consumed_at = ?
+                WHERE id = ? AND status = 'approved' AND consumed_at IS NULL
+            """)
+            defer { sqlite3_finalize(update) }
+            sqlite3_bind_double(update, 1, now.timeIntervalSince1970); try bind(id, update, 2)
+            guard sqlite3_step(update) == SQLITE_DONE, sqlite3_changes(db) == 1 else {
+                throw StoreError.expiredOrDecided
+            }
+            try execute(db, "COMMIT")
+            return ApprovedRequest(id: id, kind: String(cString: kind), target: String(cString: target), decision: decision)
+        } catch {
+            try? execute(db, "ROLLBACK")
+            throw error
+        }
+    }
+}
