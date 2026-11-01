@@ -3,12 +3,36 @@ import AppKit
 import Darwin
 
 extension BridgeModel {
+    private func stopStaleRelayOSNgrokAgents() {
+        let process = Process()
+        let output = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/bin/ps")
+        process.arguments = ["-axo", "pid=,command="]
+        process.standardOutput = output
+        guard (try? process.run()) != nil else { return }
+        process.waitUntilExit()
+        guard let data = try? output.fileHandleForReading.readToEnd(),
+              let listing = String(data: data, encoding: .utf8) else { return }
+        for line in listing.split(separator: "\n") {
+            let parts = line.split(maxSplits: 1, whereSeparator: { $0 == " " || $0 == "\t" })
+            guard parts.count == 2, let pid = Int32(parts[0]) else { continue }
+            let command = String(parts[1])
+            guard command == "/opt/homebrew/bin/ngrok http 127.0.0.1:8765" ||
+                    command == "/usr/local/bin/ngrok http 127.0.0.1:8765" ||
+                    command.hasPrefix("/opt/homebrew/bin/ngrok http 127.0.0.1:8765 --") ||
+                    command.hasPrefix("/usr/local/bin/ngrok http 127.0.0.1:8765 --")
+            else { continue }
+            kill(pid_t(pid), SIGTERM)
+        }
+    }
+
     func shutdownServices() {
         shouldMaintainServices = false
         approvalTimer?.cancel()
         approvalTimer = nil
         stopOwnedProcess(tunnel)
         stopOwnedProcess(server)
+        stopStaleRelayOSNgrokAgents()
         tunnel = nil
         server = nil
         running = false
@@ -50,6 +74,7 @@ extension BridgeModel {
 
     func startServices() {
         guard SingleInstanceCoordinator.shared.ownsLock else { return }
+        stopStaleRelayOSNgrokAgents()
         shouldMaintainServices = true
         if approvalTimer == nil {
             let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
