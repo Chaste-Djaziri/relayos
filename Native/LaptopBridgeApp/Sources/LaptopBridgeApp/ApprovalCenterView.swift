@@ -1,5 +1,6 @@
 // Path: Native/LaptopBridgeApp/Sources/LaptopBridgeApp/ApprovalCenterView.swift
 import SwiftUI
+import AppKit
 
 // MARK: - Approval Requests Page (Pending Inbox)
 
@@ -143,21 +144,35 @@ struct ApprovalCenterView: View {
     }
 }
 
-// MARK: - Activity History Page (Audit Trail)
+// MARK: - Activity History Page (Audit Trail & Details)
 
 struct ActivityHistoryView: View {
     @ObservedObject var model: BridgeModel
     @State private var search = ""
+    @State private var selectedActivity: ApprovalActivityEntry? = nil
 
     private var filteredActivity: [ApprovalActivityEntry] {
         guard !search.isEmpty else { return model.approvalActivity }
         return model.approvalActivity.filter {
-            [$0.kind, $0.target, $0.decision]
+            [$0.kind, $0.target, $0.decision, $0.summaryTitle, $0.summarySubtitle]
                 .contains { $0.localizedCaseInsensitiveContains(search) }
         }
     }
 
     var body: some View {
+        Group {
+            if let event = selectedActivity {
+                activityDetailView(event)
+            } else {
+                activityListView
+            }
+        }
+        .onAppear {
+            model.refreshApprovalActivity(search: search)
+        }
+    }
+
+    private var activityListView: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 12) {
                 HStack(spacing: 8) {
@@ -194,7 +209,7 @@ struct ActivityHistoryView: View {
                     Text("No activity recorded")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.white)
-                    Text("Approved, denied, and executed actions will appear here with timestamps and exit codes.")
+                    Text("Approved, denied, and executed actions will appear here with exact summaries, execution times, and exit codes.")
                         .font(.system(size: 12))
                         .foregroundStyle(Color(white: 0.55))
                         .multilineTextAlignment(.center)
@@ -206,32 +221,244 @@ struct ActivityHistoryView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 11))
                 .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color(white: 0.19), lineWidth: 1))
             } else {
-                SettingsCard(title: "Audit Trail (\(filteredActivity.count))") {
+                SettingsCard(title: "Activity Log (\(filteredActivity.count))") {
                     ForEach(Array(filteredActivity.enumerated()), id: \.element.id) { index, event in
-                        SettingsCardRow(
-                            title: "\(event.kind.replacingOccurrences(of: "_", with: " ").capitalized) · \(event.decision.capitalized)",
-                            subtitle: "\(event.target) · \(Date(timeIntervalSince1970: event.recordedAt).formatted())",
-                            showDivider: index < filteredActivity.count - 1
-                        ) {
-                            HStack(spacing: 8) {
-                                if let code = event.exitCode {
-                                    StatusBadge(
-                                        text: "Exit \(code)",
-                                        status: code == 0 ? .healthy : .offline
-                                    )
-                                }
-                                StatusBadge(
-                                    text: event.decision.capitalized,
-                                    status: event.decision == "denied" ? .offline : .healthy
-                                )
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.16)) {
+                                selectedActivity = event
                             }
+                        } label: {
+                            ActivitySummaryRow(
+                                event: event,
+                                showDivider: index < filteredActivity.count - 1
+                            )
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
         }
-        .onAppear {
-            model.refreshApprovalActivity(search: search)
+    }
+
+    private func activityDetailView(_ event: ApprovalActivityEntry) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 10) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.16)) {
+                        selectedActivity = nil
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("All Activity")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(white: 0.18), in: RoundedRectangle(cornerRadius: 6))
+                    .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                StatusBadge(
+                    text: event.decision.capitalized,
+                    status: event.decision == "denied" ? .offline : (event.decision == "expired" ? .warning : .healthy)
+                )
+            }
+
+            SettingsCard(title: "Activity Summary") {
+                SettingsCardRow(
+                    title: "Event",
+                    subtitle: event.summaryTitle
+                ) {
+                    HStack(spacing: 6) {
+                        Image(systemName: event.systemIcon)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.blue)
+                        Text(event.kind)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(Color(white: 0.7))
+                    }
+                }
+
+                SettingsCardRow(
+                    title: "Decision & Outcome",
+                    subtitle: "Recorded authorization result"
+                ) {
+                    StatusBadge(
+                        text: event.decision.capitalized,
+                        status: event.decision == "denied" ? .offline : (event.decision == "expired" ? .warning : .healthy)
+                    )
+                }
+
+                SettingsCardRow(
+                    title: "Timestamp",
+                    subtitle: "Exact time event was logged on this Mac"
+                ) {
+                    Text(Date(timeIntervalSince1970: event.recordedAt).formatted(date: .abbreviated, time: .standard))
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color(white: 0.8))
+                }
+
+                if let duration = event.formattedDuration {
+                    SettingsCardRow(
+                        title: "Duration",
+                        subtitle: "Total execution elapsed time"
+                    ) {
+                        Text(duration)
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(.white)
+                    }
+                }
+
+                if let exit = event.formattedExitCode {
+                    SettingsCardRow(
+                        title: "Exit Status",
+                        subtitle: event.exitCode == 0 ? "Process terminated cleanly" : "Process exited with error code",
+                        showDivider: false
+                    ) {
+                        StatusBadge(
+                            text: exit,
+                            status: event.exitCode == 0 ? .healthy : .offline
+                        )
+                    }
+                }
+            }
+
+            SettingsCard(title: "Target & Execution Context") {
+                SettingsCardRow(
+                    title: "Target identifier",
+                    subtitle: "Resource or process requested by client"
+                ) {
+                    HStack(spacing: 8) {
+                        Text(event.target)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(Color(white: 0.8))
+                            .lineLimit(1)
+                            .textSelection(.enabled)
+                        SettingsButton(title: "Copy", icon: "doc.on.doc", style: .secondary) {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(event.target, forType: .string)
+                        }
+                    }
+                }
+
+                if let dir = event.parsedProjectDirectory {
+                    SettingsCardRow(
+                        title: "Project Directory",
+                        subtitle: dir
+                    ) {
+                        SettingsButton(title: "Copy Path", icon: "doc.on.doc", style: .secondary) {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(dir, forType: .string)
+                        }
+                    }
+                }
+
+                if let exec = event.parsedExecutable {
+                    SettingsCardRow(
+                        title: "Executable",
+                        subtitle: exec,
+                        showDivider: false
+                    ) {
+                        Text(URL(fileURLWithPath: exec).lastPathComponent)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
+
+            SettingsCard(title: "Audit & Security Record") {
+                SettingsCardRow(
+                    title: "Record ID",
+                    subtitle: "Unique monotonic database entry identifier"
+                ) {
+                    Text("#\(event.id)")
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(Color(white: 0.7))
+                }
+
+                SettingsCardRow(
+                    title: "Authorization Boundary",
+                    subtitle: "Locally enforced and recorded in RelayOS SQLite database. Client tool calls cannot bypass local audit records.",
+                    showDivider: false
+                ) {
+                    StatusBadge(text: "Enforced locally", status: .healthy)
+                }
+            }
         }
+    }
+}
+
+private struct ActivitySummaryRow: View {
+    let event: ApprovalActivityEntry
+    let showDivider: Bool
+    @State private var isHovered = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(Color(white: 0.20))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: event.systemIcon)
+                        .font(.system(size: 13))
+                        .foregroundStyle(event.decision == "denied" ? Color.red : Color(white: 0.85))
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 8) {
+                        Text(event.summaryTitle)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.white)
+
+                        Text(Date(timeIntervalSince1970: event.recordedAt).formatted(date: .abbreviated, time: .shortened))
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color(white: 0.45))
+                    }
+
+                    Text(event.summarySubtitle)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Color(white: 0.55))
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 12)
+
+                HStack(spacing: 8) {
+                    if let code = event.exitCode {
+                        StatusBadge(
+                            text: "Exit \(code)",
+                            status: code == 0 ? .healthy : .offline
+                        )
+                    }
+
+                    StatusBadge(
+                        text: event.decision.capitalized,
+                        status: event.decision == "denied" ? .offline : (event.decision == "expired" ? .warning : .healthy)
+                    )
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color(white: 0.40))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(isHovered ? Color(white: 0.17) : Color.clear)
+            .contentShape(Rectangle())
+
+            if showDivider {
+                Rectangle()
+                    .fill(Color(white: 0.18))
+                    .frame(height: 1)
+                    .padding(.leading, 16)
+            }
+        }
+        .onHover { isHovered = $0 }
     }
 }
