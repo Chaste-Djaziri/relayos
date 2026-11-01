@@ -350,3 +350,11 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [ ] Verify Automation and Accessibility consent manually in a signed development bundle.
 - [ ] Verify real AirPlay outputs and system media-key delivery with a supported receiver/player.
 - [ ] Do not mark universal Control Center metadata as supported; the system MediaRemote reader is private and Apple-restricted on modern macOS.
+
+## Notch UI simplification — 2026-11-01
+- [x] Three permanent tabs: Terminal, Approvals, Settings; remove Music from the notch without deleting its adapter or changing the Python runtime.
+- [x] Widen the expanded shape to provide space for all labeled tabs beside the unchanged hardware camera exclusion; keep collapsed and hover sizes intact.
+- [x] Remove notch music polling, automatic Music navigation and Music-specific collapsed status.
+- [x] Translate previously persisted Activity/Music/System selections to current tabs safely.
+- [x] Add navigation, geometry and state-restoration tests; verify Swift tests and Xcode Debug build.
+- [ ] Verify tab labels, selection, hover and VoiceOver against a real signed MacBook notch before deployment.

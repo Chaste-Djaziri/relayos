@@ -9,6 +9,12 @@ improves three surfaces without changing the MCP runtime:
 3. An **optional top-center companion panel** opened from the menu bar, the
    main Settings toolbar, or the keyboard.
 
+## Current notch navigation — 2026-11-01
+
+The expanded notch contains exactly **three permanent tabs**: **Terminal**, **Approvals**, and **Settings**. All three labels are visible on standard notched MacBook displays, whether or not there are pending approvals. The expanded body width is now at least 820pt plus the curved notch edges, keeping the camera exclusion black and unoccupied. Smaller displays use icon-only tabs with accessible names where full labels cannot fit. **Terminal** opens current job activity and history, **Approvals** shows the live approval queue/actions, and **Settings** contains MCP health, endpoint copying, and the main Settings link. The Music tab has been removed from the notch, but its native adapter remains available in the source for a possible later integration. The notch no longer polls music services or widens on music playback.
+
+Saved tab preferences are migrated automatically: old Activity or Music selections open Terminal; System opens Settings. Collapsed and hover geometry remains unchanged. Manual inspection on the 14-inch screen is still recommended before deployment.
+
 ## Open and use
 
 - Click the RelayOS status icon to inspect local/public MCP health, pending
