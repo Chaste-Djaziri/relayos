@@ -147,6 +147,20 @@ final class NotchPanelPlacementTests: XCTestCase {
         XCTAssertEqual(bounds.maxY, 38, accuracy: 0.01)
     }
 
+    func testSavedNotchSubpageRestoresAndInvalidValueFallsBackToActivity() {
+        let suite = "RelayOS.NotchPanelPlacementTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suite) else {
+            return XCTFail("Unable to create isolated user defaults suite")
+        }
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        XCTAssertEqual(NotchPanelCoordinator.restoredSubpage(from: defaults), .activity)
+        defaults.set(NotchSubpage.music.rawValue, forKey: "relayos.notch.selected-subpage")
+        XCTAssertEqual(NotchPanelCoordinator.restoredSubpage(from: defaults), .music)
+        defaults.set("unknown-page", forKey: "relayos.notch.selected-subpage")
+        XCTAssertEqual(NotchPanelCoordinator.restoredSubpage(from: defaults), .activity)
+    }
+
     @MainActor
     func testNotchWindowIsExcludedFromScreenshotsAndUnconstrainedAtTopEdge() {
         let topRect = CGRect(x: 650, y: 944, width: 205, height: 38)
