@@ -305,9 +305,7 @@ final class RelayOSNotchWindow: NSPanel {
             // to a copy of the panel left behind on every Space. AppKit moves
             // this panel as Spaces change instead of duplicating it.
             .moveToActiveSpace,
-            .stationary,
-            .ignoresCycle,
-            .fullScreenAuxiliary
+            .ignoresCycle
         ]
         // Make the notch completely invisible in screenshots and screen recordings.
         sharingType = .none
