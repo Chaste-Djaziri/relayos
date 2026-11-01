@@ -1,6 +1,7 @@
 # Path: src/laptop_bridge/command_jobs.py
 """Owned, bounded background coding commands. Output never enters SQLite."""
 import os
+import codecs
 import signal
 import subprocess
 import tempfile
@@ -150,7 +151,14 @@ class CommandJobManager:
             def chunk(file, offset):
                 size = os.fstat(file.fileno()).st_size
                 data = os.pread(file.fileno(), min(MAX_CHUNK, max(0, size - offset)), offset)
-                return data.decode("utf-8", errors="replace"), offset + len(data)
+                # Never advance past an incomplete trailing UTF-8 code point
+                # while a live process might still write its remaining bytes.
+                # A finished process flushes even malformed output with
+                # replacement characters so the reader cannot stall forever.
+                decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+                text = decoder.decode(data, final=runtime.finished_at is not None)
+                remaining = len(decoder.getstate()[0])
+                return text, offset + len(data) - remaining
             stdout, next_out = chunk(runtime.stdout, stdout_offset)
             stderr, next_err = chunk(runtime.stderr, stderr_offset)
             return {"stdout": stdout, "stderr": stderr, "stdout_offset": next_out,

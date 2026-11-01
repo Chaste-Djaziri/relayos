@@ -168,3 +168,77 @@ def test_authenticated_local_output_route_rejects_anonymous(tmp_path, monkeypatc
     assert payload["id"] == job_id
     assert payload["output_unavailable"] is True
     assert "argv" not in payload
+
+
+def test_local_job_list_and_cancel_routes_require_control_token(tmp_path, monkeypatch):
+    import asyncio
+    import json
+    from starlette.requests import Request
+    from laptop_bridge import control
+
+    sid, project = session(tmp_path)
+    job_id = state.create_command_job(sid, str(project), str(project), "example")
+    token = "test-isolated-control-token"
+    monkeypatch.setattr(control, "control_token", lambda: token)
+
+    def request(method, path, *, provided=None, query=b"", body=b"{}"):
+        headers = [] if provided is None else [
+            (b"x-relayos-control-token", provided.encode())
+        ]
+        async def receive():
+            return {"type": "http.request", "body": body, "more_body": False}
+        return Request({
+            "type": "http", "method": method, "path": path,
+            "query_string": query, "headers": headers,
+            "scheme": "http", "server": ("127.0.0.1", 8765),
+        }, receive=receive)
+
+    path = "/control/command-jobs"
+    assert asyncio.run(control.handle(request("GET", path))).status_code == 401
+    assert asyncio.run(control.handle(request("GET", path, provided="wrong"))).status_code == 401
+    jobs = asyncio.run(control.handle(request("GET", path, provided=token)))
+    assert jobs.status_code == 200
+    payload = json.loads(jobs.body)
+    assert payload["jobs"][0]["id"] == job_id
+    assert "argv" not in payload["jobs"][0]
+    assert asyncio.run(control.handle(request("GET", path, provided=token, query=b"limit=-1"))).status_code == 400
+    assert asyncio.run(control.handle(request("GET", path, provided=token, query=b"limit=nan"))).status_code == 400
+
+    cancellation = "/control/command-jobs/cancel"
+    body = json.dumps({"job_id": job_id}).encode()
+    assert asyncio.run(control.handle(request("POST", cancellation, body=body))).status_code == 401
+    assert state.command_job(job_id)["cancel_requested"] == 0
+    assert asyncio.run(control.handle(request("POST", cancellation, provided=token, body=b'{"job_id":"missing"}'))).status_code == 404
+    accepted = asyncio.run(control.handle(request("POST", cancellation, provided=token, body=body)))
+    assert accepted.status_code == 200
+    assert json.loads(accepted.body)["cancellation_requested"] is True
+    assert state.command_job(job_id)["cancel_requested"] == 1
+
+
+def test_output_keeps_incomplete_utf8_bytes_until_next_poll():
+    # Files may be observed halfway through a multibyte write. Offsets must
+    # point to the last complete Unicode scalar rather than corrupting text.
+    runtime = command_jobs._Runtime()
+    manager = command_jobs.manager
+    manager._jobs["unicode-test"] = runtime
+    try:
+        encoded = "✓".encode("utf-8")
+        runtime.stdout.write(encoded[:2])
+        runtime.stdout.flush()
+        first = manager.output("unicode-test")
+        assert first["stdout"] == ""
+        assert first["stdout_offset"] == 0
+        runtime.stdout.write(encoded[2:])
+        runtime.stdout.flush()
+        second = manager.output("unicode-test", stdout_offset=first["stdout_offset"])
+        assert second["stdout"] == "✓"
+        assert second["stdout_offset"] == 3
+        runtime.stdout.write(b"\xff")
+        runtime.stdout.flush()
+        runtime.finished_at = time.time()
+        final = manager.output("unicode-test", stdout_offset=3)
+        assert final["stdout"] == "\ufffd"
+        assert final["stdout_offset"] == 4
+    finally:
+        manager._jobs.pop("unicode-test", None)
+        runtime.close()

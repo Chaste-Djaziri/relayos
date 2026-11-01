@@ -125,6 +125,24 @@ async def handle(request: Request):
         return JSONResponse({"permissions": state.saved_command_grants()})
     if method == "GET" and path == "/control/pending-approvals":
         return JSONResponse({"oauth": state.pending_oauth_authorizations(), "actions": state.pending_requests()})
+    if method == "GET" and path == "/control/command-jobs":
+        try:
+            limit = int(request.query_params.get("limit", "60"))
+        except ValueError:
+            return JSONResponse({"error": "Invalid job limit"}, status_code=400)
+        if not 1 <= limit <= 100:
+            return JSONResponse({"error": "Job limit must be within 1..100"}, status_code=400)
+        return JSONResponse({"jobs": state.list_command_jobs(limit=limit)})
+    if method == "POST" and path == "/control/command-jobs/cancel":
+        payload = await json_body(request)
+        job_id = payload.get("job_id")
+        if not isinstance(job_id, str) or not 1 <= len(job_id) <= 128:
+            return JSONResponse({"error": "Invalid job ID"}, status_code=400)
+        try:
+            state.request_command_job_cancel(job_id)
+        except PermissionError:
+            return JSONResponse({"error": "Unknown command job"}, status_code=404)
+        return JSONResponse({"cancellation_requested": True, "job_id": job_id})
     if method == "GET" and path.startswith("/control/command-job-output/"):
         job_id = path.removeprefix("/control/command-job-output/")
         job = state.command_job(job_id)
