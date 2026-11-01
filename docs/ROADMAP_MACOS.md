@@ -332,3 +332,12 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Preserve live job name, elapsed duration and Terminal Jobs navigation in expanded mode.
 - [x] Six geometry/phase tests and three SwiftUI previews (collapsed, hover, expanded); Swift tests and Xcode Debug build pass.
 - [ ] Manual notch hardware QA and VoiceOver/haptic verification before optional installation.
+
+## Native notch music playback — 2026-11-01
+- [x] Extend Apple Music and Spotify AppleScript adapters to read playing/paused state, title, artist, album, position and duration (seconds vs milliseconds).
+- [x] Add native transport controls, seekable progress, elapsed/duration clock and Spotify artwork fallback.
+- [x] Keep paused track metadata visible and avoid launching an unrequested player or starting a Python process.
+- [x] Add safe empty states and unit tests for metadata separators, malformed data, timeline progression and pausing.
+- [x] Xcode Debug build and Swift tests pass.
+- [ ] Manually validate real player Automation permissions, Spotify artwork and seek on a signed development bundle.
+- [ ] Additional apps and browser playback require a separate supported adapter; system-wide metadata is not exposed by Apple's public player APIs.

@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Improve the native notch Music tab: Apple Music/Spotify title, artist and album, pause/resume/previous/next, current track time, duration, seekable progress and available Spotify artwork. Native Automation consent is respected, unsupported players show an honest empty state, and no MCP/Python lifecycle is altered. Added music metadata/progress regression tests and isolated music controls SwiftUI preview.
 - Unify the notch extension into a single black silhouette, with a compact default, haptic hover peek, click-to-expand build status and automatic collapse on pointer exit. Preserve the physical camera exclusion as unoccupied black space; add six geometry/phase tests and three local #Previews. No production app deployment.
 - Replace the oversized notch control panel with a compact, physical-notch-aware black build monitor. Left/right ears occupy only the measured menu-bar side regions, the center remains transparent, and a lower tray opens live Terminal Jobs. Includes in-file previews and display geometry tests; installed app remains unchanged.
 - Make terminal jobs observable throughout the macOS app lifecycle: authenticated local job-list/cancel endpoints, compatibility fallback for older hybrid bundles, live output following with byte offsets and command-reported progress, optional completion notifications, job counts in the menu bar/notch/sidebar, and UTF-8-safe incremental output. Python backend retained and live installed app unchanged.

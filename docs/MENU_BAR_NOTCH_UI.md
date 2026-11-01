@@ -91,3 +91,47 @@ a notch. On external monitors, the black panel remains below the menu bar.
 The view contains local #Preview examples for collapsed, hover, and expanded
 states, plus six geometry tests. Manually inspect the actual macOS menu-bar
 interaction on a 14-inch MacBook before deploying a signed bundle.
+
+## Native music playback controls — 2026-11-01
+
+RelayOS's existing **Music** notch tab now presents only playback metadata and
+transport controls. It shows track title, artist, album, player name, Spotify
+artwork when available, current position, track duration, an interactive
+progress scrubber, and **Previous / Play-Pause / Next**. Progress advances from
+the most recent player-reported position while playing, stays fixed while
+paused, and clamps to track duration. If timing is unavailable, the UI shows an
+indeterminate/disabled progress surface rather than fabricating timing.
+
+The source is native macOS Automation (NSAppleScript), with queries and actions
+performed away from the UI thread. RelayOS polls already-running Apple Music
+and Spotify every two seconds and prefers the actively playing app. Playback
+controls target only the discovered player; they never implicitly open a music
+app. macOS may prompt for **Automation** permission the first time RelayOS
+accesses a supported player. If permission is denied or no supported player is
+running, the panel displays a straightforward empty state with disabled
+controls.
+
+**Important platform limitation:** Apple's public Now Playing / MediaPlayer
+APIs publish a player's own controls and metadata; they do not offer a
+supported way to inspect arbitrary other apps' playback. Generic web browsers,
+YouTube tabs, and other players are not represented by this implementation.
+Accessing private MediaRemote APIs or bypassing macOS protections is not part
+of this update. Other players require explicit integration and compatibility
+review.
+
+### Local acceptance checks
+
+- Play a song in Apple Music, then Spotify: inspect title, artist, album,
+  playback icon, duration, current time and progress movement.
+- Pause/resume, skip forward/back, and scrub the progress bar: ensure the
+  correct running player responds and the UI refreshes.
+- Deny Automation access: no player launches and no controls are enabled.
+- Pause a track: elapsed time should remain fixed, and metadata should stay
+  visible in the compact notch.
+- Run a terminal build while a track plays: approvals and build activity retain
+  their priority in the compact status; Music remains accessible in the tray.
+
+Automated tests cover metadata parsing, unit conversion, missing timing,
+position interpolation, pause behavior and duration clamping. Real-player
+Automation consent and transport behavior require testing in a signed local
+build, not just Xcode compilation.
