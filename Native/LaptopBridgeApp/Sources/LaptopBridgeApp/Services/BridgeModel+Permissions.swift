@@ -16,9 +16,9 @@ extension BridgeModel {
         process.standardOutput = pipe
         do {
             try process.run()
+            let data = try pipe.fileHandleForReading.readToEnd() ?? Data()
             process.waitUntilExit()
             guard process.terminationStatus == 0,
-                  let data = try pipe.fileHandleForReading.readToEnd(),
                   let payload = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let confirmed = payload["emergency_stop"] as? Bool,
                   confirmed == value else {
@@ -49,8 +49,9 @@ extension BridgeModel {
         setApprovalWorkingDirectory(process, executable: python)
         process.standardOutput = pipe
         try? process.run()
+        let data = try? pipe.fileHandleForReading.readToEnd()
         process.waitUntilExit()
-        guard let data = try? pipe.fileHandleForReading.readToEnd(),
+        guard let data,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let enabled = json["emergency_stop"] as? Bool else { return }
         DispatchQueue.main.async { [weak self] in
@@ -70,8 +71,9 @@ extension BridgeModel {
             self?.setApprovalWorkingDirectory(process, executable: python)
             process.standardOutput = pipe
             try? process.run()
+            let data = try? pipe.fileHandleForReading.readToEnd()
             process.waitUntilExit()
-            guard let data = try? pipe.fileHandleForReading.readToEnd(),
+            guard let data,
                   let items = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
             let names = items.compactMap { $0["client_name"] as? String }
             DispatchQueue.main.async { [weak self] in
@@ -90,8 +92,9 @@ extension BridgeModel {
             self?.setApprovalWorkingDirectory(process, executable: python)
             process.standardOutput = pipe
             try? process.run()
+            let data = try? pipe.fileHandleForReading.readToEnd()
             process.waitUntilExit()
-            guard let data = try? pipe.fileHandleForReading.readToEnd(),
+            guard let data,
                   let grants = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
             DispatchQueue.main.async { [weak self] in
                 self?.permissionGrants = grants
@@ -127,8 +130,8 @@ extension BridgeModel {
             process.standardOutput = output
             do {
                 try process.run()
-                process.waitUntilExit()
                 let data = try output.fileHandleForReading.readToEnd() ?? Data()
+                process.waitUntilExit()
                 guard process.terminationStatus == 0 else {
                     throw NSError(domain: "RelayOS", code: Int(process.terminationStatus),
                                   userInfo: [NSLocalizedDescriptionKey: "Could not read command grants."])
@@ -159,9 +162,9 @@ extension BridgeModel {
             process.standardOutput = output
             do {
                 try process.run()
+                let data = try output.fileHandleForReading.readToEnd() ?? Data()
                 process.waitUntilExit()
                 guard process.terminationStatus == 0,
-                      let data = try output.fileHandleForReading.readToEnd(),
                       let result = try JSONSerialization.jsonObject(with: data) as? [String: Int],
                       let duplicates = result["duplicates"] else { return }
                 DispatchQueue.main.async { [weak self] in
