@@ -231,7 +231,7 @@ def capture_snapshot(display_id: int | None = None) -> tuple[dict, bytes]:
     if not has_screen_recording_permission():
         raise PermissionError(
             "Screen Recording permission is required. Please grant Screen Recording "
-            "permission to Laptop Bridge in macOS System Settings > Privacy & Security > Screen Recording."
+            "permission to RelayOS in macOS System Settings > Privacy & Security > Screen Recording."
         )
 
     screens = QGuiApplication.screens()
