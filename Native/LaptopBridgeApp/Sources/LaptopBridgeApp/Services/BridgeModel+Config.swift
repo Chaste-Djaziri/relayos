@@ -39,6 +39,15 @@ extension BridgeModel {
         return domain
     }
 
+    func ngrokIsConfigured() -> Bool {
+        guard let data = try? Data(contentsOf: configURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              json["active_transport"] as? String == "ngrok",
+              let ngrok = json["ngrok"] as? [String: Any]
+        else { return false }
+        return ngrok["enabled"] as? Bool ?? false
+    }
+
     func installNgrok() {
         if FileManager.default.isExecutableFile(atPath: "/opt/homebrew/bin/ngrok") ||
             FileManager.default.isExecutableFile(atPath: "/usr/local/bin/ngrok") {
@@ -93,3 +102,4 @@ extension BridgeModel {
         restartServices()
     }
 }
+
