@@ -367,3 +367,11 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Add four geometry tests, in-file SwiftUI preview, full Swift test suite and Xcode Debug build checks.
 - [ ] Manually confirm cursor visuals, pointer alignment and Spaces/monitor transitions on the actual Mac before any signed installation.
 - [ ] Computer control, app management and interactive mouse-guidance overlays are separate future milestones; none are enabled by this visual marker.
+
+## Cursor companion refinements — 2026-11-01
+- [x] Replace outlined irregular marker with a clean, upward-facing equilateral triangle with no border or shadow.
+- [x] Fill it with `RelayOSTheme.accent` using the existing `relayos.accent` AppStorage key so changes update automatically.
+- [x] Ease in when tracking begins and smoothly decelerate after mouse stops using a critically damped, time-based tracking filter. Snap only on first render, changed display, or a long paused frame.
+- [x] Retain mouse passthrough, bottom-right offset, edge clamping and no new permissions.
+- [x] Add equal-side, direction, easing, and display-change regression tests; pass Swift tests and Xcode Debug build.
+- [ ] Check the motion feel and current theme accent in a real macOS development build before installing.
