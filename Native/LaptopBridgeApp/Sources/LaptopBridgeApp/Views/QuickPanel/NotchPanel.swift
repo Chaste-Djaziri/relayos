@@ -562,8 +562,12 @@ final class NotchPanelCoordinator: ObservableObject {
     }
 
     private init() {
-        let saved = UserDefaults.standard.string(forKey: Self.selectedSubpageDefaultsKey)
-        selectedSubpage = NotchSubpage(rawValue: saved ?? "") ?? .activity
+        selectedSubpage = Self.restoredSubpage(from: UserDefaults.standard)
+    }
+
+    static func restoredSubpage(from defaults: UserDefaults) -> NotchSubpage {
+        let saved = defaults.string(forKey: selectedSubpageDefaultsKey)
+        return NotchSubpage(rawValue: saved ?? "") ?? .activity
     }
 
     func registerOpenMainWindow(_ handler: @escaping () -> Void) {
