@@ -6,18 +6,23 @@ import CoreGraphics
 
 struct SystemPermissionsPageView: View {
     @ObservedObject var model: BridgeModel
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var hasScreenRecording = false
     @State private var hasFullDiskAccess = false
     @State private var hasAccessibility = false
     @State private var hasNotifications = false
 
+    private var theme: ThemeColors {
+        RelayOSTheme.colors(colorScheme)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
                 Text("Manage permissions required by RelayOS and paired AI clients to inspect projects, automate workflows, and display alerts.")
                     .font(.system(size: 13))
-                    .foregroundStyle(Color(white: 0.6))
+                    .foregroundStyle(theme.textSecondary)
 
                 Spacer()
 
@@ -186,3 +191,4 @@ struct SystemPermissionsPageView: View {
         }
     }
 }
+

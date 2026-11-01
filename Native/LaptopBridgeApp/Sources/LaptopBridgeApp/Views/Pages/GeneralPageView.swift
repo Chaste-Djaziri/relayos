@@ -2,8 +2,13 @@ import SwiftUI
 
 struct GeneralPageView: View {
     @ObservedObject var model: BridgeModel
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage(ApprovalSound.preferenceKey) private var approvalSoundsEnabled = true
     @AppStorage(ApprovalArrivalNotification.enabledKey) private var approvalNotificationsEnabled = false
+
+    private var theme: ThemeColors {
+        RelayOSTheme.colors(colorScheme)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -15,7 +20,7 @@ struct GeneralPageView: View {
                     HStack(spacing: 8) {
                         Text(model.endpoint)
                             .font(.system(size: 11.5, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.75))
+                            .foregroundStyle(theme.textPrimary)
                             .lineLimit(1)
                         SettingsButton(title: "Copy", icon: "doc.on.doc", style: .secondary) {
                             model.copyEndpoint()

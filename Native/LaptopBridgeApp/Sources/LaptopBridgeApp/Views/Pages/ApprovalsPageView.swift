@@ -3,7 +3,12 @@ import AppKit
 
 struct ApprovalCenterView: View {
     @ObservedObject var model: BridgeModel
+    @Environment(\.colorScheme) private var colorScheme
     @State private var search = ""
+
+    private var theme: ThemeColors {
+        RelayOSTheme.colors(colorScheme)
+    }
 
     private var visibleInbox: [ApprovalInboxItem] {
         guard !search.isEmpty else { return model.approvalInbox }
@@ -19,23 +24,23 @@ struct ApprovalCenterView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 12))
-                        .foregroundStyle(Color(white: 0.5))
+                        .foregroundStyle(theme.textSecondary)
                     TextField("Search pending requests", text: $search)
                         .textFieldStyle(.plain)
                         .font(.system(size: 12))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(theme.textPrimary)
                     if !search.isEmpty {
                         Button { search = "" } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 11))
-                                .foregroundStyle(Color(white: 0.5))
+                                .foregroundStyle(theme.textSecondary)
                         }
                         .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 10)
                 .frame(height: 30)
-                .background(Color(white: 0.16), in: RoundedRectangle(cornerRadius: 8))
+                .background(theme.sidebarSearchBackground, in: RoundedRectangle(cornerRadius: 8))
 
                 SettingsButton(title: "Refresh", icon: "arrow.clockwise", style: .secondary) {
                     model.refreshApprovalInbox()
@@ -56,21 +61,21 @@ struct ApprovalCenterView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "checkmark.shield")
                         .font(.system(size: 38))
-                        .foregroundStyle(Color(white: 0.45))
+                        .foregroundStyle(theme.textSecondary)
                     Text("No pending approvals")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(theme.textPrimary)
                     Text("New local command and MCP connection requests from AI clients will appear here for your review.")
                         .font(.system(size: 12))
-                        .foregroundStyle(Color(white: 0.55))
+                        .foregroundStyle(theme.textSecondary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: 380)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 48)
-                .background(Color(red: 0.14, green: 0.14, blue: 0.15))
+                .background(theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 11))
-                .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color(white: 0.19), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 11).stroke(theme.cardBorder, lineWidth: 1))
             } else {
                 ForEach(visibleInbox) { item in
                     SettingsCard(title: item.isOAuth ? "OAuth Connection Request" : "Command Execution Request") {
@@ -90,7 +95,7 @@ struct ApprovalCenterView: View {
                         ) {
                             Text(item.target)
                                 .font(.system(size: 11, design: .monospaced))
-                                .foregroundStyle(Color(white: 0.7))
+                                .foregroundStyle(theme.codeText)
                                 .lineLimit(1)
                         }
 
