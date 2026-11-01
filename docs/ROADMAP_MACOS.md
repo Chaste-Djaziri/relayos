@@ -322,5 +322,13 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Use NSScreen auxiliary top areas to reserve the real physical camera/notch gap; fall back below menu bar on external monitors.
 - [x] Show native application logo at left and selected active build name plus elapsed time at right.
 - [x] Use live, existing Terminal Jobs model for status/count and one-click navigation to live output.
-- [x] Add four geometry tests, in-file SwiftUI previews and Xcode Debug compilation.
+- [x] Add six geometry tests, in-file SwiftUI previews and Xcode Debug compilation.
 - [ ] Inspect appearance, click targets and menu-bar overlap manually on a real notched MacBook before deployment.
+
+## Unified hover/click notch interaction — 2026-11-01
+- [x] Replace separated ears and permanent tray with one continuous black shape, including an empty camera-housing region.
+- [x] Implement three states: compact band, small hover peek with supported trackpad haptics, full build tray on click.
+- [x] Auto-collapse on pointer exit without hiding the companion; guard against synthetic leave events during resizing.
+- [x] Preserve live job name, elapsed duration and Terminal Jobs navigation in expanded mode.
+- [x] Six geometry/phase tests and three SwiftUI previews (collapsed, hover, expanded); Swift tests and Xcode Debug build pass.
+- [ ] Manual notch hardware QA and VoiceOver/haptic verification before optional installation.

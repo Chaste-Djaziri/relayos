@@ -65,3 +65,29 @@ is included in this UI sprint.
 - Empty state is explicit (`No running builds`). A completed-job progress percentage is never fabricated for this glanceable UI.
 - Geometry is tested for a 14-inch-sized housing, a wider housing, an external monitor, and narrow layouts.
 - The panel uses the existing `BridgeModel.commandJobs` publisher and the existing Python-backed hybrid job monitoring. No backend or production bundle changes are required for this UI change.
+
+## Unified notch hover interaction — 2026-11-01
+
+The notch is now **one continuous, black surface**, including an intentionally
+empty black physical-camera region in the top center. There is no transparent
+split between the logo and active build, and the lower tray is **not** left open
+when idle.
+
+- **Collapsed**: ~394pt wide, only the menu-bar-height black band; RelayOS icon
+  on the left, running command and elapsed time on the right. No text or other
+  controls are placed inside the camera housing.
+- **Hover**: the band widens to ~474pt and a subtle 28pt status hint appears,
+  accompanied by a trackpad haptic when macOS hardware/settings support it.
+- **Click**: expands to ~568pt wide with the 94pt build-status tray; opens the
+  full Terminal Jobs console from the tray. Expansion also requests a haptic.
+- **Mouse leave**: collapses back to the compact band after a brief guard against
+  spurious mouse-leave events caused by resizing. It does **not** terminate the
+  companion itself; use the Settings/menu-bar toggle or the explicit close
+  button when expanded to hide the companion entirely.
+- **Escape**: collapses to the compact band.
+
+Geometry continues to use the live NSScreen auxiliary top regions on Macs with
+a notch. On external monitors, the black panel remains below the menu bar.
+The view contains local #Preview examples for collapsed, hover, and expanded
+states, plus six geometry tests. Manually inspect the actual macOS menu-bar
+interaction on a 14-inch MacBook before deploying a signed bundle.
