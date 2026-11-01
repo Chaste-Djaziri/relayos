@@ -3,7 +3,7 @@ import AppKit
 import Darwin
 
 extension BridgeModel {
-    private func stopStaleRelayOSNgrokAgents() {
+    nonisolated private static func stopStaleRelayOSNgrokAgents() {
         let process = Process()
         let output = Pipe()
         process.executableURL = URL(fileURLWithPath: "/bin/ps")
@@ -32,7 +32,7 @@ extension BridgeModel {
         approvalTimer = nil
         stopOwnedProcess(tunnel)
         stopOwnedProcess(server)
-        stopStaleRelayOSNgrokAgents()
+        Self.stopStaleRelayOSNgrokAgents()
         tunnel = nil
         server = nil
         running = false
@@ -75,6 +75,12 @@ extension BridgeModel {
     func startServices() {
         guard SingleInstanceCoordinator.shared.ownsLock else { return }
         shouldMaintainServices = true
+        DispatchQueue.global(qos: .utility).async {
+            // Do not block the AppKit main thread while reclaiming a tunnel
+            // left by an earlier RelayOS process. The normal health loop then
+            // launches and owns a fresh tunnel after cleanup completes.
+            Self.stopStaleRelayOSNgrokAgents()
+        }
         if approvalTimer == nil {
             let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
             timer.schedule(deadline: .now() + 1, repeating: 1)
