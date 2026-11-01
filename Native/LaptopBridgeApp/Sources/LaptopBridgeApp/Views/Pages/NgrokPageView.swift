@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NgrokPageView: View {
     @ObservedObject var model: BridgeModel
+    @State private var copiedEndpoint = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -30,8 +31,20 @@ struct NgrokPageView: View {
                     title: "Configured endpoint",
                     subtitle: model.endpoint
                 ) {
-                    SettingsButton(title: "Copy", icon: "doc.on.doc", style: .secondary) {
+                    SettingsButton(
+                        title: copiedEndpoint ? "Copied" : "Copy",
+                        icon: copiedEndpoint ? "checkmark" : "doc.on.doc",
+                        style: copiedEndpoint ? .primary : .secondary
+                    ) {
                         model.copyEndpoint()
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            copiedEndpoint = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                copiedEndpoint = false
+                            }
+                        }
                     }
                 }
 
