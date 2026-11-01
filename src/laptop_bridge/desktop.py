@@ -1,4 +1,4 @@
-"""PySide6 desktop companion for local Laptop Bridge approvals and guidance."""
+"""PySide6 desktop companion for local RelayOS approvals and guidance."""
 import json
 import os
 import shutil
@@ -32,12 +32,12 @@ class ApprovalDialog(QDialog):
     def __init__(self, request, parent=None):
         super().__init__(parent)
         self.request = request
-        self.setWindowTitle("Laptop Bridge approval")
+        self.setWindowTitle("RelayOS approval")
         self.setMinimumWidth(480)
         layout = QFormLayout(self)
 
         if request["kind"] == "project_session":
-            self.setWindowTitle("Laptop Bridge: Project Coding Session Approval")
+            self.setWindowTitle("RelayOS: Project Coding Session Approval")
             kind_label = QLabel("60-Minute Project Coding Session")
             kind_label.setStyleSheet("font-weight: bold; color: #0284c7;")
             layout.addRow("Action", kind_label)
@@ -50,14 +50,14 @@ class ApprovalDialog(QDialog):
             info.setWordWrap(True)
             layout.addRow("Permission scope", info)
         elif request["kind"] == "oauth_authorization":
-            self.setWindowTitle("Laptop Bridge: MCP Connection Approval")
+            self.setWindowTitle("RelayOS: MCP Connection Approval")
             kind_label = QLabel("MCP Connection")
             kind_label.setStyleSheet("font-weight: bold; color: #0284c7;")
             layout.addRow("Action", kind_label)
             layout.addRow("OAuth client", QLabel(request["client_id"]))
             layout.addRow("Google callback", QLabel(request["redirect_uri"]))
             layout.addRow("Scope", QLabel(", ".join(request["scopes"])))
-            info = QLabel("Approving lets this MCP client call Laptop Bridge until the connection is revoked or its 30-day authorization expires.")
+            info = QLabel("Approving lets this MCP client call RelayOS until the connection is revoked or its 30-day authorization expires.")
             info.setWordWrap(True)
             layout.addRow("Permission scope", info)
         else:
@@ -84,7 +84,7 @@ class OnboardingWizard(QWizard):
     def __init__(self, companion, parent=None):
         super().__init__(parent)
         self.companion = companion
-        self.setWindowTitle("Set up Laptop Bridge")
+        self.setWindowTitle("Set up RelayOS")
         self.setMinimumSize(620, 480)
 
         welcome = QWizardPage(); welcome.setTitle("Your private bridge")
@@ -125,7 +125,7 @@ class OnboardingWizard(QWizard):
         vl = QVBoxLayout(connect)
         self.endpoint_preview = QLabel("Your MCP endpoint will appear here")
         self.endpoint_preview.setStyleSheet("font-weight: bold; color: #2563eb;")
-        vl.addWidget(QLabel("ChatGPT, Claude, and Gemini use OAuth. After setup, paste the endpoint below into each app; the first connection will ask you to approve it in the Laptop Bridge dashboard."))
+        vl.addWidget(QLabel("ChatGPT, Claude, and Gemini use OAuth. After setup, paste the endpoint below into each app; the first connection will ask you to approve it in the RelayOS dashboard."))
         vl.addWidget(self.endpoint_preview); vl.addStretch(); self.addPage(connect)
         self.hostname.textChanged.connect(lambda value: self.endpoint_preview.setText(f"https://{value.strip().strip('/')}/mcp" if value.strip() else "Your MCP endpoint will appear here"))
 
@@ -133,7 +133,7 @@ class OnboardingWizard(QWizard):
         if _is_windows():
             if shutil.which("winget"):
                 if QProcess.startDetached("winget", ["install", "--id", "9MVS1J51GMK6", "--exact", "--source", "msstore", "--accept-source-agreements", "--accept-package-agreements", "--silent"]):
-                    QMessageBox.information(self, "Installing ngrok", "winget is installing ngrok in the background. Return to this step when it finishes, then restart Laptop Bridge if ngrok is not found yet.")
+                    QMessageBox.information(self, "Installing ngrok", "winget is installing ngrok in the background. Return to this step when it finishes, then restart RelayOS if ngrok is not found yet.")
                 else:
                     QMessageBox.warning(self, "Could not start winget", "Run `winget install --id 9MVS1J51GMK6 --exact --source msstore --accept-source-agreements --accept-package-agreements` in PowerShell, then return here.")
             else:
@@ -147,7 +147,7 @@ class OnboardingWizard(QWizard):
         if QProcess.startDetached(brew, ["install", "ngrok/ngrok/ngrok"]):
             QMessageBox.information(self, "Installing ngrok", "Homebrew is installing ngrok in the background. Return to this step when it finishes.")
         else:
-            QMessageBox.warning(self, "Could not start Homebrew", "Laptop Bridge could not start Homebrew. Run `brew install ngrok/ngrok/ngrok` in Terminal.")
+            QMessageBox.warning(self, "Could not start Homebrew", "RelayOS could not start Homebrew. Run `brew install ngrok/ngrok/ngrok` in Terminal.")
 
     def accept(self):
         token = self.token.text().strip(); hostname = self.hostname.text().strip().removeprefix("https://").removeprefix("http://").strip("/")
@@ -179,7 +179,7 @@ class QuickPanel(QDialog):
     def __init__(self, companion):
         super().__init__(companion.window)
         self.companion = companion
-        self.setWindowTitle("Laptop Bridge")
+        self.setWindowTitle("RelayOS")
         self.setFixedSize(390, 520)
         self.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
         self.setStyleSheet("""
@@ -194,7 +194,7 @@ class QuickPanel(QDialog):
         brand = QHBoxLayout()
         logo = QLabel("◉"); logo.setStyleSheet("font-size: 26px; color: #60a5fa;")
         brand.addWidget(logo)
-        title_box = QVBoxLayout(); title = QLabel("Laptop Bridge"); title.setStyleSheet("font-size: 18px; font-weight: 700;")
+        title_box = QVBoxLayout(); title = QLabel("RelayOS"); title.setStyleSheet("font-size: 18px; font-weight: 700;")
         self.status = QLabel("Checking status…"); self.status.setObjectName("muted")
         title_box.addWidget(title); title_box.addWidget(self.status); brand.addLayout(title_box); brand.addStretch(); root.addLayout(brand)
         self.endpoint = QLabel(); self.endpoint.setObjectName("muted"); self.endpoint.setWordWrap(True); root.addWidget(self.endpoint)
@@ -246,7 +246,7 @@ class StatusWindow(QMainWindow):
     def __init__(self, companion):
         super().__init__()
         self.companion = companion
-        self.setWindowTitle("Laptop Bridge")
+        self.setWindowTitle("RelayOS")
         self.setMinimumSize(760, 640)
 
         content = QWidget()
@@ -254,7 +254,7 @@ class StatusWindow(QMainWindow):
         root.setContentsMargins(18, 18, 18, 18)
         root.setSpacing(14)
         header = QHBoxLayout()
-        title = QLabel("Laptop Bridge")
+        title = QLabel("RelayOS")
         title.setStyleSheet("font-size: 22px; font-weight: 700;")
         header.addWidget(title)
         header.addStretch()
@@ -606,7 +606,7 @@ class Companion:
         menu.addAction("Clear Guidance", self.clear_guidance)
 
         menu.addSeparator()
-        menu.addAction("Open Laptop Bridge…", self.show_window)
+        menu.addAction("Open RelayOS…", self.show_window)
         menu.addAction("Set up or reconfigure…", self.open_onboarding)
         menu.addAction("Restart server", self.restart_server)
 
@@ -708,7 +708,7 @@ class Companion:
         reply = QMessageBox.question(
             self.window,
             "Approve Project Coding Session",
-            f"Grant Laptop Bridge MCP server 60-minute read/write/patch/command access strictly inside:\n\n{folder_path}\n\nProceed?",
+            f"Grant RelayOS MCP server 60-minute read/write/patch/command access strictly inside:\n\n{folder_path}\n\nProceed?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
@@ -730,7 +730,7 @@ class Companion:
             display_id=0,
             x=320,
             y=240,
-            label="Laptop Bridge",
+            label="RelayOS",
             message="Visual guidance active. Mouse trailing enabled.",
             timeout_seconds=15,
         )
@@ -828,7 +828,7 @@ class Companion:
                         display_id=payload.get("display_id", 0),
                         x=payload.get("x", 200),
                         y=payload.get("y", 200),
-                        label=payload.get("label", "Laptop Bridge"),
+                        label=payload.get("label", "RelayOS"),
                         message=payload.get("message", ""),
                         timeout_seconds=payload.get("timeout_seconds", 15),
                     )
@@ -928,7 +928,7 @@ def main():
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(_is_windows())
     if not _is_windows() and not QSystemTrayIcon.isSystemTrayAvailable():
-        raise SystemExit("Laptop Bridge requires a system tray")
+        raise SystemExit("RelayOS requires a system tray")
     STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
     lock = QLockFile(str(STATE_DIR / "desktop-instance.lock"))
     lock.setStaleLockTime(30_000)
