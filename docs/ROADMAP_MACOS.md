@@ -375,3 +375,13 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Retain mouse passthrough, bottom-right offset, edge clamping and no new permissions.
 - [x] Add equal-side, direction, easing, and display-change regression tests; pass Swift tests and Xcode Debug build.
 - [ ] Check the motion feel and current theme accent in a real macOS development build before installing.
+
+## On-demand screenshot sharing — 2026-11-01
+- [x] Add native ScreenCaptureKit app/window/display capture helper, JPEG bytes returned in memory and packaged with the hybrid MCP server.
+- [x] Add two-phase MCP tools (`request_screen_capture` then `capture_approved_screen`), requiring local, target-bound, single-use permission for **every** frame.
+- [x] Expose Once / Deny for screen captures in the main Approval Inbox and notch; block Session / Always in the backend.
+- [x] Honor Screen Guidance toggle, macOS Screen Recording permission, emergency stop, maximum image size and expiring approvals.
+- [x] Remove ungated legacy screenshot commands from the public MCP tool list.
+- [x] Add Python security tests and compile-time Swift tests for the native target.
+- [ ] Manually verify the signed helper's Screen Recording consent attribution, actual window/app/display content and image rendering in ChatGPT.
+- [ ] Streaming, repeated refresh, app management, and computer control are separate opt-in milestones.
