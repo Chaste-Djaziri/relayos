@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Begin native single-process Swift MCP migration: experimental loopback-only Network.framework listener, native SQLite authorization checks compatible with existing OAuth/session state, and three read-only MCP tools. Production Python service remains active until security and OAuth parity.
 - Replace separate Xcode preview showcase with local `#Preview` declarations alongside each native screen, setup step, reusable settings component, terminal row and permission guide. The Xcode Debug app now renders the real Settings window with inert sample state; no MCP/ngrok starts.
 - Align Xcode Release and packaged macOS bundle identity to `pro.micorp.relayos`, use `pro.micorp.relayos.dev` for isolated Debug, and configure RelayOS name, Utilities category, version 1.0.0, build 1 while preserving user-customized Xcode project and schemes.
 - Added an Xcode-managed macOS app project with a dedicated safe Debug UI preview scheme, distinct .dev bundle identity, automatic code-signing controls, shared existing SwiftUI sources, and native test target; the production Python MCP deployment remains unchanged.

@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FAAAAAAAAAAAAAAAAAAAAAAA /* NativeMCPAuthorizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F99999999999999999999999 /* NativeMCPAuthorizationTests.swift */; };
+		F88888888888888888888888 /* NativeMCPProjectFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F77777777777777777777777 /* NativeMCPProjectFiles.swift */; };
+		F66666666666666666666666 /* NativeMCPHTTP.swift in Sources */ = {isa = PBXBuildFile; fileRef = F55555555555555555555555 /* NativeMCPHTTP.swift */; };
+		F44444444444444444444444 /* NativeMCPAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = F33333333333333333333333 /* NativeMCPAuthorization.swift */; };
 		0C6F487398FDD7AB91D7A548 /* NgrokTunnelMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */; };
 		1082C54EAC0015720F7AD15F /* CommandPermissionsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A20318397E308D076DE7F /* CommandPermissionsPageView.swift */; };
 		10C20CCAA3DBA57333534A8D /* SavedCommandGrant.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DCD2DF7385FBDF3D206AAFC /* SavedCommandGrant.swift */; };
@@ -91,6 +95,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F99999999999999999999999 /* NativeMCPAuthorizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPAuthorizationTests.swift; sourceTree = "<group>"; };
+		F77777777777777777777777 /* NativeMCPProjectFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPProjectFiles.swift; sourceTree = "<group>"; };
+		F55555555555555555555555 /* NativeMCPHTTP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPHTTP.swift; sourceTree = "<group>"; };
+		F33333333333333333333333 /* NativeMCPAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPAuthorization.swift; sourceTree = "<group>"; };
 		010C81D41E2B4A8F38171CA5 /* BridgeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeModel.swift; sourceTree = "<group>"; };
 		0606A340C321E3C38BC40B9C /* SingleInstanceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleInstanceCoordinator.swift; sourceTree = "<group>"; };
 		074974C562F230CC62710F89 /* BridgeModel+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+Config.swift"; sourceTree = "<group>"; };
@@ -194,6 +202,9 @@
 			isa = PBXGroup;
 			children = (
 				010C81D41E2B4A8F38171CA5 /* BridgeModel.swift */,
+				F77777777777777777777777 /* NativeMCPProjectFiles.swift */,
+				F55555555555555555555555 /* NativeMCPHTTP.swift */,
+				F33333333333333333333333 /* NativeMCPAuthorization.swift */,
 				40017314B96D04DB9DF7025F /* BridgeModel+Approvals.swift */,
 				EA1547CE08DBD57A9DFA1396 /* BridgeModel+CommandJobs.swift */,
 				074974C562F230CC62710F89 /* BridgeModel+Config.swift */,
@@ -259,6 +270,7 @@
 				2F8523F43A4AAE041F302654 /* CommandJobModelsTests.swift */,
 				5AAF3F10B93F830BC33B27E4 /* InstanceLeaseTests.swift */,
 				45B18B25B4B4D6AD68891289 /* LaptopBridgeAppTests.swift */,
+				F99999999999999999999999 /* NativeMCPAuthorizationTests.swift */,
 				7DFE6A41A2CDF9C522333953 /* MCPHealthMonitorTests.swift */,
 				FA5E94A049DF259A6CE6DB7E /* NgrokTunnelMonitorTests.swift */,
 				4FA09765A5DC85740382BB61 /* SavedCommandGrantTests.swift */,
@@ -473,6 +485,9 @@
 				E7036D84F04C4324B951656D /* BridgeModel+Permissions.swift in Sources */,
 				D12705F9869D63CEA6A8E576 /* BridgeModel+ProcessControl.swift in Sources */,
 				66ED3830CC3709D053488B80 /* BridgeModel.swift in Sources */,
+				F88888888888888888888888 /* NativeMCPProjectFiles.swift in Sources */,
+				F66666666666666666666666 /* NativeMCPHTTP.swift in Sources */,
+				F44444444444444444444444 /* NativeMCPAuthorization.swift in Sources */,
 				82DCB56CEFBCA0B18B79B17E /* CommandGrantGroupCard.swift in Sources */,
 				9E0C04877E8C049602380544 /* CommandGrantItemRow.swift in Sources */,
 				C0FFBE0E81E9C7124055CC4A /* CommandJobModels.swift in Sources */,

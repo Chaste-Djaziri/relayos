@@ -3,6 +3,9 @@ import SwiftUI
 import AppKit
 
 final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
+    // This optional developer-mode service lives INSIDE RelayOS.app.
+    // It never replaces the existing production listener on :8765.
+    private var nativeExperiment: NativeMCPListener?
     // Xcode's dedicated Debug bundle identifier is safe to launch beside installed RelayOS.
     // A UI-only development run never acquires the production process lease.
     static var isXcodeUIPreview: Bool {
@@ -13,6 +16,17 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
     // RelayOS; simply closing Settings leaves its approved MCP services alive.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if Bundle.main.bundleIdentifier == "pro.micorp.relayos.dev" &&
+            ProcessInfo.processInfo.environment["RELAYOS_NATIVE_MCP_EXPERIMENT"] == "1" {
+            let listener = NativeMCPListener(port: 18765)
+            do {
+                try listener.start()
+                nativeExperiment = listener
+                NSLog("RelayOS native read-only MCP experiment active on 127.0.0.1:18765")
+            } catch {
+                NSLog("RelayOS native MCP experiment did not start: %@", error.localizedDescription)
+            }
+        }
         guard !Self.isXcodeUIPreview else { return }
         guard SingleInstanceCoordinator.shared.claimOrReplaceExistingInstance() else {
             NSApplication.shared.terminate(nil)
@@ -22,6 +36,8 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        nativeExperiment?.stop()
+        nativeExperiment = nil
         guard !Self.isXcodeUIPreview else { return }
         BridgeModel.shared.shutdownServices()
         SingleInstanceCoordinator.shared.release()

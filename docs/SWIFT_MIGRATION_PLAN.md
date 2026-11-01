@@ -45,3 +45,24 @@ All remote tool requests must continue to be authorized by an independently loca
 ## Scope exclusions
 
 Do not redesign the menu-bar/notch surfaces during the protocol migration, weaken auth to achieve parity, change the production bundle ID, or silently replace the live MCP endpoint.
+
+## Native in-process transport implementation — 2026-11-01
+
+The first migration slice now compiles in the RelayOS app target. It is deliberately **experimental** and cannot replace production yet.
+
+- `Services/NativeMCPAuthorization.swift`: fail-closed, read-only access to the existing SQLite authorization schema. Revalidates emergency-stop, SHA-256-hashed legacy OAuth access tokens, session scope and folder scope per request.
+- `Services/NativeMCPProjectFiles.swift`: read-only, UTF-8 capped project listings and file reads; reject invalid sessions, traversal, symlinks escaping the project root, and oversized payloads. Permission scope is validated using current SQLite sessions rather than trusting a client-supplied root.
+- `Services/NativeMCPHTTP.swift`: a native Network.framework HTTP listener bound to `127.0.0.1` on development port `18765`; MCP initialize, ping, tools/list and three read-only tools are implemented. All writes, grants, shell/process commands and unported methods are rejected.
+- `Tests/LaptopBridgeAppTests/NativeMCPAuthorizationTests.swift`: authorization, expiration, emergency stop, scope, resource binding, traversal and HTTP enforcement tests.
+
+To opt into the **in-process native experiment**, choose the existing Xcode RelayOS Debug scheme, then Edit Scheme → Run → Arguments → Environment Variables; add `RELAYOS_NATIVE_MCP_EXPERIMENT=1`. The Debug bundle identifier must be `pro.micorp.relayos.dev`. Launching it starts only a native listener on `127.0.0.1:18765`, **not** Python and not ngrok. The standard Debug run remains an inert UI preview without the experimental listener.
+
+The current production service on `127.0.0.1:8765` and public ngrok remains Python-backed and should not be stopped until the following gates pass:
+1. Replace handcrafted experimental JSON-RPC/HTTP with the official MCP Swift SDK + fully validated transport and comprehensive protocol-version/session/SSE interoperability.
+2. Port **OAuth client registration, PKCE, authorization code, refresh rotation and revocation** with exact existing persistence semantics.
+3. Port the **local once/session/always/deny inbox and consent** in Swift, using atomic SQLite transactions and no remotely executable approval paths.
+4. Port all remaining tools with exact tool schemas, capability gating, activity audit and error behavior: write/patch, command execution, background jobs/cancellation, screenshots/guidance and support actions.
+5. Eliminate all GUI calls to the Python approvals helper and packaged Python interpreter; remove helper references only after native UI equivalents are exercised.
+6. Validate live protected multi-client auth flows, stable signing and recovery/rollback. Only then let the native app take port 8765 and preserve ngrok hostname and user data.
+
+Smoke test: the native listener was started on a randomly selected loopback port and served HTTP `200` on `/health` without Python. Initial listener argument configuration was corrected after this test detected a Network.framework bind error.\n\nKnown restrictions: the development transport is JSON-only with no MCP SSE/resumability or OAuth bootstrap; the `/health` endpoint is loopback-only and intentionally reports experimental status; no external client should rely on it. Existing SQLite data is only read by the experimental code, not migrated or modified.

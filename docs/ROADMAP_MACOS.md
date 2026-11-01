@@ -262,3 +262,15 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Remove standalone UI showcase, aggregate preview fixtures, and extra preview-only Xcode scheme.
 - [x] Xcode Debug loads safe local sample data in the actual window; no live MCP, ngrok or approval process is launched.
 - [ ] Visually review Canvas rendering for each source file, including onboarding steps, and inspect contrast in light and dark modes.
+
+## Native single-process MCP migration — 2026-11-01
+- [x] Native in-process HTTP listener built into RelayOS target, isolated to port 18765 behind Debug-only opt-in.
+- [x] Read-only SQLite adapter enforcing legacy OAuth access tokens, Emergency Stop, session validity and folder scopes.
+- [x] Native system_status, list_project_files and read_project_file MCP tools (experimental).
+- [x] Swift authorization/path safety regression tests.
+- [ ] Integrate official MCP Swift SDK and full Streamable HTTP (session/SSE) support.
+- [ ] Port OAuth authorization, PKCE, refresh tokens, client registration and resource indicators.
+- [ ] Port local approval inbox, audit decisions and command permissions with transaction-safe state.
+- [ ] Port write/edit/patch, command execution, jobs/cancel, screenshots and guidance tools.
+- [ ] Remove Python helper use from all native views and package Python-free Release bundle.
+- [ ] Run full client interoperability, codesign, migration and production handover checks.
