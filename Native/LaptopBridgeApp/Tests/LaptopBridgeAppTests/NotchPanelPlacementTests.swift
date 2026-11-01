@@ -190,4 +190,63 @@ final class NotchPanelPlacementTests: XCTestCase {
         XCTAssertFalse(window.collectionBehavior.contains(.fullScreenAuxiliary))
         XCTAssertEqual(window.constrainFrameRect(topRect, to: nil), topRect)
     }
+
+    func testSpotifyTrackMetadataAndMillisecondsDuration() {
+        let sep = "\u{001E}"
+        let result = ["playing", "A Song || With a Separator", "Artist", "Album",
+                      "72.5", "245000", "https://i.scdn.co/image/test"].joined(separator: sep)
+        let track = NotchMediaController.parseSnapshot(
+            result, player: "Spotify", bundle: "com.spotify.client")
+        XCTAssertEqual(track?.trackTitle, "A Song || With a Separator")
+        XCTAssertEqual(track?.duration, 245)
+        XCTAssertEqual(track?.elapsed, 72.5)
+        XCTAssertEqual(track?.artworkURL, "https://i.scdn.co/image/test")
+        XCTAssertTrue(track?.isPlaying == true)
+    }
+
+    func testAppleMusicSecondsAndPausedTrack() {
+        let sep = "\u{001E}"
+        let result = ["paused", "Track", "Singer", "Album", "30", "185.25", ""]
+            .joined(separator: sep)
+        let track = NotchMediaController.parseSnapshot(
+            result, player: "Music", bundle: "com.apple.Music")
+        XCTAssertEqual(track?.duration, 185.25)
+        XCTAssertEqual(track?.elapsed, 30)
+        XCTAssertEqual(track?.isPlaying, false)
+    }
+
+    func testMalformedMetadataAndMissingDurationShowNoFakeProgress() {
+        let sep = "\u{001E}"
+        XCTAssertNil(NotchMediaController.parseSnapshot(
+            "stopped", player: "Music", bundle: "com.apple.Music"))
+        let raw = ["playing", "Track", "Artist", "Album", "bad", "NaN", ""]
+            .joined(separator: sep)
+        let track = NotchMediaController.parseSnapshot(
+            raw, player: "Music", bundle: "com.apple.Music")
+        XCTAssertNotNil(track)
+        XCTAssertNil(track?.duration)
+        XCTAssertNil(track?.elapsed)
+        XCTAssertNil(NotchPlaybackTimeline.position(
+            elapsed: nil, duration: 200, isPlaying: true,
+            observedAt: Date(timeIntervalSince1970: 100),
+            now: Date(timeIntervalSince1970: 120)))
+    }
+
+    func testPlaybackProgressAdvancesOnlyWhilePlayingAndClampsToDuration() {
+        let started = Date(timeIntervalSince1970: 100)
+        let now = Date(timeIntervalSince1970: 110)
+        XCTAssertEqual(NotchPlaybackTimeline.position(
+            elapsed: 43, duration: 180, isPlaying: true,
+            observedAt: started, now: now), 53)
+        XCTAssertEqual(NotchPlaybackTimeline.position(
+            elapsed: 43, duration: 180, isPlaying: false,
+            observedAt: started, now: now), 43)
+        XCTAssertEqual(NotchPlaybackTimeline.position(
+            elapsed: 179, duration: 180, isPlaying: true,
+            observedAt: started, now: now), 180)
+        XCTAssertEqual(NotchPlaybackTimeline.clock(83), "1:23")
+        XCTAssertEqual(NotchPlaybackTimeline.clock(3703), "1:01:43")
+        XCTAssertEqual(NotchPlaybackTimeline.clock(nil), "–:––")
+    }
+
 }

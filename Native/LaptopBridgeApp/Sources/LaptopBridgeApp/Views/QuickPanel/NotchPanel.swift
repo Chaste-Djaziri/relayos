@@ -369,8 +369,34 @@ final class RelayOSNotchWindow: NSPanel {
     }
 }
 
-/// Monitors and controls live music playback in Apple Music or Spotify without
-/// launching player applications that are not already running.
+/// Timeline calculations are separated from the UI so missing/malformed
+/// metadata never produces a fake progress bar.
+enum NotchPlaybackTimeline {
+    static func position(elapsed: TimeInterval?, duration: TimeInterval?,
+                         isPlaying: Bool, observedAt: Date, now: Date) -> TimeInterval? {
+        guard let elapsed, elapsed.isFinite, elapsed >= 0 else { return nil }
+        let advanced = elapsed + (isPlaying ? max(0, now.timeIntervalSince(observedAt)) : 0)
+        if let duration, duration.isFinite, duration > 0 {
+            return min(max(0, advanced), duration)
+        }
+        return max(0, advanced)
+    }
+
+    static func clock(_ seconds: TimeInterval?) -> String {
+        guard let seconds, seconds.isFinite, seconds >= 0 else { return "–:––" }
+        let total = Int(seconds)
+        if total >= 3600 {
+            return String(format: "%d:%02d:%02d", total / 3600, (total % 3600) / 60, total % 60)
+        }
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+}
+
+/// A system-wide "currently playing" reader is not available through Apple's
+/// public media APIs. This native adapter supports already-running Music and
+/// Spotify via their AppleScript dictionaries and macOS Automation consent.
+/// It never launches an application implicitly, reads the MCP backend, or
+/// claims to control unrelated browsers/players.
 @MainActor
 final class NotchMediaController: ObservableObject {
     static let shared = NotchMediaController()
@@ -381,10 +407,12 @@ final class NotchMediaController: ObservableObject {
     @Published private(set) var albumName = ""
     @Published private(set) var playerName = "Music"
     @Published private(set) var playerBundleIdentifier = "com.apple.Music"
-    /// Whether a supported player is already running. Keeping this separate
-    /// from playback prevents a control click from launching Music merely
-    /// because no player has been discovered yet.
     @Published private(set) var hasRunningPlayer = false
+    @Published private(set) var duration: TimeInterval?
+    @Published private(set) var elapsed: TimeInterval?
+    @Published private(set) var observedAt = Date()
+    @Published private(set) var artworkURL: URL?
+    @Published private(set) var commandInFlight = false
 
     private var pollTask: Task<Void, Never>?
 
@@ -395,6 +423,35 @@ final class NotchMediaController: ObservableObject {
         let albumName: String
         let playerName: String
         let playerBundleIdentifier: String
+        let duration: TimeInterval?
+        let elapsed: TimeInterval?
+        let artworkURL: String?
+    }
+
+    /// AppleScript record separator avoids corrupting titles containing "||".
+    nonisolated static func parseSnapshot(_ raw: String, player: String,
+                                          bundle: String) -> Snapshot? {
+        let parts = raw.components(separatedBy: "\u{001E}")
+        guard parts.count >= 6,
+              ["playing", "paused"].contains(parts[0]),
+              !parts[1].isEmpty else { return nil }
+        let position = Double(parts[4])
+        let rawDuration = Double(parts[5])
+        let duration = rawDuration.map { bundle == "com.spotify.client" ? $0 / 1000 : $0 }
+        let validDuration = duration.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
+        let validPosition = position.flatMap { $0.isFinite && $0 >= 0 ? $0 : nil }
+        let artwork = parts.count > 6 && parts[6].hasPrefix("https://") ? parts[6] : nil
+        return Snapshot(isPlaying: parts[0] == "playing", trackTitle: parts[1],
+                        artistName: parts[2], albumName: parts[3],
+                        playerName: player, playerBundleIdentifier: bundle,
+                        duration: validDuration, elapsed: validPosition,
+                        artworkURL: artwork)
+    }
+
+    func position(at date: Date = Date()) -> TimeInterval? {
+        NotchPlaybackTimeline.position(
+            elapsed: elapsed, duration: duration,
+            isPlaying: isPlaying, observedAt: observedAt, now: date)
     }
 
     func startMonitoring() {
@@ -413,65 +470,81 @@ final class NotchMediaController: ObservableObject {
     }
 
     func refresh() async {
-        let runningBundles = Set(
-            NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier)
-        )
+        let runningBundles = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
         let snapshot = await Task.detached(priority: .utility) {
             Self.queryRunningPlayers(runningBundles: runningBundles)
         }.value
-
+        guard !Task.isCancelled else { return }
         if let snapshot {
-            if !hasRunningPlayer { hasRunningPlayer = true }
-            if isPlaying != snapshot.isPlaying { isPlaying = snapshot.isPlaying }
-            if trackTitle != snapshot.trackTitle { trackTitle = snapshot.trackTitle }
-            if artistName != snapshot.artistName { artistName = snapshot.artistName }
-            if albumName != snapshot.albumName { albumName = snapshot.albumName }
-            if playerName != snapshot.playerName { playerName = snapshot.playerName }
-            if playerBundleIdentifier != snapshot.playerBundleIdentifier {
-                playerBundleIdentifier = snapshot.playerBundleIdentifier
+            let changedTrack = trackTitle != snapshot.trackTitle ||
+                artistName != snapshot.artistName ||
+                playerBundleIdentifier != snapshot.playerBundleIdentifier
+            hasRunningPlayer = true
+            isPlaying = snapshot.isPlaying
+            trackTitle = snapshot.trackTitle
+            artistName = snapshot.artistName
+            albumName = snapshot.albumName
+            playerName = snapshot.playerName
+            playerBundleIdentifier = snapshot.playerBundleIdentifier
+            duration = snapshot.duration
+            elapsed = snapshot.elapsed
+            observedAt = Date()
+            if changedTrack || artworkURL?.absoluteString != snapshot.artworkURL {
+                artworkURL = snapshot.artworkURL.flatMap(URL.init(string:))
             }
-        } else if isPlaying || !trackTitle.isEmpty {
+        } else {
             hasRunningPlayer = false
             isPlaying = false
             trackTitle = ""
             artistName = ""
             albumName = ""
-        } else if hasRunningPlayer {
-            hasRunningPlayer = false
+            duration = nil
+            elapsed = nil
+            artworkURL = nil
         }
     }
 
-    func togglePlayPause() {
-        guard let targetApp = runningPlayerName() else { return }
-        Task.detached(priority: .userInitiated) {
-            _ = Self.runAppleScript("tell application \"\(targetApp)\" to playpause")
+    func togglePlayPause() { send(.toggle) }
+    func nextTrack() { send(.next) }
+    func previousTrack() { send(.previous) }
+
+    func seek(to time: TimeInterval) {
+        guard let target = runningPlayerName(),
+              let duration, duration.isFinite, duration > 0,
+              time.isFinite, time >= 0, !commandInFlight else { return }
+        let position = Int(min(duration, time))
+        commandInFlight = true
+        Task { [weak self] in
+            _ = await Task.detached(priority: .userInitiated) {
+                Self.runAppleScript("tell application \"\(target)\" to set player position to \(position)")
+            }.value
+            guard let self else { return }
+            self.commandInFlight = false
             await self.refresh()
         }
     }
 
-    func nextTrack() {
-        guard let targetApp = runningPlayerName() else { return }
-        Task.detached(priority: .userInitiated) {
-            _ = Self.runAppleScript("tell application \"\(targetApp)\" to next track")
-            try? await Task.sleep(for: .milliseconds(180))
-            await self.refresh()
+    private enum PlaybackAction {
+        case toggle, next, previous
+        var script: String {
+            switch self {
+            case .toggle: "playpause"
+            case .next: "next track"
+            case .previous: "previous track"
+            }
         }
     }
 
-    func previousTrack() {
-        guard let targetApp = runningPlayerName() else { return }
-        Task.detached(priority: .userInitiated) {
-            _ = Self.runAppleScript("tell application \"\(targetApp)\" to previous track")
-            try? await Task.sleep(for: .milliseconds(180))
+    private func send(_ action: PlaybackAction) {
+        guard let target = runningPlayerName(), hasRunningPlayer, !commandInFlight else { return }
+        commandInFlight = true
+        Task { [weak self] in
+            _ = await Task.detached(priority: .userInitiated) {
+                Self.runAppleScript("tell application \"\(target)\" to \(action.script)")
+            }.value
+            guard let self else { return }
+            self.commandInFlight = false
             await self.refresh()
-        }
-    }
-
-    func openPlayerApp() {
-        if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: playerBundleIdentifier) {
-            NSWorkspace.shared.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration())
-        } else if let musicURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Music") {
-            NSWorkspace.shared.openApplication(at: musicURL, configuration: NSWorkspace.OpenConfiguration())
         }
     }
 
@@ -480,30 +553,33 @@ final class NotchMediaController: ObservableObject {
         isPlaying: Bool,
         trackTitle: String = "",
         artistName: String = "",
-        playerName: String = "Music"
+        playerName: String = "Music",
+        duration: TimeInterval? = 234,
+        elapsed: TimeInterval? = 83
     ) {
         self.isPlaying = isPlaying
+        self.hasRunningPlayer = !trackTitle.isEmpty
         self.trackTitle = trackTitle
         self.artistName = artistName
         self.playerName = playerName
+        self.duration = duration
+        self.elapsed = elapsed
+        self.observedAt = Date()
     }
     #endif
 
     private func runningPlayerName() -> String? {
         let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+        guard hasRunningPlayer else { return nil }
         if running.contains(playerBundleIdentifier) {
-            return playerName
-        }
-        if running.contains("com.spotify.client") {
-            return "Spotify"
-        }
-        if running.contains("com.apple.Music") {
-            return "Music"
+            return playerBundleIdentifier == "com.spotify.client" ? "Spotify" : "Music"
         }
         return nil
     }
 
-    nonisolated private static func queryRunningPlayers(runningBundles: Set<String>) -> Snapshot? {
+    nonisolated private static func queryRunningPlayers(
+        runningBundles: Set<String>
+    ) -> Snapshot? {
         let candidates: [(bundle: String, name: String)] = [
             ("com.apple.Music", "Music"),
             ("com.spotify.client", "Spotify")
@@ -513,44 +589,38 @@ final class NotchMediaController: ObservableObject {
         for candidate in candidates where runningBundles.contains(candidate.bundle) {
             let script = """
             tell application "\(candidate.name)"
-                if player state is playing then
-                    return "playing||" & (name of current track) & "||" & (artist of current track) & "||" & (album of current track)
-                else if player state is paused then
-                    return "paused||" & (name of current track) & "||" & (artist of current track) & "||" & (album of current track)
-                else
-                    return "stopped||||||"
-                end if
+                try
+                    set playbackState to player state as text
+                    if playbackState is not "playing" and playbackState is not "paused" then return "stopped"
+                    set currentSong to current track
+                    set trackPosition to player position as text
+                    set trackDuration to duration of currentSong as text
+                    set artAddress to ""
+                    if "\(candidate.name)" is "Spotify" then
+                        try
+                            set artAddress to artwork url of currentSong as text
+                        end try
+                    end if
+                    set sep to ASCII character 30
+                    return playbackState & sep & (name of currentSong as text) & sep & (artist of currentSong as text) & sep & (album of currentSong as text) & sep & trackPosition & sep & trackDuration & sep & artAddress
+                on error
+                    return "stopped"
+                end try
             end tell
             """
-            guard let raw = runAppleScript(script), !raw.isEmpty else { continue }
-            let parts = raw.components(separatedBy: "||")
-            guard let state = parts.first else { continue }
-            let title = parts.count > 1 ? parts[1] : ""
-            let artist = parts.count > 2 ? parts[2] : ""
-            let album = parts.count > 3 ? parts[3] : ""
-            let snapshot = Snapshot(
-                isPlaying: state == "playing",
-                trackTitle: title,
-                artistName: artist,
-                albumName: album,
-                playerName: candidate.name,
-                playerBundleIdentifier: candidate.bundle
-            )
-            if snapshot.isPlaying {
-                return snapshot
-            }
-            if state == "paused", !title.isEmpty, pausedCandidate == nil {
-                pausedCandidate = snapshot
-            }
+            guard let raw = runAppleScript(script),
+                  let snapshot = parseSnapshot(raw, player: candidate.name,
+                                               bundle: candidate.bundle)
+            else { continue }
+            if snapshot.isPlaying { return snapshot }
+            if pausedCandidate == nil { pausedCandidate = snapshot }
         }
         return pausedCandidate
     }
 
     nonisolated private static func runAppleScript(_ source: String) -> String? {
-        // Execute the Apple Event from RelayOS rather than from a child
-        // `osascript` process. macOS can then show and retain the Automation
-        // consent for RelayOS itself (Music/Spotify), which is required for
-        // dependable now-playing updates and transport controls.
+        // Apple Events originate from RelayOS so macOS grants Automation
+        // permission to RelayOS itself, not a spawned osascript helper.
         guard let script = NSAppleScript(source: source) else { return nil }
         var error: NSDictionary?
         let result = script.executeAndReturnError(&error)
@@ -600,7 +670,7 @@ final class NotchPanelCoordinator: ObservableObject {
 
     var hasLiveActivity: Bool {
         let hasActiveJobs = model?.commandJobs.contains(where: \.active) ?? false
-        let isMusicPlaying = NotchMediaController.shared.isPlaying
+        let isMusicPlaying = NotchMediaController.shared.hasRunningPlayer && !NotchMediaController.shared.trackTitle.isEmpty
         let hasApprovals = model.map { $0.isSwiftOnly ? $0.nativePendingCount > 0 : !$0.approvalInbox.isEmpty } ?? false
         return hasActiveJobs || isMusicPlaying || hasApprovals
     }
@@ -786,7 +856,7 @@ final class NotchPanelCoordinator: ObservableObject {
         let hasActiveJobs = model?.commandJobs.contains(where: \.active) ?? false
         // Prefer an active terminal job when one exists. Otherwise retain the
         // user's page choice, except for the first music activity after launch.
-        if !hasActiveJobs && NotchMediaController.shared.isPlaying,
+        if !hasActiveJobs && NotchMediaController.shared.hasRunningPlayer,
            UserDefaults.standard.object(forKey: Self.selectedSubpageDefaultsKey) == nil {
             selectedSubpage = .music
         }
@@ -860,6 +930,8 @@ struct NotchPanelView: View {
     /// Preview-only overrides keep every Canvas preview next to its view.
     var previewLayout: NotchPanelPlacement.Layout? = nil
     var previewPhase: NotchPanelPhase? = nil
+    var previewSubpage: NotchSubpage? = nil
+    private var displayedSubpage: NotchSubpage { previewSubpage ?? coordinator.selectedSubpage }
 
     private var phase: NotchPanelPhase { previewPhase ?? coordinator.phase }
     private var jobs: [CommandJobEntry] {
@@ -871,7 +943,8 @@ struct NotchPanelView: View {
     private var primaryJob: CommandJobEntry? { jobs.first }
     private var isRunningJob: Bool { !jobs.isEmpty }
     private var isPlayingMusic: Bool { media.isPlaying }
-    private var hasLiveActivity: Bool { isRunningJob || isPlayingMusic || pendingApprovalsCount > 0 }
+    private var hasMusicTrack: Bool { media.hasRunningPlayer && !media.trackTitle.isEmpty }
+    private var hasLiveActivity: Bool { isRunningJob || hasMusicTrack || pendingApprovalsCount > 0 }
     private var pendingApprovalsCount: Int {
         model.isSwiftOnly ? model.nativePendingCount : model.approvalInbox.count
     }
@@ -897,7 +970,7 @@ struct NotchPanelView: View {
     private let muted = Color.white.opacity(0.62)
     private var visibleTabs: [NotchSubpage] {
         var tabs: [NotchSubpage] = [.activity]
-        if pendingApprovalsCount > 0 || coordinator.selectedSubpage == .approvals { tabs.append(.approvals) }
+        if pendingApprovalsCount > 0 || displayedSubpage == .approvals { tabs.append(.approvals) }
         tabs += [.music, .services]
         return tabs
     }
@@ -946,7 +1019,7 @@ struct NotchPanelView: View {
         .accessibilityElement(children: .contain)
         .animation(.spring(response: 0.24, dampingFraction: 0.84), value: phase)
         .animation(.spring(response: 0.24, dampingFraction: 0.84), value: hasLiveActivity)
-        .animation(.easeInOut(duration: 0.16), value: coordinator.selectedSubpage)
+        .animation(.easeInOut(duration: 0.16), value: displayedSubpage)
     }
 
     @ViewBuilder
@@ -988,8 +1061,8 @@ struct NotchPanelView: View {
                         Text(primaryJob?.executableName ?? "Running")
                             .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
                             .lineLimit(1)
-                    } else if isPlayingMusic {
-                        Image(systemName: "waveform")
+                    } else if hasMusicTrack {
+                        Image(systemName: media.isPlaying ? "waveform" : "pause.fill")
                             .font(.system(size: 10.5, weight: .semibold))
                             .foregroundStyle(.pink)
                         Text(media.trackTitle.isEmpty ? media.playerName : media.trackTitle)
@@ -1030,8 +1103,8 @@ struct NotchPanelView: View {
                                 .padding(.vertical, 2)
                                 .background(Color.white.opacity(0.14), in: Capsule())
                         }
-                    } else if isPlayingMusic {
-                        Text(media.artistName.isEmpty ? "Playing" : media.artistName)
+                    } else if hasMusicTrack {
+                        Text(media.artistName.isEmpty ? (media.isPlaying ? "Playing" : "Paused") : media.artistName)
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(muted)
                             .lineLimit(1)
@@ -1102,12 +1175,12 @@ struct NotchPanelView: View {
                         .padding(.horizontal, 7)
                         .padding(.vertical, 4)
                         .background(
-                            coordinator.selectedSubpage == page
+                            displayedSubpage == page
                                 ? Color.white.opacity(0.18)
                                 : Color.white.opacity(0.05),
                             in: Capsule()
                         )
-                        .foregroundStyle(coordinator.selectedSubpage == page ? .white : muted)
+                        .foregroundStyle(displayedSubpage == page ? .white : muted)
                     }
                     .buttonStyle(.plain)
                 }
@@ -1139,7 +1212,7 @@ struct NotchPanelView: View {
                 .padding(.horizontal, 12)
 
             Group {
-                switch coordinator.selectedSubpage {
+                switch displayedSubpage {
                 case .activity:
                     activitySubpageView
                 case .approvals:
@@ -1323,81 +1396,7 @@ struct NotchPanelView: View {
     }
 
     private var musicSubpageView: some View {
-        HStack(spacing: 12) {
-            Button {
-                media.openPlayerApp()
-            } label: {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(
-                            LinearGradient(
-                                colors: isPlayingMusic
-                                    ? [Color.pink.opacity(0.85), Color.purple.opacity(0.75)]
-                                    : [Color.white.opacity(0.12), Color.white.opacity(0.06)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 52, height: 52)
-                    Image(systemName: isPlayingMusic ? "waveform" : "music.note")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-            }
-            .buttonStyle(.plain)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(media.trackTitle.isEmpty ? "Not Playing" : media.trackTitle)
-                    .font(.system(size: 12.5, weight: .semibold))
-                    .lineLimit(1)
-                Text(media.artistName.isEmpty
-                     ? "Play in Apple Music or Spotify"
-                     : (media.albumName.isEmpty ? media.artistName : "\(media.artistName) — \(media.albumName)"))
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(muted)
-                    .lineLimit(1)
-                Text(media.playerName)
-                    .font(.system(size: 9.5, weight: .medium))
-                    .foregroundStyle(isPlayingMusic ? Color.pink : muted)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            HStack(spacing: 8) {
-                Button {
-                    media.previousTrack()
-                } label: {
-                    Image(systemName: "backward.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(width: 32, height: 32)
-                        .background(Color.white.opacity(0.08), in: Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Previous track")
-
-                Button {
-                    media.togglePlayPause()
-                } label: {
-                    Image(systemName: isPlayingMusic ? "pause.fill" : "play.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .frame(width: 38, height: 38)
-                        .background(Color.white.opacity(0.18), in: Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(isPlayingMusic ? "Pause" : "Play")
-
-                Button {
-                    media.nextTrack()
-                } label: {
-                    Image(systemName: "forward.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(width: 32, height: 32)
-                        .background(Color.white.opacity(0.08), in: Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Next track")
-            }
-        }
-        .padding(.horizontal, 6)
+        NotchMusicControlsView(media: media)
     }
 
     private var servicesSubpageView: some View {
@@ -1487,6 +1486,176 @@ struct NotchPanelView: View {
         coordinator.collapse()
     }
 }
+
+// Self-contained playback control layout avoids inflating the parent notch
+// view's SwiftUI type graph. Only metadata and transport controls are shown.
+struct NotchMusicControlsView: View {
+    @ObservedObject var media: NotchMediaController
+    @State private var isScrubbingMusic = false
+    @State private var draggedMusicPosition: Double = 0
+    private let muted = Color.white.opacity(0.62)
+
+    var body: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 11) {
+                albumArtwork
+                    .frame(width: 46, height: 46)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(media.trackTitle.isEmpty ? "Nothing playing" : media.trackTitle)
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                    Text(media.artistName.isEmpty
+                         ? "Start playback in Music or Spotify"
+                         : (media.albumName.isEmpty
+                            ? media.artistName
+                            : "\(media.artistName) · \(media.albumName)"))
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(muted)
+                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 8))
+                        Text(media.hasRunningPlayer ? media.playerName : "Apple Music · Spotify")
+                            .lineLimit(1)
+                    }
+                    .font(.system(size: 9))
+                    .foregroundStyle(.white.opacity(0.48))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                playbackButtons
+            }
+
+            TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                VStack(spacing: 3) {
+                    if let duration = media.duration, duration > 0 {
+                        Slider(
+                            value: Binding(
+                                get: {
+                                    isScrubbingMusic
+                                        ? draggedMusicPosition
+                                        : (media.position(at: context.date) ?? 0)
+                                },
+                                set: { draggedMusicPosition = $0 }
+                            ),
+                            in: 0...duration,
+                            onEditingChanged: { editing in
+                                if editing {
+                                    draggedMusicPosition = media.position(at: context.date) ?? 0
+                                    isScrubbingMusic = true
+                                } else {
+                                    isScrubbingMusic = false
+                                    media.seek(to: draggedMusicPosition)
+                                }
+                            }
+                        )
+                        .tint(.pink)
+                        .disabled(!media.hasRunningPlayer || media.commandInFlight)
+                        .accessibilityLabel("Playback position")
+                        .accessibilityValue(
+                            NotchPlaybackTimeline.clock(
+                                isScrubbingMusic ? draggedMusicPosition
+                                    : media.position(at: context.date)
+                            )
+                        )
+                    } else {
+                        Capsule()
+                            .fill(Color.white.opacity(0.12))
+                            .frame(height: 3)
+                            .accessibilityLabel("Playback progress unavailable")
+                    }
+
+                    HStack {
+                        Text(NotchPlaybackTimeline.clock(
+                            isScrubbingMusic ? draggedMusicPosition
+                                : media.position(at: context.date)))
+                        Spacer()
+                        Text(NotchPlaybackTimeline.clock(media.duration))
+                    }
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(muted)
+                }
+            }
+        }
+        .padding(.horizontal, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var albumArtwork: some View {
+        Group {
+            if let url = media.artworkURL {
+                AsyncImage(url: url) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    artworkPlaceholder
+                }
+            } else {
+                artworkPlaceholder
+            }
+        }
+        .frame(width: 46, height: 46)
+        .clipShape(RoundedRectangle(cornerRadius: 9))
+        .accessibilityLabel("Track artwork")
+    }
+
+    private var artworkPlaceholder: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 9)
+                .fill(LinearGradient(
+                    colors: [Color.pink.opacity(0.65), Color.purple.opacity(0.52)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing))
+            Image(systemName: media.isPlaying ? "waveform" : "music.note")
+                .font(.system(size: 19, weight: .medium))
+                .foregroundStyle(.white)
+        }
+    }
+
+    private var playbackButtons: some View {
+        HStack(spacing: 7) {
+            Button {
+                media.previousTrack()
+            } label: {
+                Image(systemName: "backward.end.fill")
+                    .frame(width: 27, height: 30)
+            }
+            .accessibilityLabel("Previous track")
+
+            Button {
+                media.togglePlayPause()
+            } label: {
+                Image(systemName: media.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .frame(width: 33, height: 33)
+                    .background(Color.white.opacity(0.18), in: Circle())
+            }
+            .accessibilityLabel(media.isPlaying ? "Pause" : "Play")
+
+            Button {
+                media.nextTrack()
+            } label: {
+                Image(systemName: "forward.end.fill")
+                    .frame(width: 27, height: 30)
+            }
+            .accessibilityLabel("Next track")
+        }
+        .font(.system(size: 11))
+        .buttonStyle(.plain)
+        .disabled(!media.hasRunningPlayer || media.commandInFlight)
+    }
+
+}
+
+
+
+#if DEBUG
+#Preview("Music · Not Playing") {
+    NotchMusicControlsView(media: .shared)
+        .frame(width: 490, height: 146)
+        .padding(16)
+        .background(Color.black, in: RoundedRectangle(cornerRadius: 18))
+}
+#endif
 
 #if DEBUG
 #Preview("Notch · Idle Collapsed") {
