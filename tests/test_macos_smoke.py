@@ -41,7 +41,7 @@ def test_macos_end_to_end_smoke(tmp_path, qapp, monkeypatch):
         display_id=0,
         x=200,
         y=200,
-        label="Laptop Bridge Smoke Test",
+        label="RelayOS Smoke Test",
         message="Instructional overlay",
         timeout_seconds=None,
     )
