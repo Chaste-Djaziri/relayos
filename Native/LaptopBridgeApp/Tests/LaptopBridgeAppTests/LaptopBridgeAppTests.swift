@@ -6,6 +6,17 @@ final class LaptopBridgeAppTests: XCTestCase {
         XCTAssertTrue(true)
     }
 
+    func testXcodeRunIsNotADataPreview() {
+        // SwiftUI Canvas opts into samples explicitly; Xcode Run doesn't.
+        XCTAssertFalse(RelayOSApplicationDelegate.usesSampleModel(
+            environment: ["RELAYOS_NATIVE_MCP_EXPERIMENT": "1"]))
+        XCTAssertFalse(RelayOSApplicationDelegate.usesSampleModel(environment: [:]))
+        XCTAssertTrue(RelayOSApplicationDelegate.usesSampleModel(
+            environment: ["XCODE_RUNNING_FOR_PREVIEWS": "1"]))
+        XCTAssertTrue(RelayOSApplicationDelegate.usesSampleModel(
+            environment: ["RELAYOS_XCODE_UI_PREVIEW": "1"]))
+    }
+
     @MainActor
     func testClosingSettingsDoesNotTerminatePersistentAgent() {
         let delegate = RelayOSApplicationDelegate()

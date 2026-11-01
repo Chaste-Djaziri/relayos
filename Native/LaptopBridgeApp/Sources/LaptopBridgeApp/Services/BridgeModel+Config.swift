@@ -15,6 +15,7 @@ extension BridgeModel {
     }
 
     func saveCapabilities() {
+        guard !isDevelopmentClient else { return }
         guard let data = try? Data(contentsOf: configURL),
               var json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return }
         json["capabilities"] = [
@@ -78,6 +79,10 @@ extension BridgeModel {
     }
 
     func configureNgrok() {
+        guard !isDevelopmentClient else {
+            ngrokInstallState = "Configure the production tunnel using the installed RelayOS application."
+            return
+        }
         let domain = ngrokDomainValue.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "https://", with: "")
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))

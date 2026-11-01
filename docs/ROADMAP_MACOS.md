@@ -274,3 +274,9 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [ ] Port write/edit/patch, command execution, jobs/cancel, screenshots and guidance tools.
 - [ ] Remove Python helper use from all native views and package Python-free Release bundle.
 - [ ] Run full client interoperability, codesign, migration and production handover checks.
+
+## Xcode Run versus Canvas — 2026-11-01
+- [x] Use real BridgeModel for Xcode Debug Run; keep mock BridgeModel exclusively inside SwiftUI Canvas / explicit preview environment.
+- [x] Observe existing MCP authenticated local health and configured ngrok endpoint without taking the production service lock.
+- [x] Disable process restart and ngrok setup writes in the separate Debug bundle; show prominent notice about live approvals/revocations.
+- [ ] Complete the Swift in-process OAuth and tools migration before treating the development app as a fully standalone native server.

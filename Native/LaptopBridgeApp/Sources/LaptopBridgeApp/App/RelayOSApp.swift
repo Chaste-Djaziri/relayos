@@ -6,11 +6,17 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
     // This optional developer-mode service lives INSIDE RelayOS.app.
     // It never replaces the existing production listener on :8765.
     private var nativeExperiment: NativeMCPListener?
-    // Xcode's dedicated Debug bundle identifier is safe to launch beside installed RelayOS.
-    // A UI-only development run never acquires the production process lease.
+    // Only Canvas/explicit previews use artificial data. Pressing Run in Xcode
+    // opens the real settings application with live configuration and state.
+    static func usesSampleModel(environment: [String: String]) -> Bool {
+        environment["RELAYOS_XCODE_UI_PREVIEW"] == "1"
+            || environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    }
     static var isXcodeUIPreview: Bool {
-        ProcessInfo.processInfo.environment["RELAYOS_XCODE_UI_PREVIEW"] == "1"
-            || Bundle.main.bundleIdentifier == "pro.micorp.relayos.dev"
+        usesSampleModel(environment: ProcessInfo.processInfo.environment)
+    }
+    static var isXcodeDevelopment: Bool {
+        Bundle.main.bundleIdentifier == "pro.micorp.relayos.dev"
     }
     // The settings window is not the agent's lifetime. Explicit Quit terminates
     // RelayOS; simply closing Settings leaves its approved MCP services alive.
@@ -28,6 +34,12 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
             }
         }
         guard !Self.isXcodeUIPreview else { return }
+        if Self.isXcodeDevelopment {
+            // Observe the installed agent without claiming its lock, launching
+            // Python/ngrok, or interrupting its authenticated MCP endpoint.
+            BridgeModel.shared.startDevelopmentObservation()
+            return
+        }
         guard SingleInstanceCoordinator.shared.claimOrReplaceExistingInstance() else {
             NSApplication.shared.terminate(nil)
             return
@@ -39,6 +51,10 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
         nativeExperiment?.stop()
         nativeExperiment = nil
         guard !Self.isXcodeUIPreview else { return }
+        if Self.isXcodeDevelopment {
+            BridgeModel.shared.stopDevelopmentObservation()
+            return
+        }
         BridgeModel.shared.shutdownServices()
         SingleInstanceCoordinator.shared.release()
     }

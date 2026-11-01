@@ -43,7 +43,7 @@ struct GeneralPageView: View {
 
                 SettingsCardRow(
                     title: "Local MCP",
-                    subtitle: "FastAPI server running locally on localhost"
+                    subtitle: model.isDevelopmentClient ? "Observing the installed MCP service (no server started by Xcode)" : "Local MCP service running on this Mac"
                 ) {
                     StatusBadge(
                         text: model.mcpHealth.rawValue.capitalized,
@@ -73,12 +73,13 @@ struct GeneralPageView: View {
 
                 SettingsCardRow(
                     title: "Services control",
-                    subtitle: "Restart local backend and refresh ngrok tunnel session",
+                    subtitle: model.isDevelopmentClient ? "Unavailable in Xcode: the installed app owns the backend" : "Restart local backend and refresh ngrok tunnel session",
                     showDivider: false
                 ) {
                     SettingsButton(title: "Restart services", icon: "arrow.clockwise", style: .secondary) {
                         model.restartServices()
                     }
+                    .disabled(model.isDevelopmentClient)
                 }
             }
 

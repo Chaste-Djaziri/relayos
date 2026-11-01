@@ -38,6 +38,19 @@ struct SettingsView: View {
                             .tracking(-0.7)
                             .foregroundStyle(theme.textPrimary)
 
+                        if model.isDevelopmentClient {
+                            HStack(alignment: .top, spacing: 9) {
+                                Image(systemName: "hammer.fill")
+                                Text("Xcode development · Live settings and approvals. This app observes the installed MCP service without restarting it. Approval and revocation actions can affect live permissions.")
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .font(.system(size: 11.5 * scale))
+                            .foregroundStyle(theme.textSecondary)
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.orange.opacity(0.09), in: RoundedRectangle(cornerRadius: 10))
+                        }
+
                         tabDetailView(selected)
                             .allowsHitTesting(!model.isPreview || selected == .appearance)
                     }

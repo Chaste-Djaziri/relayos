@@ -7,6 +7,11 @@ final class BridgeModel: ObservableObject {
     static let shared = BridgeModel()
     // Canvas/UI-only models never load the user's configuration or run helpers.
     let isPreview: Bool
+    // Xcode Run uses the actual app model, not mock data, but never owns the
+    // production server's process lease.
+    var isDevelopmentClient: Bool {
+        !isPreview && Bundle.main.bundleIdentifier == "pro.micorp.relayos.dev"
+    }
 
     // MARK: - Published Properties
     @Published var running = false
@@ -57,6 +62,8 @@ final class BridgeModel: ObservableObject {
     var shouldMaintainServices = false
     var preserveTunnelOnTermination = false
     var approvalTimer: DispatchSourceTimer?
+    var developmentTimer: DispatchSourceTimer?
+    private var developmentProbeInFlight = false
     var inboxPollInFlight = false
     let arrivalTracker = ApprovalArrivalTracker()
     var commandJobStdoutOffset = 0
@@ -72,6 +79,9 @@ final class BridgeModel: ObservableObject {
         configURL = home.appendingPathComponent(".laptop-bridge/config.json")
         if preview { return }
         loadConfig()
+        // Development instances observe the installed agent. Termination must
+        // never invoke production service shutdown from the debug process.
+        if isDevelopmentClient { return }
         terminationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification,
             object: nil,
@@ -84,6 +94,55 @@ final class BridgeModel: ObservableObject {
     deinit {
         if let terminationObserver {
             NotificationCenter.default.removeObserver(terminationObserver)
+        }
+    }
+
+    // MARK: - Xcode development runtime (observe-only service supervision)
+    func startDevelopmentObservation() {
+        guard isDevelopmentClient, developmentTimer == nil else { return }
+        serviceNotice = "Xcode development build: viewing the installed RelayOS service. Service ownership and restart are disabled."
+        refreshApprovalInbox()
+        refreshApprovalActivity()
+        refreshConnectedClients()
+        refreshPermissionGrants()
+        refreshEmergencyStop()
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
+        timer.schedule(deadline: .now(), repeating: .seconds(5))
+        timer.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.refreshDevelopmentHealth()
+            }
+        }
+        timer.resume()
+        developmentTimer = timer
+    }
+
+    func stopDevelopmentObservation() {
+        developmentTimer?.cancel()
+        developmentTimer = nil
+    }
+
+    private func refreshDevelopmentHealth() {
+        guard isDevelopmentClient, !developmentProbeInFlight else { return }
+        developmentProbeInFlight = true
+        let endpointSnapshot = endpoint
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let local = await MCPHealthMonitor().probe()
+            let remote = endpointSnapshot.hasPrefix("https://")
+                ? await self.tunnelMonitor.probe(configuredEndpoint: URL(string: endpointSnapshot))
+                : nil
+            guard self.isDevelopmentClient else {
+                self.developmentProbeInFlight = false
+                return
+            }
+            self.mcpHealth = local
+            self.running = local == .healthy
+            self.tunnelHealth = remote?.status ?? .stopped
+            // Monitoring an existing service doesn't confer process ownership.
+            self.tunnelRunning = false
+            self.developmentProbeInFlight = false
+            self.refreshApprovalInbox()
         }
     }
 

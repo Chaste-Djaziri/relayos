@@ -24,6 +24,7 @@ struct ToolsPageView: View {
                     SettingsButton(title: "Save tool settings", style: .secondary) {
                         model.saveCapabilities()
                     }
+                    .disabled(model.isDevelopmentClient)
                 }
             }
 

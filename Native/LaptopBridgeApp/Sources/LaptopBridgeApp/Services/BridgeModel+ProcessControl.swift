@@ -78,6 +78,7 @@ extension BridgeModel {
     }
 
     func startServices() {
+        guard !isDevelopmentClient else { return }
         guard SingleInstanceCoordinator.shared.ownsLock else { return }
         shouldMaintainServices = true
         if approvalTimer == nil {
@@ -138,6 +139,7 @@ extension BridgeModel {
     }
 
     func restartServices() {
+        guard !isDevelopmentClient else { return }
         let ownsServer = server != nil
         stopOwnedProcess(tunnel)
         stopOwnedProcess(server)
@@ -158,6 +160,7 @@ extension BridgeModel {
     }
 
     func restartPythonServer() {
+        guard !isDevelopmentClient else { return }
         let owned = server != nil
         stopOwnedProcess(server)
         server = nil
@@ -168,6 +171,7 @@ extension BridgeModel {
     }
 
     func startTunnelIfConfigured() {
+        guard !isDevelopmentClient else { return }
         guard SingleInstanceCoordinator.shared.ownsLock, mcpHealth == .healthy,
               supervisor.mayLaunchTunnel() else { return }
         guard tunnel == nil, let token = TokenStore.read() else { return }
@@ -219,6 +223,7 @@ extension BridgeModel {
     }
 
     func adoptNgrokEndpoint(_ origin: String) {
+        guard !isDevelopmentClient else { return }
         let clean = origin.trimmingCharacters(in: CharacterSet(charactersIn: "\r\n"))
         guard clean.hasPrefix("https://") else { return }
         endpoint = clean + "/mcp"

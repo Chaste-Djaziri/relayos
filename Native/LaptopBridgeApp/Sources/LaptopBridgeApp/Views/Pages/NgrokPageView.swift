@@ -56,6 +56,7 @@ struct NgrokPageView: View {
                     SettingsButton(title: "Reconnect", icon: "arrow.clockwise", style: .secondary) {
                         model.restartServices()
                     }
+                    .disabled(model.isDevelopmentClient)
                 }
             }
         }

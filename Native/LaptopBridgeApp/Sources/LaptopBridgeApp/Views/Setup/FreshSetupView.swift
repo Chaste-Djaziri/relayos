@@ -101,7 +101,7 @@ struct FreshSetupView: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(model.isPreview || tokenInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(model.isPreview || model.isDevelopmentClient || tokenInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             .padding(.horizontal, 32)
@@ -158,8 +158,8 @@ struct FreshSetupView: View {
                     }
                 }
                 HStack(spacing: 12) {
-                    Button("Install ngrok via Homebrew") { if !model.isPreview { model.installNgrok() } }
-                        .disabled(model.isPreview)
+                    Button("Install ngrok via Homebrew") { if !model.isPreview && !model.isDevelopmentClient { model.installNgrok() } }
+                        .disabled(model.isPreview || model.isDevelopmentClient)
                     if !model.ngrokInstallState.isEmpty {
                         Text(model.ngrokInstallState).font(.caption).foregroundStyle(theme.textSecondary)
                     }
