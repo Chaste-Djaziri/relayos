@@ -21,7 +21,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='Laptop Bridge',
+    name='RelayOS',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -40,11 +40,11 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='Laptop Bridge',
+    name='RelayOS',
 )
 app = BUNDLE(
     coll,
-    name='Laptop Bridge.app',
+    name='RelayOS.app',
     icon=None,
-    bundle_identifier='rw.shangazi.laptop-bridge',
+    bundle_identifier='rw.shangazi.relayos',
 )
