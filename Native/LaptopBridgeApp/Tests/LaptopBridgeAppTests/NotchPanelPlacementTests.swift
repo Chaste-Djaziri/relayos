@@ -339,4 +339,63 @@ final class NotchPanelPlacementTests: XCTestCase {
         ))
     }
 
+
+    func testRelayOSCursorTriangleHasThreeExactlyEqualSides() {
+        for rect in [
+            CGRect(x: 0, y: 0, width: 24, height: 27),
+            CGRect(x: 8, y: 4, width: 120, height: 28),
+            CGRect(x: 0, y: 0, width: 20, height: 80)
+        ] {
+            let p = RelayOSCursorTriangle.vertices(in: rect)
+            XCTAssertEqual(p.count, 3)
+            let lengths = (0..<3).map { index in
+                hypot(p[index].x - p[(index + 1) % 3].x,
+                      p[index].y - p[(index + 1) % 3].y)
+            }
+            XCTAssertEqual(lengths[0], lengths[1], accuracy: 0.0001)
+            XCTAssertEqual(lengths[1], lengths[2], accuracy: 0.0001)
+            XCTAssertEqual(p[0].x, rect.midX, accuracy: 0.0001)
+            XCTAssertLessThan(p[0].y, p[1].y)
+            XCTAssertEqual(p[1].y, p[2].y, accuracy: 0.0001)
+        }
+    }
+
+    func testCursorFollowAcceleratesGentlyThenEasesToRest() {
+        let screen = CGRect(x: 0, y: 0, width: 1200, height: 800)
+        var motion = RelayOSCursorMotion()
+        let initial = CGRect(x: 100, y: 200, width: 24, height: 27)
+        XCTAssertEqual(motion.advance(to: initial, screen: screen, at: 0), initial)
+
+        let target = CGRect(x: 300, y: 200, width: 24, height: 27)
+        let first = motion.advance(to: target, screen: screen, at: 1.0 / 60)
+        let second = motion.advance(to: target, screen: screen, at: 2.0 / 60)
+        XCTAssertGreaterThan(first.minX, initial.minX)
+        XCTAssertLessThan(first.minX, target.minX)
+        // Unlike a direct jump or constant-speed interpolation, initial speed
+        // ramps up from rest before decelerating toward the target.
+        XCTAssertGreaterThan(second.minX - first.minX, first.minX - initial.minX)
+        let earlyVelocity = motion.velocity.dx
+        for tick in 3...60 {
+            _ = motion.advance(to: target, screen: screen, at: Double(tick) / 60)
+        }
+        XCTAssertEqual(motion.position?.x ?? 0, target.minX, accuracy: 0.15)
+        XCTAssertEqual(motion.velocity.dx, 0, accuracy: 0.8)
+        XCTAssertGreaterThan(earlyVelocity, 0)
+    }
+
+    func testCursorFollowSnapsOnlyOnFirstFrameDisplayChangeOrLongPause() {
+        let left = CGRect(x: -1200, y: 0, width: 1200, height: 800)
+        let right = CGRect(x: 0, y: 0, width: 1200, height: 800)
+        var motion = RelayOSCursorMotion()
+        let one = CGRect(x: 300, y: 400, width: 24, height: 27)
+        let two = CGRect(x: 600, y: 400, width: 24, height: 27)
+        XCTAssertEqual(motion.advance(to: one, screen: right, at: 0), one)
+        XCTAssertNotEqual(motion.advance(to: two, screen: right, at: 0.0167), two)
+        let other = CGRect(x: -400, y: 300, width: 24, height: 27)
+        XCTAssertEqual(motion.advance(to: other, screen: left, at: 0.0333), other)
+        XCTAssertEqual(motion.advance(to: one, screen: left, at: 2), one)
+        motion.reset()
+        XCTAssertNil(motion.position)
+    }
+
 }

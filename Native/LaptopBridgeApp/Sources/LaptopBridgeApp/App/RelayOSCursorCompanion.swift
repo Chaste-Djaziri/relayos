@@ -33,29 +33,109 @@ enum RelayOSCursorPlacement {
     }
 }
 
-/// A simple triangular RelayOS marker pointing toward the real cursor's
-/// position, not a replacement for macOS's pointer.
+/// Equal-length sides, centered in the cursor's click-through panel.
+/// The frame may be taller than the triangle, but the actual path is always
+/// equilateral, regardless of the available preview/window dimensions.
 struct RelayOSCursorTriangle: Shape {
+    static let heightFactor: CGFloat = sqrt(3) / 2
+
+    static func vertices(in rect: CGRect) -> [CGPoint] {
+        let side = min(rect.width, rect.height / heightFactor)
+        let height = side * heightFactor
+        let left = rect.midX - side / 2
+        let top = rect.midY - height / 2
+        let bottom = rect.midY + height / 2
+        return [
+            CGPoint(x: rect.midX, y: top),
+            CGPoint(x: left + side, y: bottom),
+            CGPoint(x: left, y: bottom)
+        ]
+    }
+
     func path(in rect: CGRect) -> Path {
+        let points = Self.vertices(in: rect)
         var path = Path()
-        path.move(to: CGPoint(x: rect.width * 0.10, y: rect.height * 0.07))
-        path.addLine(to: CGPoint(x: rect.width * 0.88, y: rect.height * 0.54))
-        path.addLine(to: CGPoint(x: rect.width * 0.38, y: rect.height * 0.91))
+        path.move(to: points[0])
+        path.addLine(to: points[1])
+        path.addLine(to: points[2])
         path.closeSubpath()
         return path
     }
 }
 
 struct RelayOSCursorMarkerView: View {
+    @AppStorage(RelayOSTheme.accentKey) private var accent = "blue"
+
     var body: some View {
         RelayOSCursorTriangle()
-            .fill(Color(red: 0.43, green: 0.89, blue: 1.00))
-            .overlay {
-                RelayOSCursorTriangle()
-                    .stroke(Color.black.opacity(0.96), style: StrokeStyle(lineWidth: 2.1, lineJoin: .round))
-            }
-            .shadow(color: .black.opacity(0.38), radius: 2, x: 1, y: 1)
+            .fill(RelayOSTheme.accent(accent))
             .accessibilityHidden(true)
+    }
+}
+
+/// Critically damped follow motion. It accelerates gently from rest and
+/// decelerates naturally after the real mouse stops, without a trailing
+/// Core Animation transaction that could interfere with future frames.
+struct RelayOSCursorMotion {
+    private(set) var position: CGPoint?
+    private(set) var velocity = CGVector.zero
+    private var lastTick: TimeInterval?
+    private var lastScreen: CGRect?
+
+    private static let angularFrequency: CGFloat = 29
+
+    mutating func reset() {
+        position = nil
+        velocity = .zero
+        lastTick = nil
+        lastScreen = nil
+    }
+
+    mutating func advance(to target: CGRect, screen: CGRect, at time: TimeInterval) -> CGRect {
+        guard time.isFinite else {
+            reset()
+            return target
+        }
+        guard let current = position, let previous = lastTick,
+              lastScreen == screen, time > previous, time - previous <= 0.35
+        else {
+            position = target.origin
+            velocity = .zero
+            lastTick = time
+            lastScreen = screen
+            return target
+        }
+
+        let dt = CGFloat(time - previous)
+        let omega = Self.angularFrequency
+        let decay = exp(-omega * dt)
+
+        // Analytical solution for a critically damped spring, one axis at a
+        // time; independent of timer variability or the pointer's frame rate.
+        func easedAxis(_ p: CGFloat, _ v: CGFloat, _ goal: CGFloat) -> (CGFloat, CGFloat) {
+            let displacement = p - goal
+            let transient = (v + omega * displacement) * dt
+            let next = goal + (displacement + transient) * decay
+            let nextVelocity = (v - omega * transient) * decay
+            if abs(next - goal) < 0.08 && abs(nextVelocity) < 0.8 {
+                return (goal, 0)
+            }
+            return (next, nextVelocity)
+        }
+
+        let (x, vx) = easedAxis(current.x, velocity.dx, target.origin.x)
+        let (y, vy) = easedAxis(current.y, velocity.dy, target.origin.y)
+        let minimumX = screen.minX + RelayOSCursorPlacement.edgeInset
+        let maximumX = max(minimumX, screen.maxX - target.width - RelayOSCursorPlacement.edgeInset)
+        let minimumY = screen.minY + RelayOSCursorPlacement.edgeInset
+        let maximumY = max(minimumY, screen.maxY - target.height - RelayOSCursorPlacement.edgeInset)
+        let bounded = CGPoint(x: min(max(x, minimumX), maximumX),
+                              y: min(max(y, minimumY), maximumY))
+        position = bounded
+        velocity = CGVector(dx: bounded.x == x ? vx : 0,
+                            dy: bounded.y == y ? vy : 0)
+        lastTick = time
+        return CGRect(origin: bounded, size: target.size)
     }
 }
 
@@ -74,6 +154,7 @@ final class RelayOSCursorCompanion {
     private var window: RelayOSCursorWindow?
     private var timer: Timer?
     private var lastFrame: CGRect?
+    private var motion = RelayOSCursorMotion()
 
     private init() {}
 
@@ -112,18 +193,24 @@ final class RelayOSCursorCompanion {
         window?.close()
         window = nil
         lastFrame = nil
+        motion.reset()
     }
 
     private func updatePosition() {
         guard let window else { return }
-        let frames = NSScreen.screens.map(\.frame)
-        guard let frame = RelayOSCursorPlacement.frame(
-            for: NSEvent.mouseLocation, on: frames
-        ) else {
+        let pointer = NSEvent.mouseLocation
+        let screens = NSScreen.screens.map(\.frame)
+        guard let screen = screens.first(where: { $0.contains(pointer) }),
+              let target = RelayOSCursorPlacement.frame(for: pointer, on: screens)
+        else {
             window.orderOut(nil)
             lastFrame = nil
+            motion.reset()
             return
         }
+        let frame = motion.advance(
+            to: target, screen: screen, at: ProcessInfo.processInfo.systemUptime
+        )
         if frame != lastFrame {
             window.setFrame(frame, display: true)
             lastFrame = frame
