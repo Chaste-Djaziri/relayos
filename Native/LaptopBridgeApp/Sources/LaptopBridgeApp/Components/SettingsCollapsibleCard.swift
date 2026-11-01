@@ -7,6 +7,10 @@ struct SettingsCollapsibleCard<Content: View>: View {
     @State private var isHovered: Bool = false
     let content: Content
 
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(RelayOSTheme.fontSizeKey) private var userFontSize = 14.0
+    @AppStorage(RelayOSTheme.reduceMotionKey) private var reduceMotion = false
+
     init(
         title: String,
         subtitle: String? = nil,
@@ -19,35 +23,51 @@ struct SettingsCollapsibleCard<Content: View>: View {
         self.content = content()
     }
 
+    private var theme: ThemeColors {
+        RelayOSTheme.colors(colorScheme)
+    }
+
+    private var scale: CGFloat {
+        RelayOSTheme.scale(userFontSize)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.82)) {
+                if reduceMotion {
                     isExpanded.toggle()
+                } else {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.82)) {
+                        isExpanded.toggle()
+                    }
                 }
             } label: {
                 HStack(alignment: .center, spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.white)
+                            .font(.system(size: 13 * scale, weight: .semibold))
+                            .foregroundStyle(theme.textPrimary)
                         if let subtitle = subtitle, !subtitle.isEmpty {
                             Text(subtitle)
-                                .font(.system(size: 11.5))
-                                .foregroundStyle(Color(white: 0.55))
+                                .font(.system(size: 11.5 * scale))
+                                .foregroundStyle(theme.textSecondary)
                         }
                     }
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color(white: 0.6))
+                        .font(.system(size: 11 * scale, weight: .semibold))
+                        .foregroundStyle(theme.textSecondary)
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
-                .background(isHovered ? Color(white: 0.17) : Color(red: 0.14, green: 0.14, blue: 0.15))
+                .background(
+                    isHovered
+                        ? (colorScheme == .dark ? Color(white: 0.17) : Color(white: 0.94))
+                        : theme.cardBackground
+                )
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -55,20 +75,24 @@ struct SettingsCollapsibleCard<Content: View>: View {
 
             if isExpanded {
                 Rectangle()
-                    .fill(Color(white: 0.18))
+                    .fill(theme.cardDivider)
                     .frame(height: 1)
 
                 VStack(spacing: 0) {
                     content
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .transition(reduceMotion ? .identity : .opacity.combined(with: .move(edge: .top)))
             }
         }
-        .background(Color(red: 0.14, green: 0.14, blue: 0.15))
+        .background(theme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 11))
         .overlay(
             RoundedRectangle(cornerRadius: 11)
-                .stroke(Color(white: 0.19), lineWidth: 1)
+                .stroke(theme.cardBorder, lineWidth: 1)
+        )
+        .shadow(
+            color: colorScheme == .light ? Color.black.opacity(0.035) : Color.clear,
+            radius: 3, x: 0, y: 1
         )
     }
 }

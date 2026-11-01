@@ -6,6 +6,9 @@ struct SettingsCardRow<Trailing: View>: View {
     let showDivider: Bool
     let trailing: Trailing
 
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(RelayOSTheme.fontSizeKey) private var userFontSize = 14.0
+
     init(
         title: String,
         subtitle: String? = nil,
@@ -18,17 +21,25 @@ struct SettingsCardRow<Trailing: View>: View {
         self.trailing = trailing()
     }
 
+    private var theme: ThemeColors {
+        RelayOSTheme.colors(colorScheme)
+    }
+
+    private var scale: CGFloat {
+        RelayOSTheme.scale(userFontSize)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 13 * scale, weight: .medium))
+                        .foregroundStyle(theme.textPrimary)
                     if let subtitle = subtitle, !subtitle.isEmpty {
                         Text(subtitle)
-                            .font(.system(size: 11.5))
-                            .foregroundStyle(Color(white: 0.55))
+                            .font(.system(size: 11.5 * scale))
+                            .foregroundStyle(theme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -40,7 +51,7 @@ struct SettingsCardRow<Trailing: View>: View {
 
             if showDivider {
                 Rectangle()
-                    .fill(Color(white: 0.18))
+                    .fill(theme.cardDivider)
                     .frame(height: 1)
                     .padding(.leading, 16)
             }
