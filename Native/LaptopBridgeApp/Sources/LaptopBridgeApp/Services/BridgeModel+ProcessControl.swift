@@ -277,14 +277,17 @@ extension BridgeModel {
                   SingleInstanceCoordinator.shared.ownsLock,
                   self.tunnel === observedTunnel
             else { return }
-            // An unavailable inspector does not prove the public route stopped.
-            // Only a missing configured route and no owned child justify launch.
-            // A previous public URL can still be configured after this app's
-            // child tunnel exited. Do not let a 404/timeout from that stale
-            // route suppress launch of a new owned tunnel; without an owned
-            // child there is nothing safe to adopt or monitor.
-            let effectiveStatus: TunnelHealthStatus = self.tunnel == nil
-                ? .stopped : result.status
+            // A verified 401 proves that the configured public route reaches
+            // RelayOS authentication. This is a health fact, not an ownership
+            // claim: an app relaunch can lose the local Process reference
+            // while its ngrok child remains alive. Never label that verified
+            // public MCP route "Stopped" in the UI.
+            //
+            // A failed probe without an owned child still remains stopped, so
+            // recovery can launch a new tunnel rather than adopt an arbitrary
+            // process from ngrok's local inspector.
+            let effectiveStatus: TunnelHealthStatus = result.status == .healthy
+                ? .healthy : (self.tunnel == nil ? .stopped : result.status)
             guard self.supervisor.finishTunnelProbe(effectiveStatus, generation: generation) else { return }
             self.tunnelHealth = effectiveStatus
             // A reachable remote route is not proof we own the ngrok process.
