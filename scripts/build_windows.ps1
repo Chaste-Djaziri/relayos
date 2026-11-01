@@ -11,12 +11,12 @@ $Build = Join-Path $Root "build\\windows"
 
 & $Python -m pip install -e ".[dev]"
 & $Python -m PyInstaller --noconfirm --clean --windowed --onedir `
-    --name "Laptop Bridge" --distpath $Dist --workpath $Build --specpath $Build `
+    --name "RelayOS" --distpath $Dist --workpath $Build --specpath $Build `
     --paths src --collect-submodules pynput `
     --hidden-import mcp.server --hidden-import mcp.server.auth --hidden-import mcp.server.transport_security `
     packaging/desktop_entry.py
 
-$Executable = Join-Path $Dist "Laptop Bridge\\Laptop Bridge.exe"
+$Executable = Join-Path $Dist "RelayOS\\RelayOS.exe"
 if (-not (Test-Path $Executable)) { throw "PyInstaller did not create $Executable" }
 
 if ($env:LAPTOP_BRIDGE_SIGNING_CERTIFICATE) {
@@ -29,6 +29,6 @@ if ($env:LAPTOP_BRIDGE_SIGNING_CERTIFICATE) {
 
 $Iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue
 if (-not $Iscc) { throw "Inno Setup 6 (ISCC.exe) is required to create the installer" }
-& $Iscc.Source "packaging\\windows-installer.iss" "/DSourceDir=$Dist\\Laptop Bridge" "/DAppVersion=$Version"
+& $Iscc.Source "packaging\\windows-installer.iss" "/DSourceDir=$Dist\\RelayOS" "/DAppVersion=$Version"
 
 Write-Host "Built installer in dist\\installer"
