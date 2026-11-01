@@ -2,6 +2,7 @@
 """Optional command-line fallback for reviewing SQLite-backed approvals."""
 import argparse
 import json
+import sys
 
 from . import state
 
@@ -45,7 +46,10 @@ def main():
     approve.add_argument("request_id")
     deny_parser = sub.add_parser("deny")
     deny_parser.add_argument("request_id")
-    args = parser.parse_args()
+    argv = list(sys.argv[1:])
+    if len(argv) >= 2 and argv[1].startswith("-") and argv[1] not in ("-h", "--help", "--limit", "--search"):
+        argv.insert(1, "--")
+    args = parser.parse_args(argv)
     if args.command == "list":
         for item in pending_requests():
             print(f"{item['request_id']}: {item['kind']} {item['target']} {item['argv']}")
