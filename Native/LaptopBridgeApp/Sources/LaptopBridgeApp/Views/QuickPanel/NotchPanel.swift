@@ -685,7 +685,7 @@ final class NotchPanelCoordinator: ObservableObject {
         guard panel != nil else { return }
         phase = next
         if haptic {
-            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+            NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
         }
         reposition(animated: true)
     }
@@ -699,7 +699,15 @@ final class NotchPanelCoordinator: ObservableObject {
             hasLiveActivity: hasLiveActivity
         )
         panel.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
-        panel.setFrame(layout.frame, display: true, animate: animated)
+        if animated {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.22
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                panel.animator().setFrame(layout.frame, display: true)
+            }
+        } else {
+            panel.setFrame(layout.frame, display: true)
+        }
     }
 
     func dismiss() {
@@ -786,7 +794,7 @@ struct NotchPanelView: View {
             }
         }
         .padding(.horizontal, layout.topCornerRadius)
-        .frame(width: layout.frame.width, height: layout.frame.height)
+        .frame(width: layout.frame.width, height: layout.frame.height, alignment: .top)
         .background(Color.black, in: shape)
         .clipShape(shape)
         .overlay {
