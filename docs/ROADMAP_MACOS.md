@@ -358,3 +358,12 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Translate previously persisted Activity/Music/System selections to current tabs safely.
 - [x] Add navigation, geometry and state-restoration tests; verify Swift tests and Xcode Debug build.
 - [ ] Verify tab labels, selection, hover and VoiceOver against a real signed MacBook notch before deployment.
+
+## Cursor companion foundation — 2026-11-01
+- [x] Create one minimalist RelayOS triangle cursor marker offset to the real mouse's bottom-right.
+- [x] Follow mouse location with a native, click-through transparent panel while RelayOS is running (including when Settings is closed).
+- [x] Support negative-display coordinates, edge clamping, all Spaces and full-screen auxiliary contexts.
+- [x] Start after native app ownership is established and stop on app termination; Xcode Debug client remains isolated from production services.
+- [x] Add four geometry tests, in-file SwiftUI preview, full Swift test suite and Xcode Debug build checks.
+- [ ] Manually confirm cursor visuals, pointer alignment and Spaces/monitor transitions on the actual Mac before any signed installation.
+- [ ] Computer control, app management and interactive mouse-guidance overlays are separate future milestones; none are enabled by this visual marker.
