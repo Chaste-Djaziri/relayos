@@ -13,12 +13,18 @@ settings:
     MACOSX_DEPLOYMENT_TARGET: "14.0"
     CODE_SIGN_STYLE: Automatic
     ENABLE_HARDENED_RUNTIME: YES
+packages:
+  MCP:
+    url: https://github.com/modelcontextprotocol/swift-sdk.git
+    exactVersion: 0.12.1
 targets:
   RelayOS:
     type: application
     platform: macOS
     sources:
       - path: Sources/LaptopBridgeApp
+    dependencies:
+      - package: MCP
     info:
       path: Xcode/RelayOS-Info.plist
       properties:
