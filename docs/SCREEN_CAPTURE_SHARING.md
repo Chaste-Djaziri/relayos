@@ -80,6 +80,27 @@ tools from its published tool list.
 - `tests/test_screenshot_links.py` — URL issuance, expiry, one-time capture
   integration, HTTP no-store response and Emergency Stop regression tests.
 
+## Point-at-item cursor guidance (source implementation)
+
+After an approved **display screenshot** lets ChatGPT identify a target,
+`point_screen_target(x, y, display="main", hold_seconds=20)` moves the
+existing equilateral RelayOS virtual cursor toward the normalized target
+(0..1, origin **top-left** of the *full display screenshot*) and smoothly
+rotates its tip toward the item. It stops approximately 46 macOS screen
+points away from the item, then stays there. Once the real mouse enters a
+64-point radius around the target **from outside**, the guide returns to
+following the mouse. It also returns after timeout (1–60 seconds, default 20)
+or `clear_screen_pointer`, and immediately on Emergency Stop. When the
+mouse already starts near the target, it must leave and re-enter the radius
+to dismiss guidance.
+
+The native app polls an authenticated loopback-only
+`GET /control/cursor-guidance`, then acknowledges arrival with
+`POST /control/cursor-guidance/arrived` bound to a target ID. The public
+MCP tool can only set a temporary visual target; it **never moves or clicks
+the real macOS pointer**, injects input or triggers a new capture. This
+feature remains source-only until the Swift app is rebuilt and deployed.
+
 ## Remaining manual QA
 
 - Test the signed release app with the selected app, window and both internal

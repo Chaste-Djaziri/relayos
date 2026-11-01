@@ -8,6 +8,16 @@ Scope: /Users/chastedjaziri/Documents/GitHub/laptop-bridge
 - [x] Run Python regression suite (137 passed, 19 subtests; one pre-existing Pydantic warning), confirm HTTP route registration/metadata contract, and pass git diff --check.
 - [ ] Deploy the signed bundle with a rollback backup, then verify a real consented full-screen JPEG is retrievable and inspectable from ChatGPT over the public tunnel.
 
+## Native visual guidance cursor — current development branch
+- [x] Add visual-only `point_screen_target` MCP tool for user-requested item location on a recently approved **full-display** screenshot, with normalized top-left x/y coordinates.
+- [x] Animate existing theme-accent equilateral triangle to a fixed nearby target and rotate its apex to point toward the item from any direction.
+- [x] Keep marker fixed until pointer approaches target (64 pt proximity) or temporary hold expires (default 20 s, max 60 s); avoid instant dismissal when pointer starts inside proximity.
+- [x] Keep OS cursor untouched and overlay click-through; use local control-token-protected polling and arrival acknowledgments that are bound to the active target ID. Support Emergency Stop and explicit clear.
+- [x] Python tests: 144 passed, 37 subtests; git diff --check passed.
+- [ ] Run native Swift suite/build (the attempted Swift test invocation was blocked before execution).
+- [ ] Signed installation and live visual acceptance on the actual Mac; do not claim runtime availability before redeployment.
+- [ ] Confirm multiple displays and displays with negative origins in live guidance.
+
 ## Product direction
 RelayOS is a persistent, locally controlled macOS agent exposing approved tools to ChatGPT and other authorized MCP clients. SwiftUI/AppKit powers the menu bar, dashboard and optional notch companion. The existing Python MCP/OAuth runtime stays in place until Swift parity is proven. Windows development is frozen; do not delete its code without a separate migration decision.
 

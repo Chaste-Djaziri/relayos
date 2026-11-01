@@ -16,7 +16,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from . import keychain, state
-from . import ngrok, command_jobs
+from . import ngrok, command_jobs, cursor_guidance
 from .config import CONFIG_FILE, STATE_DIR, load_config, save_config
 
 TOKEN_FILE = STATE_DIR / "control.token"
@@ -117,6 +117,16 @@ async def handle(request: Request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     path = request.url.path
     method = request.method
+    if method == "POST" and path == "/control/cursor-guidance/arrived":
+        body = await json_body(request)
+        try:
+            return JSONResponse(cursor_guidance.complete_target(body.get("id")))
+        except ValueError:
+            return JSONResponse({"error": "Invalid target id"}, status_code=400)
+    if method == "GET" and path == "/control/cursor-guidance":
+        # Uses the native control-token gate above; the tunnel cannot grant
+        # cursor actions by fetching this route anonymously.
+        return JSONResponse(cursor_guidance.current_target())
     if method == "GET" and path == "/control/status":
         return JSONResponse(status())
     if method == "GET" and path == "/control/connections":
@@ -181,6 +191,8 @@ async def handle(request: Request):
     if method == "POST" and path == "/control/emergency-stop":
         payload = await json_body(request)
         state.set_emergency_stop(bool(payload.get("enabled", True)))
+        if state.emergency_stop():
+            cursor_guidance.clear()
         return JSONResponse({"emergency_stop": state.emergency_stop()})
     if method == "POST" and path == "/control/setup/capabilities":
         payload = await json_body(request)

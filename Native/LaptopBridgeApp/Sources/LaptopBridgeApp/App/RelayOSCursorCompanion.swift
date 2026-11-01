@@ -1,13 +1,58 @@
 // Path: Native/LaptopBridgeApp/Sources/LaptopBridgeApp/App/RelayOSCursorCompanion.swift
 import AppKit
+import CoreGraphics
 import SwiftUI
 
 /// Pure placement logic for the passive cursor companion. NSScreen and
 /// NSEvent.mouseLocation use the same global bottom-left coordinate space.
 enum RelayOSCursorPlacement {
-    static let size = CGSize(width: 24, height: 27)
+    // Expanded transparent window gives the 24pt triangle room to rotate 360°
+    // without clipping when its tip points left, right or diagonally.
+    static let size = CGSize(width: 38, height: 38)
     static let offset = CGPoint(x: 16, y: -16)
     static let edgeInset: CGFloat = 2
+    // The real mouse entering this radius around the pointed-at item ends
+    // visual guidance. Kept independent from the marker's 46pt standoff.
+    static let arrivalRadius: CGFloat = 64
+
+    static func arrived(pointer: CGPoint, at target: CGPoint) -> Bool {
+        hypot(pointer.x - target.x, pointer.y - target.y) <= arrivalRadius
+    }
+
+    static func point(in screen: CGRect, x: Double, y: Double) -> CGPoint? {
+        guard x.isFinite, y.isFinite, (0...1).contains(x), (0...1).contains(y) else { return nil }
+        // Captures are top-left-origin; NSScreen's global coordinates are
+        // bottom-left-origin, including displays with negative origins.
+        return CGPoint(x: screen.minX + CGFloat(x) * screen.width,
+                       y: screen.maxY - CGFloat(y) * screen.height)
+    }
+
+    static func framePointing(at target: CGPoint, from current: CGPoint, on screen: CGRect) -> CGRect {
+        let dx = target.x - current.x
+        let dy = target.y - current.y
+        let distance = hypot(dx, dy)
+        let ux: CGFloat = distance > 0.01 ? dx / distance : 0
+        let uy: CGFloat = distance > 0.01 ? dy / distance : 1
+        // Stop short of the control: keep its text and hit target unobscured.
+        let standoff: CGFloat = 46
+        let x = target.x - ux * standoff - size.width / 2
+        let y = target.y - uy * standoff - size.height / 2
+        let minX = screen.minX + edgeInset
+        let minY = screen.minY + edgeInset
+        return CGRect(
+            x: min(max(x, minX), max(minX, screen.maxX - size.width - edgeInset)),
+            y: min(max(y, minY), max(minY, screen.maxY - size.height - edgeInset)),
+            width: size.width, height: size.height
+        )
+    }
+
+    static func rotationToward(target: CGPoint, from center: CGPoint) -> Double {
+        let dx = target.x - center.x, dy = target.y - center.y
+        guard hypot(dx, dy) > 0.01 else { return 0 }
+        // Upward triangle is zero rotation. SwiftUI positive rotation is
+        // clockwise; global display Y is upward.
+        return atan2(Double(dx), Double(dy))
+    }
 
     static func frame(for pointer: CGPoint, on screens: [CGRect]) -> CGRect? {
         // The cursor must be on a display: never put an overlay on an
@@ -63,13 +108,93 @@ struct RelayOSCursorTriangle: Shape {
     }
 }
 
+@MainActor
+final class RelayOSCursorPresentation: ObservableObject {
+    @Published var angle: Double = 0
+}
+
 struct RelayOSCursorMarkerView: View {
     @AppStorage(RelayOSTheme.accentKey) private var accent = "blue"
+    @ObservedObject var presentation: RelayOSCursorPresentation
 
     var body: some View {
         RelayOSCursorTriangle()
             .fill(RelayOSTheme.accent(accent))
+            .frame(width: 24, height: 27)
+            .rotationEffect(.radians(presentation.angle))
+            .frame(width: RelayOSCursorPlacement.size.width,
+                   height: RelayOSCursorPlacement.size.height)
             .accessibilityHidden(true)
+    }
+}
+
+/// Smooth shortest-arc rotation, avoiding a 360° spin when crossing ±π.
+struct RelayOSCursorOrientation {
+    private(set) var angle: Double = 0
+    private var lastTime: TimeInterval?
+
+    mutating func reset() {
+        angle = 0
+        lastTime = nil
+    }
+
+    mutating func advance(toward target: Double, at time: TimeInterval) -> Double {
+        guard target.isFinite, time.isFinite else { return angle }
+        let dt = min(0.1, max(0, time - (lastTime ?? time)))
+        lastTime = time
+        let delta = atan2(sin(target - angle), cos(target - angle))
+        let alpha = 1 - exp(-18 * dt)
+        angle += delta * alpha
+        return angle
+    }
+}
+
+/// The marker remains at its target until the real mouse enters the
+/// proximity radius from outside. If already close, the user must move out
+/// and return, so guidance does not vanish immediately when it appears.
+struct RelayOSCursorArrivalGate {
+    private(set) var hasBeenOutside = false
+
+    mutating func reset(pointer: CGPoint, target: CGPoint) {
+        hasBeenOutside = !RelayOSCursorPlacement.arrived(pointer: pointer, at: target)
+    }
+
+    mutating func update(pointer: CGPoint, target: CGPoint) -> Bool {
+        if !RelayOSCursorPlacement.arrived(pointer: pointer, at: target) {
+            hasBeenOutside = true
+            return false
+        }
+        return hasBeenOutside
+    }
+}
+
+/// Only the native UI consumes this ephemeral command. It cannot inject input.
+struct RelayOSPointerGuidance: Decodable {
+    let active: Bool
+    let id: String?
+    let display: String?
+    let x: Double?
+    let y: Double?
+    let expiresAt: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case active, id, display, x, y
+        case expiresAt = "expires_at"
+    }
+
+    func targetScreen(in screens: [NSScreen]) -> NSScreen? {
+        guard active, let display else { return nil }
+        let wantedID = display == "main" ? CGMainDisplayID() : UInt32(display)
+        guard let wantedID else { return nil }
+        return screens.first {
+            ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == wantedID
+        }
+    }
+
+    func point(in screen: CGRect, now: TimeInterval) -> CGPoint? {
+        guard active, let expiresAt, now < expiresAt,
+              let x, let y else { return nil }
+        return RelayOSCursorPlacement.point(in: screen, x: x, y: y)
     }
 }
 
@@ -155,6 +280,16 @@ final class RelayOSCursorCompanion {
     private var timer: Timer?
     private var lastFrame: CGRect?
     private var motion = RelayOSCursorMotion()
+    private var orientation = RelayOSCursorOrientation()
+    private let presentation = RelayOSCursorPresentation()
+    private var guidance: RelayOSPointerGuidance?
+    private var polling = false
+    private var lastPoll: TimeInterval = 0
+    private var pollGeneration = 0
+    private var anchoredID: String?
+    private var anchoredFrame: CGRect?
+    private var arrivalGate = RelayOSCursorArrivalGate()
+    private var dismissedID: String?
 
     private init() {}
 
@@ -173,7 +308,7 @@ final class RelayOSCursorCompanion {
         window.hidesOnDeactivate = false
         window.level = .statusBar
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-        window.contentView = NSHostingView(rootView: RelayOSCursorMarkerView())
+        window.contentView = NSHostingView(rootView: RelayOSCursorMarkerView(presentation: presentation))
         self.window = window
         updatePosition()
 
@@ -194,23 +329,148 @@ final class RelayOSCursorCompanion {
         window = nil
         lastFrame = nil
         motion.reset()
+        orientation.reset()
+        presentation.angle = 0
+        guidance = nil
+        anchoredID = nil
+        anchoredFrame = nil
+        arrivalGate = RelayOSCursorArrivalGate()
+        dismissedID = nil
+        polling = false
+        lastPoll = 0
+        pollGeneration += 1
+    }
+
+    private func finishGuidance(_ id: String) {
+        // Keep the released marker following the mouse locally even if the
+        // acknowledgement is delayed. Never dismiss a newer target by ID.
+        dismissedID = id
+        guidance = nil
+        anchoredID = nil
+        anchoredFrame = nil
+        arrivalGate = RelayOSCursorArrivalGate()
+        guard let token = MCPHealthMonitor.readLocalControlToken(),
+              let url = URL(string: "http://127.0.0.1:8765/control/cursor-guidance/arrived"),
+              let body = try? JSONSerialization.data(withJSONObject: ["id": id])
+        else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 2
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(token, forHTTPHeaderField: "x-relayos-control-token")
+        request.httpBody = body
+        Task { _ = try? await URLSession.shared.data(for: request) }
+    }
+
+    private func pollGuidanceIfNeeded(at uptime: TimeInterval) {
+        guard !polling, uptime - lastPoll >= 0.4 else { return }
+        lastPoll = uptime
+        guard let token = MCPHealthMonitor.readLocalControlToken(),
+              let url = URL(string: "http://127.0.0.1:8765/control/cursor-guidance")
+        else {
+            guidance = nil
+            return
+        }
+        polling = true
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 1.5
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue(token, forHTTPHeaderField: "x-relayos-control-token")
+        let generation = pollGeneration
+        Task { @MainActor [weak self] in
+            guard let self, self.pollGeneration == generation else { return }
+            defer { self.polling = false }
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+                    self.guidance = nil
+                    return
+                }
+                let command = try JSONDecoder().decode(RelayOSPointerGuidance.self, from: data)
+                // Never resurrect a target after closing or on a stale reply.
+                guard self.timer != nil else { return }
+                self.guidance = command.active && command.id != self.dismissedID
+                    ? command : nil
+                // A new server-side target may resume guidance after release.
+                if command.active && command.id != self.dismissedID {
+                    self.dismissedID = nil
+                }
+            } catch {
+                self.guidance = nil
+            }
+        }
     }
 
     private func updatePosition() {
         guard let window else { return }
+        let uptime = ProcessInfo.processInfo.systemUptime
+        pollGuidanceIfNeeded(at: uptime)
+        let screens = NSScreen.screens
         let pointer = NSEvent.mouseLocation
-        let screens = NSScreen.screens.map(\.frame)
-        guard let screen = screens.first(where: { $0.contains(pointer) }),
-              let target = RelayOSCursorPlacement.frame(for: pointer, on: screens)
-        else {
-            window.orderOut(nil)
-            lastFrame = nil
-            motion.reset()
-            return
+        let now = Date().timeIntervalSince1970
+        var targetPoint: CGPoint?
+        var chosenScreen: CGRect?
+        var targetFrame: CGRect?
+
+        if let command = guidance, let id = command.id,
+           let selected = command.targetScreen(in: screens),
+           let point = command.point(in: selected.frame, now: now) {
+            if anchoredID != id {
+                // Anchor one location relative to the user's current pointer.
+                // Keep the destination fixed even as the marker approaches
+                // it or the real pointer moves elsewhere.
+                anchoredID = id
+                let center = motion.position.map {
+                    CGPoint(x: $0.x + RelayOSCursorPlacement.size.width / 2,
+                            y: $0.y + RelayOSCursorPlacement.size.height / 2)
+                } ?? pointer
+                anchoredFrame = RelayOSCursorPlacement.framePointing(
+                    at: point, from: center, on: selected.frame)
+                arrivalGate.reset(pointer: pointer, target: point)
+            }
+            if arrivalGate.update(pointer: pointer, target: point) {
+                // The actual mouse reached the highlighted item. Stop the
+                // guide and smoothly rejoin the usual follow behavior.
+                finishGuidance(id)
+            } else {
+                chosenScreen = selected.frame
+                targetPoint = point
+                targetFrame = anchoredFrame
+            }
+        } else if guidance != nil {
+            guidance = nil
+            anchoredID = nil
+            anchoredFrame = nil
+            arrivalGate = RelayOSCursorArrivalGate()
         }
-        let frame = motion.advance(
-            to: target, screen: screen, at: ProcessInfo.processInfo.systemUptime
-        )
+
+        if targetFrame == nil {
+            let frames = screens.map(\.frame)
+            guard let follows = frames.first(where: { $0.contains(pointer) }),
+                  let normalFrame = RelayOSCursorPlacement.frame(for: pointer, on: frames)
+            else {
+                window.orderOut(nil)
+                lastFrame = nil
+                motion.reset()
+                return
+            }
+            chosenScreen = follows
+            targetFrame = normalFrame
+        }
+        guard let screen = chosenScreen, let target = targetFrame else { return }
+        let frame = motion.advance(to: target, screen: screen, at: uptime)
+        let pointingAngle: Double
+        if let targetPoint {
+            pointingAngle = RelayOSCursorPlacement.rotationToward(
+                target: targetPoint,
+                from: CGPoint(x: frame.midX, y: frame.midY))
+        } else {
+            pointingAngle = 0
+        }
+        let angle = orientation.advance(toward: pointingAngle, at: uptime)
+        if abs(presentation.angle - angle) > 0.0001 {
+            presentation.angle = angle
+        }
         if frame != lastFrame {
             window.setFrame(frame, display: true)
             lastFrame = frame
@@ -223,7 +483,7 @@ final class RelayOSCursorCompanion {
 
 #if DEBUG
 #Preview("RelayOS cursor · Triangle") {
-    RelayOSCursorMarkerView()
+    RelayOSCursorMarkerView(presentation: RelayOSCursorPresentation())
         .frame(width: RelayOSCursorPlacement.size.width,
                height: RelayOSCursorPlacement.size.height)
         .padding(25)
