@@ -3,6 +3,10 @@ import SwiftUI
 struct DiffView: View {
     let diff: String
 
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var isDark: Bool { colorScheme == .dark }
+
     private struct DiffLine: Identifiable {
         let id: Int
         let text: String
@@ -12,23 +16,33 @@ struct DiffView: View {
             case fileHeader, hunkHeader, addition, deletion, context
         }
 
-        var foregroundColor: Color {
+        func foregroundColor(isDark: Bool) -> Color {
             switch type {
-            case .fileHeader: return Color(white: 0.70)
-            case .hunkHeader: return Color(red: 0.55, green: 0.75, blue: 0.95)
-            case .addition: return Color(red: 0.40, green: 0.88, blue: 0.50)
-            case .deletion: return Color(red: 0.95, green: 0.45, blue: 0.45)
-            case .context: return Color(white: 0.80)
+            case .fileHeader:
+                return isDark ? Color(white: 0.70) : Color(white: 0.40)
+            case .hunkHeader:
+                return isDark ? Color(red: 0.55, green: 0.75, blue: 0.95) : Color(red: 0.10, green: 0.40, blue: 0.75)
+            case .addition:
+                return isDark ? Color(red: 0.40, green: 0.88, blue: 0.50) : Color(red: 0.12, green: 0.55, blue: 0.20)
+            case .deletion:
+                return isDark ? Color(red: 0.95, green: 0.45, blue: 0.45) : Color(red: 0.80, green: 0.18, blue: 0.18)
+            case .context:
+                return isDark ? Color(white: 0.80) : Color(white: 0.20)
             }
         }
 
-        var backgroundColor: Color {
+        func backgroundColor(isDark: Bool) -> Color {
             switch type {
-            case .fileHeader: return Color(white: 0.16)
-            case .hunkHeader: return Color(red: 0.15, green: 0.25, blue: 0.35).opacity(0.4)
-            case .addition: return Color(red: 0.15, green: 0.45, blue: 0.20).opacity(0.25)
-            case .deletion: return Color(red: 0.50, green: 0.15, blue: 0.15).opacity(0.25)
-            case .context: return Color.clear
+            case .fileHeader:
+                return isDark ? Color(white: 0.16) : Color(white: 0.90)
+            case .hunkHeader:
+                return Color.blue.opacity(isDark ? 0.25 : 0.10)
+            case .addition:
+                return Color.green.opacity(isDark ? 0.22 : 0.12)
+            case .deletion:
+                return Color.red.opacity(isDark ? 0.22 : 0.12)
+            case .context:
+                return Color.clear
             }
         }
     }
@@ -58,19 +72,26 @@ struct DiffView: View {
                     HStack(spacing: 0) {
                         Text(line.text.isEmpty ? " " : line.text)
                             .font(.system(size: 11.5, weight: .regular, design: .monospaced))
-                            .foregroundStyle(line.foregroundColor)
+                            .foregroundStyle(line.foregroundColor(isDark: isDark))
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 1.5)
-                    .background(line.backgroundColor)
+                    .background(line.backgroundColor(isDark: isDark))
                     .cornerRadius(2)
                 }
             }
             .padding(.vertical, 6)
         }
         .frame(maxHeight: 280)
-        .background(Color(white: 0.10), in: RoundedRectangle(cornerRadius: 6))
+        .background(
+            isDark ? Color(white: 0.10) : Color(white: 0.95),
+            in: RoundedRectangle(cornerRadius: 6)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(isDark ? Color(white: 0.18) : Color(white: 0.86), lineWidth: 1)
+        )
         .textSelection(.enabled)
     }
 }
