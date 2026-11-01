@@ -19,7 +19,7 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct LaptopBridgeApp: App {
+struct RelayOSApp: App {
     @StateObject private var model = BridgeModel.shared
     @AppStorage(RelayOSTheme.modeKey) private var appearance = "system"
     @AppStorage(RelayOSTheme.accentKey) private var accent = "blue"
