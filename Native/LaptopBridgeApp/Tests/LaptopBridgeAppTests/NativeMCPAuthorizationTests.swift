@@ -274,4 +274,48 @@ final class NativeMCPAuthorizationTests: XCTestCase {
                                    body: Data("{}".utf8)).status, 400)
         XCTAssertEqual(http.handle(method: "GET", path: "/health", headers: headers, body: Data()).status, 200)
     }
+
+    func testNativeApprovalIsConsumedExactlyOnce() throws {
+        let store = NativeMCPApprovalStore(databaseURL: databaseURL)
+        let now = Date(timeIntervalSince1970: 1_000)
+        let request = try store.enqueue(kind: "project_command", target: "swift test", now: now)
+        try store.decide(id: request.id, decision: .once, now: now.addingTimeInterval(1))
+        let approved = try store.consume(id: request.id, now: now.addingTimeInterval(2))
+        XCTAssertEqual(approved.kind, "project_command")
+        XCTAssertEqual(approved.target, "swift test")
+        XCTAssertEqual(approved.decision, .once)
+        XCTAssertThrowsError(try store.consume(id: request.id, now: now.addingTimeInterval(3))) {
+            XCTAssertEqual($0 as? NativeMCPApprovalStore.StoreError, .expiredOrDecided)
+        }
+    }
+
+    func testNativeApprovalRejectsStaleAndConflictingDecisions() throws {
+        let now = Date(timeIntervalSince1970: 2_000)
+        let store = NativeMCPApprovalStore(databaseURL: databaseURL, approvalLifetime: 5)
+        let request = try store.enqueue(kind: "project_session", target: directory.path, now: now)
+        try store.decide(id: request.id, decision: .session, now: now.addingTimeInterval(1))
+        XCTAssertThrowsError(try store.decide(id: request.id, decision: .always,
+                                              now: now.addingTimeInterval(2))) {
+            XCTAssertEqual($0 as? NativeMCPApprovalStore.StoreError, .expiredOrDecided)
+        }
+        let expired = try store.enqueue(kind: "project_session", target: directory.path, now: now)
+        XCTAssertThrowsError(try store.decide(id: expired.id, decision: .once,
+                                              now: now.addingTimeInterval(5))) {
+            XCTAssertEqual($0 as? NativeMCPApprovalStore.StoreError, .expiredOrDecided)
+        }
+    }
+
+    func testNativeApprovalFailsClosedWhenEmergencyStopIsSet() throws {
+        let now = Date(timeIntervalSince1970: 3_000)
+        let store = NativeMCPApprovalStore(databaseURL: databaseURL)
+        let request = try store.enqueue(kind: "project_write", target: directory.path, now: now)
+        execute("INSERT INTO settings VALUES ('emergency_stop', 'true')")
+        XCTAssertThrowsError(try store.decide(id: request.id, decision: .once,
+                                              now: now.addingTimeInterval(1))) {
+            XCTAssertEqual($0 as? NativeMCPApprovalStore.StoreError, .emergencyStop)
+        }
+        XCTAssertThrowsError(try store.consume(id: request.id, now: now.addingTimeInterval(1))) {
+            XCTAssertEqual($0 as? NativeMCPApprovalStore.StoreError, .emergencyStop)
+        }
+    }
 }
