@@ -306,3 +306,13 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Add layout tests for standard, small and negative-origin external displays and per-view SwiftUI previews.
 - [ ] Manually review the notch positioning, keyboard interactions, VoiceOver and light/dark contrast on real macOS displays.
 - [ ] Consider optional automatic collapse/pin preference only after interactive QA; never auto-display on first launch.
+
+## Persistent terminal job monitoring — 2026-11-01
+- [x] Add authenticated loopback job listing and cancellation routes with negative authorization tests.
+- [x] Poll backend job metadata in the Swift app lifecycle (2-second cadence), independent of the Terminal Jobs page.
+- [x] Add follow-live terminal console, received-byte count, elapsed runtime and real command-reported percentages.
+- [x] Keep a legacy bundled-helper fallback until the new Python backend build is deployed.
+- [x] Add Terminal Jobs entry points in the menu bar, notch, Settings toolbar and sidebar active-count badge.
+- [x] Offer opt-in completion notifications without leaking command arguments or output.
+- [x] Preserve whole UTF-8 scalars across chunk boundaries; run Python/Swift suites and Xcode Debug build.
+- [ ] Perform staged/manual end-to-end UI QA with approved disposable jobs before replacing the installed app.
