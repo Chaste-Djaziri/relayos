@@ -97,3 +97,13 @@ struct SettingsCollapsibleCard<Content: View>: View {
         )
     }
 }
+
+#if DEBUG
+#Preview("Collapsible card") {
+    SettingsCollapsibleCard(title: "Advanced", subtitle: "Optional preferences", initiallyExpanded: true) {
+        SettingsCardRow(title: "Reduce motion", subtitle: "Prefer fewer animations", showDivider: false) {
+            SettingsToggle(isOn: .constant(true))
+        }
+    }.frame(width: 620).padding()
+}
+#endif

@@ -113,3 +113,11 @@ struct QuickPanel: View {
         .padding(18)
     }
 }
+
+#if DEBUG
+#Preview("Menu bar panel") {
+    QuickPanel(model: BridgeModel.preview())
+        .allowsHitTesting(false)
+        .frame(width: 360)
+}
+#endif

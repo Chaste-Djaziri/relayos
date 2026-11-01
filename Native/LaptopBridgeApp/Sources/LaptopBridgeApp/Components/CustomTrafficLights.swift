@@ -62,3 +62,9 @@ struct CustomTrafficLights: View {
 }
 
 typealias CustomTrafficLightsAndNav = CustomTrafficLights
+
+#if DEBUG
+#Preview("Window controls") {
+    CustomTrafficLights().allowsHitTesting(false).padding()
+}
+#endif

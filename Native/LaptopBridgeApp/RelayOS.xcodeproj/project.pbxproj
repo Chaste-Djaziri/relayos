@@ -10,9 +10,7 @@
 		0C6F487398FDD7AB91D7A548 /* NgrokTunnelMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */; };
 		1082C54EAC0015720F7AD15F /* CommandPermissionsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A20318397E308D076DE7F /* CommandPermissionsPageView.swift */; };
 		10C20CCAA3DBA57333534A8D /* SavedCommandGrant.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DCD2DF7385FBDF3D206AAFC /* SavedCommandGrant.swift */; };
-		172F38A8DED5F1667BCF3ED0 /* XcodePreviewShowcaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56DC7029AA0FED98ED2DD114 /* XcodePreviewShowcaseView.swift */; };
 		18A5EE9DDF88CE710907B224 /* relayos-white.png in Resources */ = {isa = PBXBuildFile; fileRef = 4D0A37E94818963512C7A078 /* relayos-white.png */; };
-		206496E93863EB0166776E27 /* WindowPreviewFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACEF0A696201F2FEA64C8F63 /* WindowPreviewFixtures.swift */; };
 		209F367D5A545995122990B6 /* SidebarItemModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A41ED5BBC85B05E57B15CF7 /* SidebarItemModel.swift */; };
 		2508024A777268584D880B1D /* SettingsCardRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B4C7CB4A4D712541902C002 /* SettingsCardRow.swift */; };
 		29BE237E49B747B5E15B2358 /* SidebarItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D79D365EF6A27D13BCE24C92 /* SidebarItemRow.swift */; };
@@ -46,6 +44,7 @@
 		8C7FAC30CC29619981EE8163 /* BridgeModel+Approvals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40017314B96D04DB9DF7025F /* BridgeModel+Approvals.swift */; };
 		8CD692DE3F2EF728E41BB660 /* CommandJobModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F8523F43A4AAE041F302654 /* CommandJobModelsTests.swift */; };
 		8D543F62066B8D94DC11FE28 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A75ABC2EF649483FACCE8E5 /* SettingsView.swift */; };
+		F22222222222222222222222 /* PreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11111111111111111111111 /* PreviewSupport.swift */; };
 		921010956D0573613A2CE1D0 /* RelayOSTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABDF00FAD2BE8C34B9A9EA20 /* RelayOSTheme.swift */; };
 		9607D773D0C2DEB2F23CF1EC /* CustomSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28C4A0F8F501A733194DE25E /* CustomSidebarView.swift */; };
 		9684BDA65EB9E5877050B290 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 160DA6357E98CDFF64BFC295 /* Keychain.swift */; };
@@ -96,6 +95,7 @@
 		0606A340C321E3C38BC40B9C /* SingleInstanceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleInstanceCoordinator.swift; sourceTree = "<group>"; };
 		074974C562F230CC62710F89 /* BridgeModel+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+Config.swift"; sourceTree = "<group>"; };
 		0A75ABC2EF649483FACCE8E5 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F11111111111111111111111 /* PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSupport.swift; sourceTree = "<group>"; };
 		0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NgrokTunnelMonitor.swift; sourceTree = "<group>"; };
 		0F698E7F3F856A246A4878AB /* SystemPermissionsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPermissionsPageView.swift; sourceTree = "<group>"; };
 		117EEB3A4505CFA882C6F27F /* CustomTrafficLights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTrafficLights.swift; sourceTree = "<group>"; };
@@ -120,7 +120,6 @@
 		4D0A37E94818963512C7A078 /* relayos-white.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "relayos-white.png"; sourceTree = "<group>"; };
 		4FA09765A5DC85740382BB61 /* SavedCommandGrantTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedCommandGrantTests.swift; sourceTree = "<group>"; };
 		5035C5D233584D80945951A4 /* ApprovalCenterModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalCenterModels.swift; sourceTree = "<group>"; };
-		56DC7029AA0FED98ED2DD114 /* XcodePreviewShowcaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcodePreviewShowcaseView.swift; sourceTree = "<group>"; };
 		5AAF3F10B93F830BC33B27E4 /* InstanceLeaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstanceLeaseTests.swift; sourceTree = "<group>"; };
 		61EEC49F3DCA38C9750BC9DF /* RelayOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RelayOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		696C2E390D56A4200CCC662D /* BridgeModel+ProcessControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+ProcessControl.swift"; sourceTree = "<group>"; };
@@ -141,7 +140,6 @@
 		A3184FA7CCA10909266F6728 /* QuickPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPanel.swift; sourceTree = "<group>"; };
 		A8D5FF69919504CE19785BDA /* ServiceSupervisor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceSupervisor.swift; sourceTree = "<group>"; };
 		ABDF00FAD2BE8C34B9A9EA20 /* RelayOSTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSTheme.swift; sourceTree = "<group>"; };
-		ACEF0A696201F2FEA64C8F63 /* WindowPreviewFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPreviewFixtures.swift; sourceTree = "<group>"; };
 		ADEF7F916CC9B40C2956BFB0 /* NgrokPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NgrokPageView.swift; sourceTree = "<group>"; };
 		AF7EC9B8A1074531E5EC43E8 /* ManagedProcessSlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedProcessSlot.swift; sourceTree = "<group>"; };
 		BD620B4A3907C4DB20516D13 /* SettingsButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsButton.swift; sourceTree = "<group>"; };
@@ -283,8 +281,7 @@
 			children = (
 				8CF620AE5C056396CFD9F836 /* DesktopWindowView.swift */,
 				0A75ABC2EF649483FACCE8E5 /* SettingsView.swift */,
-				ACEF0A696201F2FEA64C8F63 /* WindowPreviewFixtures.swift */,
-				56DC7029AA0FED98ED2DD114 /* XcodePreviewShowcaseView.swift */,
+				F11111111111111111111111 /* PreviewSupport.swift */,
 				ECA9926118C9D66803AAD20E /* Pages */,
 				BF06DB6F457A775297D024B7 /* QuickPanel */,
 				5CB3942B4275CA4BA7FCC447 /* Setup */,
@@ -510,6 +507,7 @@
 				5FBF89074C57D79FB72B3FB5 /* SettingsTab.swift in Sources */,
 				CE7CD965B1A669000A30F54A /* SettingsToggle.swift in Sources */,
 				8D543F62066B8D94DC11FE28 /* SettingsView.swift in Sources */,
+				F22222222222222222222222 /* PreviewSupport.swift in Sources */,
 				209F367D5A545995122990B6 /* SidebarItemModel.swift in Sources */,
 				29BE237E49B747B5E15B2358 /* SidebarItemRow.swift in Sources */,
 				FDCFAB97EEEF00AE1DBDC584 /* SingleInstanceCoordinator.swift in Sources */,
@@ -521,8 +519,6 @@
 				DCBDA4DE0585D229663DF181 /* TerminalOutputConsole.swift in Sources */,
 				485444AD71723A6C144A4DDB /* ToolsPageView.swift in Sources */,
 				682D99ABA596F6FB38FC5309 /* VisualEffectView.swift in Sources */,
-				206496E93863EB0166776E27 /* WindowPreviewFixtures.swift in Sources */,
-				172F38A8DED5F1667BCF3ED0 /* XcodePreviewShowcaseView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

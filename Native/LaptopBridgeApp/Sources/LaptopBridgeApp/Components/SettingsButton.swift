@@ -93,3 +93,13 @@ struct SettingsButton: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Settings buttons") {
+    HStack {
+        SettingsButton(title: "Connect", icon: "network", style: .primary) {}
+        SettingsButton(title: "Refresh", icon: "arrow.clockwise") {}
+        SettingsButton(title: "Revoke", icon: "trash", style: .destructive) {}
+    }.padding()
+}
+#endif

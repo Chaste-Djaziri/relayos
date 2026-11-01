@@ -141,9 +141,19 @@ struct ApprovalCenterView: View {
             }
         }
         .onAppear {
+            guard !model.isPreview else { return }
             model.refreshApprovalInbox()
         }
     }
 }
 
 typealias ApprovalsPageView = ApprovalCenterView
+
+#if DEBUG
+#Preview("Approvals") {
+    let model = BridgeModel.preview()
+    PreviewPageFrame("Approvals") {
+        ApprovalCenterView(model: model)
+    }
+}
+#endif

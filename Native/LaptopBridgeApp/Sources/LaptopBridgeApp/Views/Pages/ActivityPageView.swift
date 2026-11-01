@@ -30,6 +30,7 @@ struct ActivityHistoryView: View {
             }
         }
         .onAppear {
+            guard !model.isPreview else { return }
             model.refreshApprovalActivity(search: search)
         }
     }
@@ -413,3 +414,12 @@ struct ActivityHistoryView: View {
 }
 
 typealias ActivityPageView = ActivityHistoryView
+
+#if DEBUG
+#Preview("Activity") {
+    let model = BridgeModel.preview()
+    PreviewPageFrame("Activity") {
+        ActivityHistoryView(model: model)
+    }
+}
+#endif

@@ -95,3 +95,17 @@ struct DiffView: View {
         .textSelection(.enabled)
     }
 }
+
+#if DEBUG
+#Preview("Code diff") {
+    DiffView(diff: """
+    diff --git a/RelayOS.swift b/RelayOS.swift
+    @@ -1,2 +1,2 @@
+    -let status = "offline"
+    +let status = "healthy"
+     print(status)
+    """)
+    .frame(width: 760)
+    .padding()
+}
+#endif

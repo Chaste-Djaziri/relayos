@@ -87,3 +87,12 @@ struct ToolsPageView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Tools & permissions") {
+    let model = BridgeModel.preview()
+    PreviewPageFrame("Tools & permissions") {
+        ToolsPageView(model: model)
+    }
+}
+#endif

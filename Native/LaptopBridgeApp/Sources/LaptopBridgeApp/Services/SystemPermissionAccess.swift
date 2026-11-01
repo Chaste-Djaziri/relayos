@@ -93,13 +93,22 @@ enum PermissionObservation: Equatable {
 final class SystemPermissionAccess: ObservableObject {
     @Published private(set) var status: [SystemPermissionKind: PermissionObservation] = [:]
 
-    init() { refresh() }
+    private let preview: Bool
+    init(preview: Bool = false) {
+        self.preview = preview
+        if preview {
+            status = [.screenRecording: .granted, .accessibility: .notGranted, .notifications: .granted]
+        } else {
+            refresh()
+        }
+    }
 
     func observation(for kind: SystemPermissionKind) -> PermissionObservation {
         status[kind] ?? .manual
     }
 
     func refresh() {
+        guard !preview else { return }
         status[.screenRecording] = CGPreflightScreenCaptureAccess() ? .granted : .notGranted
         status[.accessibility] = AXIsProcessTrusted() ? .granted : .notGranted
         for kind in SystemPermissionKind.allCases where kind != .screenRecording
@@ -117,6 +126,7 @@ final class SystemPermissionAccess: ObservableObject {
     }
 
     func openGuide(for kind: SystemPermissionKind) {
+        guard !preview else { return }
         PermissionGuidePanel.shared.present(for: kind)
         let anchor = kind.settingsAnchor
         let urlText: String

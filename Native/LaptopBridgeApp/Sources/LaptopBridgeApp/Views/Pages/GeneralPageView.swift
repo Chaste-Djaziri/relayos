@@ -120,3 +120,12 @@ struct GeneralPageView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("General") {
+    let model = BridgeModel.preview()
+    PreviewPageFrame("General") {
+        GeneralPageView(model: model)
+    }
+}
+#endif

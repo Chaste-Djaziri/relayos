@@ -65,20 +65,3 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: pro.micorp.relayos.tests
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/RelayOS.app/Contents/MacOS/RelayOS"
         BUNDLE_LOADER: "$(TEST_HOST)"
-schemes:
-  RelayOS UI Preview:
-    build:
-      targets:
-        RelayOS: all
-    run:
-      config: Debug
-      environmentVariables:
-        RELAYOS_XCODE_UI_PREVIEW: "1"
-    test:
-      config: Debug
-      targets:
-        - RelayOSTests
-      environmentVariables:
-        RELAYOS_XCODE_UI_PREVIEW: "1"
-    archive:
-      config: Release

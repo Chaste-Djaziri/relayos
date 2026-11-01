@@ -100,3 +100,11 @@ struct ActivitySummaryRow: View {
         .onHover { isHovered = $0 }
     }
 }
+
+#if DEBUG
+#Preview("Activity entry") {
+    ActivitySummaryRow(event: BridgeModel.preview().approvalActivity[0], showDivider: false)
+        .frame(width: 760)
+        .padding()
+}
+#endif

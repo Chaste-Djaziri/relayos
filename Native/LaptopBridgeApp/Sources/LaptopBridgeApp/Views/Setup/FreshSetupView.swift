@@ -6,13 +6,25 @@ import AppKit
 // request and no requirement to grant screen or accessibility privileges.
 struct FreshSetupView: View {
     @ObservedObject var model: BridgeModel
-    @StateObject private var permissions = SystemPermissionAccess()
+    @StateObject private var permissions: SystemPermissionAccess
     @AppStorage("relayos.onboarding.step") private var savedStep = 0
     @State private var tokenInput = ""
+    @State private var previewCurrentStep = 0
     @Environment(\.colorScheme) private var colorScheme
 
     private var theme: ThemeColors { RelayOSTheme.colors(colorScheme) }
-    private var step: Int { min(max(savedStep, 0), 3) }
+    private var step: Int { min(max(model.isPreview ? previewCurrentStep : savedStep, 0), 3) }
+
+    init(model: BridgeModel, previewStep: Int = 0) {
+        self.model = model
+        _permissions = StateObject(wrappedValue: SystemPermissionAccess(preview: model.isPreview))
+        _previewCurrentStep = State(initialValue: previewStep)
+    }
+
+    private func navigate(to value: Int) {
+        if model.isPreview { previewCurrentStep = value }
+        else { savedStep = value }
+    }
     private let titles = ["Welcome to RelayOS", "Your local AI companion", "Choose optional permissions", "Connect your AI clients"]
     private let descriptions = [
         "A private, permission-gated bridge between your Mac and the AI tools you choose.",
@@ -64,21 +76,22 @@ struct FreshSetupView: View {
             Divider()
             HStack {
                 if step > 0 {
-                    Button("Back") { savedStep = step - 1 }
+                    Button("Back") { navigate(to: step - 1) }
                         .buttonStyle(.bordered)
                 }
                 Spacer()
                 if step == 2 {
-                    Button("Skip optional permissions") { savedStep = 3 }
+                    Button("Skip optional permissions") { navigate(to: 3) }
                         .buttonStyle(.bordered)
                 }
                 if step < 3 {
-                    Button("Continue") { savedStep = step + 1 }
+                    Button("Continue") { navigate(to: step + 1) }
                         .buttonStyle(.borderedProminent)
                 } else {
                     Button("Save and connect") {
                         let token = tokenInput.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard !token.isEmpty else { return }
+                        guard !model.isPreview else { return }
                         model.ngrokToken = token
                         model.ngrokDomainValue = ""
                         model.configureNgrok()
@@ -88,7 +101,7 @@ struct FreshSetupView: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(tokenInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(model.isPreview || tokenInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             .padding(.horizontal, 32)
@@ -145,7 +158,8 @@ struct FreshSetupView: View {
                     }
                 }
                 HStack(spacing: 12) {
-                    Button("Install ngrok via Homebrew") { model.installNgrok() }
+                    Button("Install ngrok via Homebrew") { if !model.isPreview { model.installNgrok() } }
+                        .disabled(model.isPreview)
                     if !model.ngrokInstallState.isEmpty {
                         Text(model.ngrokInstallState).font(.caption).foregroundStyle(theme.textSecondary)
                     }
@@ -164,7 +178,8 @@ struct FreshSetupView: View {
     }
     private func optionalPermission(_ kind: SystemPermissionKind, last: Bool = false) -> some View {
         SettingsCardRow(title: kind.title, subtitle: kind.explanation, showDivider: !last) {
-            Button("Set up") { permissions.openGuide(for: kind) }
+            Button("Set up") { if !model.isPreview { permissions.openGuide(for: kind) } }
+                .disabled(model.isPreview)
                 .buttonStyle(.bordered)
         }
     }
@@ -184,3 +199,22 @@ struct FreshSetupView: View {
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(theme.cardBorder))
     }
 }
+
+#if DEBUG
+#Preview("Onboarding · Welcome") {
+    FreshSetupView(model: BridgeModel.preview(), previewStep: 0)
+        .frame(width: 1050, height: 740)
+}
+#Preview("Onboarding · Features") {
+    FreshSetupView(model: BridgeModel.preview(), previewStep: 1)
+        .frame(width: 1050, height: 740)
+}
+#Preview("Onboarding · Permissions") {
+    FreshSetupView(model: BridgeModel.preview(), previewStep: 2)
+        .frame(width: 1050, height: 740)
+}
+#Preview("Onboarding · Connect") {
+    FreshSetupView(model: BridgeModel.preview(), previewStep: 3)
+        .frame(width: 1050, height: 740)
+}
+#endif

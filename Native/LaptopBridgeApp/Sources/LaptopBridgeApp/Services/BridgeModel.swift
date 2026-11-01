@@ -5,6 +5,8 @@ import SwiftUI
 @MainActor
 final class BridgeModel: ObservableObject {
     static let shared = BridgeModel()
+    // Canvas/UI-only models never load the user's configuration or run helpers.
+    let isPreview: Bool
 
     // MARK: - Published Properties
     @Published var running = false
@@ -64,9 +66,11 @@ final class BridgeModel: ObservableObject {
     private var terminationObserver: NSObjectProtocol?
 
     // MARK: - Lifecycle
-    init() {
+    init(preview: Bool = false) {
+        isPreview = preview
         let home = FileManager.default.homeDirectoryForCurrentUser
         configURL = home.appendingPathComponent(".laptop-bridge/config.json")
+        if preview { return }
         loadConfig()
         terminationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification,

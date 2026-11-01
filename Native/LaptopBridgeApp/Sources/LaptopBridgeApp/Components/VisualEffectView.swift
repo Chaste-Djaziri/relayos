@@ -20,3 +20,15 @@ struct VisualEffectView: NSViewRepresentable {
         nsView.state = state
     }
 }
+
+#if DEBUG
+#Preview("Sidebar material") {
+    ZStack {
+        VisualEffectView(material: .sidebar)
+        VStack(alignment: .leading, spacing: 12) {
+            Label("General", systemImage: "gearshape")
+            Label("Appearance", systemImage: "paintpalette")
+        }.padding()
+    }.frame(width: 270, height: 180)
+}
+#endif

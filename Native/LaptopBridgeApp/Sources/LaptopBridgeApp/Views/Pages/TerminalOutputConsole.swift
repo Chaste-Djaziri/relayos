@@ -135,3 +135,12 @@ struct TerminalOutputConsole: View {
         .shadow(color: Color.black.opacity(0.35), radius: 6, x: 0, y: 3)
     }
 }
+
+#if DEBUG
+#Preview("Terminal output") {
+    let model = BridgeModel.preview()
+    TerminalOutputConsole(job: model.commandJobs[0],
+                          output: model.commandJobOutput, onClose: {})
+        .allowsHitTesting(false).frame(width: 760).padding()
+}
+#endif

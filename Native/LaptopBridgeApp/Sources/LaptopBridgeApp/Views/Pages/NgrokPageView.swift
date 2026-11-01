@@ -61,3 +61,12 @@ struct NgrokPageView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("ngrok transport") {
+    let model = BridgeModel.preview()
+    PreviewPageFrame("ngrok transport") {
+        NgrokPageView(model: model)
+    }
+}
+#endif

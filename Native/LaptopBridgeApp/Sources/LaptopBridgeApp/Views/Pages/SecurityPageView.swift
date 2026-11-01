@@ -40,3 +40,12 @@ struct SecurityPageView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Security") {
+    let model = BridgeModel.preview()
+    PreviewPageFrame("Security") {
+        SecurityPageView(model: model)
+    }
+}
+#endif

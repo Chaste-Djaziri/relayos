@@ -147,3 +147,11 @@ struct CommandGrantGroupCard: View {
         )
     }
 }
+
+#if DEBUG
+#Preview("Command permission group") {
+    let model = BridgeModel.preview()
+    CommandGrantGroupCard(group: CommandGrantGroup(id: "demo", projectRoot: "/Users/demo/Projects/RelayOS", commandName: "git", grants: model.commandGrants), onRevokeGrant: { _ in })
+        .allowsHitTesting(false).frame(width: 760).padding()
+}
+#endif

@@ -50,3 +50,12 @@ struct ConnectionsPageView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Connections") {
+    let model = BridgeModel.preview()
+    PreviewPageFrame("Connections") {
+        ConnectionsPageView(model: model)
+    }
+}
+#endif

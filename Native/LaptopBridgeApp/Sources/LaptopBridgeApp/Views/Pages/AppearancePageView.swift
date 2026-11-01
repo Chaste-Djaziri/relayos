@@ -208,3 +208,11 @@ struct AppearancePageView: View {
 }
 
 typealias RelayOSAppearanceView = AppearancePageView
+
+#if DEBUG
+#Preview("Appearance") {
+    PreviewPageFrame("Appearance") {
+        AppearancePageView()
+    }
+}
+#endif

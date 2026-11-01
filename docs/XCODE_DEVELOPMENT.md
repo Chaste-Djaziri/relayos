@@ -11,13 +11,13 @@ The existing SwiftUI sources remain under `Native/LaptopBridgeApp/Sources/Laptop
 4. In the project navigator, select the blue **RelayOS** project, then the **RelayOS** app target.
 5. Open **Signing & Capabilities**. Enable **Automatically manage signing** and choose your Apple Developer **Team**.
 6. Use **General → Identity** to manage version/build numbers, app identity, and supported macOS deployment version.
-7. Choose **RelayOS UI Preview** and **My Mac** in the scheme selector.
+7. Choose the **RelayOS** scheme, **Debug** configuration, and **My Mac**. Previews live beside each SwiftUI view implementation.
 
 The project uses the existing app implementation, not a copied set of files. Do not create a second `@main` app entry point.
 
 ## Signing and system permissions
 
-- The Xcode Debug bundle uses `pro.micorp.relayos.dev` and shows an **inert demo window**. It neither takes the production instance lock nor starts the MCP server or ngrok.
+- The Xcode Debug bundle uses `pro.micorp.relayos.dev` and renders the **actual Settings window** with sample data. It neither takes the production instance lock nor starts MCP, ngrok, or approval helpers. Only Appearance controls remain interactive in the Debug settings window; other service controls are inert.
 - The Release bundle identifier is `pro.micorp.relayos`. The currently installed legacy app may still use `rw.shangazi.relayos`; these are different macOS privacy identities. **Do not install an Xcode Release build over the live app**: it does not include the Python runtime helpers.
 - Keep a consistent signing team and certificate on successive builds. Ad-hoc signing may cause macOS screen-recording and accessibility permissions to be reported as missing after replacement.
 - **Do not grant Full Disk Access to the Debug UI preview** just to experiment with appearance settings.
@@ -27,8 +27,8 @@ The project uses the existing app implementation, not a copied set of files. Do 
 ## Build, preview, test
 
 - **Command+B** builds the selected Xcode app target.
-- **Command+R** runs the safe Debug UI showcase. It does not affect the active RelayOS connector.
-- **Editor → Canvas** renders `Views/WindowPreviewFixtures.swift`, `Views/XcodePreviewShowcaseView.swift`, and component `#Preview` declarations. Open one of those files, then resume the canvas.
+- **Command+R** runs the actual Settings window with a non-operational, seeded preview model, without affecting the active RelayOS connector.
+- **Editor → Canvas** shows the local `#Preview` in the **same file as each SwiftUI view**. Open `Views/Pages/GeneralPageView.swift`, `AppearancePageView.swift`, or another page and resume Canvas to see that exact view. Open `Views/Setup/FreshSetupView.swift` to switch between Welcome, Features, Permissions and Connect previews. The shared `Views/PreviewSupport.swift` supplies only safe sample data and framing; it is not a separate showcase. Preview controls which could change the machine are disabled.
 - **Command+U** runs the Xcode test target; the separate package regression suite remains `swift test --package-path Native/LaptopBridgeApp`.
 - Use **Product → Archive** only after the production app build target and helper packaging are integrated into Xcode. Today the Release Xcode archive is **not a supported final distribution artifact**.
 

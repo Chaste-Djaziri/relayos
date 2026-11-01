@@ -59,3 +59,14 @@ struct StatusBadge: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Status badges") {
+    HStack {
+        StatusBadge(text: "Healthy", status: .healthy)
+        StatusBadge(text: "Connecting", status: .warning)
+        StatusBadge(text: "Stopped", status: .offline)
+        StatusBadge(text: "Unknown", status: .neutral)
+    }.padding()
+}
+#endif

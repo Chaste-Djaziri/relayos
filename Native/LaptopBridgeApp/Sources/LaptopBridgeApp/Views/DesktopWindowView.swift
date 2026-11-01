@@ -22,3 +22,10 @@ struct DesktopWindowView: View {
         )
     }
 }
+
+#if DEBUG
+#Preview("RelayOS · Main window") {
+    DesktopWindowView(model: BridgeModel.preview())
+        .frame(width: 1160, height: 780)
+}
+#endif

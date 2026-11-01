@@ -8,6 +8,11 @@ struct SystemPermissionsPageView: View {
     @Environment(\.colorScheme) private var scheme
     @AppStorage(RelayOSTheme.fontSizeKey) private var fontSize = 14.0
 
+    init(model: BridgeModel) {
+        self.model = model
+        _permissions = StateObject(wrappedValue: SystemPermissionAccess(preview: model.isPreview))
+    }
+
     private var theme: ThemeColors { RelayOSTheme.colors(scheme) }
     private var scale: CGFloat { RelayOSTheme.scale(fontSize) }
 
@@ -70,7 +75,17 @@ struct SystemPermissionsPageView: View {
                 ) {
                     permissions.openGuide(for: kind)
                 }
+                .disabled(model.isPreview)
             }
         }
     }
 }
+
+#if DEBUG
+#Preview("System permissions") {
+    let model = BridgeModel.preview()
+    PreviewPageFrame("System permissions") {
+        SystemPermissionsPageView(model: model)
+    }
+}
+#endif

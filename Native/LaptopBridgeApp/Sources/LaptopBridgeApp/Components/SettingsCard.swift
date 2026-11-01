@@ -44,3 +44,15 @@ struct SettingsCard<Content: View>: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Settings card") {
+    SettingsCard(title: "Preferences") {
+        SettingsCardRow(title: "Appearance", subtitle: "Choose how RelayOS looks", showDivider: false) {
+            StatusBadge(text: "System", status: .neutral)
+        }
+    }
+    .padding(24)
+    .frame(width: 620)
+}
+#endif

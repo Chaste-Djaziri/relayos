@@ -14,3 +14,12 @@ struct ConnectionRow: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Connection row") {
+    VStack(spacing: 12) {
+        ConnectionRow(name: "ChatGPT", connected: true)
+        ConnectionRow(name: "Claude", connected: false)
+    }.padding().frame(width: 340)
+}
+#endif

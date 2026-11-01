@@ -255,3 +255,10 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Display name RelayOS; category Utilities; marketing version 1.0.0 and build 1.
 - [x] Preserve user-edited Xcode project and scheme settings; modify project file in place instead of regenerating.
 - [ ] Confirm stable Apple Team signing for new app identity, then migrate TCC permissions intentionally during a controlled deployment.
+
+## Local in-file SwiftUI previews — 2026-11-01
+- [x] Each settings page and four onboarding screens declare their own `#Preview` blocks in the same source file.
+- [x] Native Settings/Desktop window, menu panel, code diff, terminal output, permission guide, settings components, and navigation entries have local previews.
+- [x] Remove standalone UI showcase, aggregate preview fixtures, and extra preview-only Xcode scheme.
+- [x] Xcode Debug loads safe local sample data in the actual window; no live MCP, ngrok or approval process is launched.
+- [ ] Visually review Canvas rendering for each source file, including onboarding steps, and inspect contrast in light and dark modes.

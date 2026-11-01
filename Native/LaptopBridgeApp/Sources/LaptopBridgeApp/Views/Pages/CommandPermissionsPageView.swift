@@ -216,6 +216,7 @@ struct CommandPermissionsView: View {
             }
         }
         .onAppear {
+            guard !model.isPreview else { return }
             model.refreshCommandGrants()
         }
         .confirmationDialog(
@@ -254,3 +255,12 @@ struct CommandPermissionsView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Command permissions") {
+    let model = BridgeModel.preview()
+    PreviewPageFrame("Command permissions") {
+        CommandPermissionsView(model: model)
+    }
+}
+#endif

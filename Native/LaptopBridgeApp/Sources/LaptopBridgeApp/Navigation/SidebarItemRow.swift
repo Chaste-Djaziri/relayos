@@ -99,3 +99,12 @@ struct SidebarItemRow: View {
             )
     }
 }
+
+#if DEBUG
+#Preview("Sidebar item") {
+    VStack {
+        SidebarItemRow(title: "General", systemImage: "gearshape", isSelected: true, action: {})
+        SidebarItemRow(title: "Approvals", systemImage: "tray.full", isSelected: false, badgeCount: 2, action: {})
+    }.frame(width: 270).padding()
+}
+#endif

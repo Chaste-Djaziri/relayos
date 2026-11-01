@@ -133,3 +133,11 @@ struct TerminalJobRow: View {
         .onHover { isHovered = $0 }
     }
 }
+
+#if DEBUG
+#Preview("Terminal job row") {
+    TerminalJobRow(job: BridgeModel.preview().commandJobs[0],
+                   isSelected: true, onToggleOutput: {}, onCancel: {})
+        .allowsHitTesting(false).frame(width: 760).padding()
+}
+#endif

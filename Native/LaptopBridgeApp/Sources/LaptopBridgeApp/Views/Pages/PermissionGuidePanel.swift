@@ -118,3 +118,10 @@ private struct PermissionDragGuideView: View {
         .preferredColorScheme(RelayOSTheme.scheme(appearance))
     }
 }
+
+#if DEBUG
+#Preview("Permission guide") {
+    PermissionDragGuideView(permission: .screenRecording, close: {})
+        .allowsHitTesting(false)
+}
+#endif

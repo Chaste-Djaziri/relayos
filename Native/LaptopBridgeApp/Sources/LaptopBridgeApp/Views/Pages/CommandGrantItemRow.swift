@@ -96,3 +96,10 @@ struct CommandGrantItemRow: View {
         .onHover { isHovered = $0 }
     }
 }
+
+#if DEBUG
+#Preview("Command permission row") {
+    CommandGrantItemRow(grant: BridgeModel.preview().commandGrants[0], onRevoke: {})
+        .allowsHitTesting(false).frame(width: 760).padding()
+}
+#endif

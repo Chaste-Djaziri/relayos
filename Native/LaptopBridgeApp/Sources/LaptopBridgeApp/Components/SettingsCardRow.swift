@@ -58,3 +58,13 @@ struct SettingsCardRow<Trailing: View>: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Settings row") {
+    SettingsCardRow(title: "Local MCP", subtitle: "The local service is ready", showDivider: false) {
+        StatusBadge(text: "Healthy", status: .healthy)
+    }
+    .frame(width: 600)
+    .padding()
+}
+#endif

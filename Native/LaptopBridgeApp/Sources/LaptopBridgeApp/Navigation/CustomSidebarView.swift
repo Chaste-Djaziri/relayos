@@ -178,3 +178,10 @@ struct CustomSidebarView: View {
             keywords.localizedCaseInsensitiveContains(query)
     }
 }
+
+#if DEBUG
+#Preview("Navigation sidebar") {
+    CustomSidebarView(model: BridgeModel.preview(), selected: .constant(.general), searchText: .constant(""))
+        .frame(width: 290, height: 710)
+}
+#endif

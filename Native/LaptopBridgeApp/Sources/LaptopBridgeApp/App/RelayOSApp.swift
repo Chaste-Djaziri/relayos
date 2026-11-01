@@ -30,13 +30,20 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
 
 @main
 struct RelayOSApp: App {
-    @StateObject private var model = BridgeModel.shared
+    @StateObject private var model: BridgeModel
     @AppStorage(RelayOSTheme.modeKey) private var appearance = "system"
     @AppStorage(RelayOSTheme.accentKey) private var accent = "blue"
     @AppStorage(RelayOSTheme.fontSizeKey) private var uiFontSize = 14.0
     @NSApplicationDelegateAdaptor(RelayOSApplicationDelegate.self) private var appDelegate
 
     init() {
+        #if DEBUG
+        let initialModel = RelayOSApplicationDelegate.isXcodeUIPreview
+            ? BridgeModel.preview() : BridgeModel.shared
+        #else
+        let initialModel = BridgeModel.shared
+        #endif
+        _model = StateObject(wrappedValue: initialModel)
         // Use a native macOS glyph for both surfaces. Status-item images are
         // rendered as template masks, so bitmap logos can disappear against
         // the menu bar; the system mouse glyph remains visible in every theme.
@@ -47,13 +54,7 @@ struct RelayOSApp: App {
 
     var body: some Scene {
         Window("RelayOS", id: "main") {
-            Group {
-                if RelayOSApplicationDelegate.isXcodeUIPreview {
-                    XcodePreviewShowcaseView()
-                } else {
-                    DesktopWindowView(model: model)
-                }
-            }
+            DesktopWindowView(model: model)
                 .preferredColorScheme(RelayOSTheme.scheme(appearance))
                 .tint(RelayOSTheme.accent(accent))
                 .environment(\.font, .system(size: uiFontSize))
@@ -69,6 +70,7 @@ struct RelayOSApp: App {
         .windowStyle(.hiddenTitleBar)
         MenuBarExtra {
             QuickPanel(model: model)
+                .allowsHitTesting(!model.isPreview)
                 .preferredColorScheme(RelayOSTheme.scheme(appearance))
                 .tint(RelayOSTheme.accent(accent))
                 .frame(width: 360)

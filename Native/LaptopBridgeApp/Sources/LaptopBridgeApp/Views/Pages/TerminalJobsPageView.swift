@@ -216,12 +216,14 @@ struct CommandJobsView: View {
             }
         }
         .onAppear {
+            guard !model.isPreview else { return }
             model.refreshCommandJobs()
             if model.selectedCommandJobID != nil {
                 model.refreshCommandJobOutput()
             }
         }
         .onReceive(ticker) { _ in
+            guard !model.isPreview else { return }
             model.refreshCommandJobs()
             if model.selectedCommandJobID != nil {
                 model.refreshCommandJobOutput()
@@ -229,3 +231,12 @@ struct CommandJobsView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Terminal jobs") {
+    let model = BridgeModel.preview()
+    PreviewPageFrame("Terminal jobs") {
+        CommandJobsView(model: model)
+    }
+}
+#endif

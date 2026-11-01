@@ -78,3 +78,12 @@ extension ToggleStyle where Self == SleekSwitchToggleStyle {
     static var sleekSwitch: SleekSwitchToggleStyle { SleekSwitchToggleStyle() }
     static func sleekSwitch(tint: Color) -> SleekSwitchToggleStyle { SleekSwitchToggleStyle(tint: tint) }
 }
+
+#if DEBUG
+#Preview("Settings toggle") {
+    HStack {
+        SettingsToggle(isOn: .constant(true))
+        SettingsToggle(isOn: .constant(false))
+    }.padding()
+}
+#endif

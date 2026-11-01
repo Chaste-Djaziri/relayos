@@ -39,6 +39,7 @@ struct SettingsView: View {
                             .foregroundStyle(theme.textPrimary)
 
                         tabDetailView(selected)
+                            .allowsHitTesting(!model.isPreview || selected == .appearance)
                     }
                     .frame(maxWidth: 760, alignment: .leading)
                     .padding(.horizontal, 36)
@@ -89,3 +90,10 @@ struct SettingsView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Settings · All pages") {
+    SettingsView(model: BridgeModel.preview())
+        .frame(width: 1160, height: 780)
+}
+#endif
