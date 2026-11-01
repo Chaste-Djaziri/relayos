@@ -249,11 +249,11 @@ def test_apply_project_patch(project_dir):
 +++ b/main.py
 @@ -1 +1 @@
 -print('hello world')
-+print('patched by laptop bridge')
++print('patched by RelayOS')
 """
     patch_res = server.apply_project_patch(session_id, patch)
     assert patch_res["applied"] is True
-    assert server.read_project_file(session_id, "main.py") == "print('patched by laptop bridge')\n"
+    assert server.read_project_file(session_id, "main.py") == "print('patched by RelayOS')\n"
 
 
 def test_run_project_command_security_and_caps(project_dir):
