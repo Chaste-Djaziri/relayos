@@ -563,6 +563,9 @@ final class NotchPanelCoordinator: ObservableObject {
     static let shared = NotchPanelCoordinator()
     private static let enabledDefaultsKey = "relayos.notch.enabled"
     private static let selectedSubpageDefaultsKey = "relayos.notch.selected-subpage"
+    /// Keep the tray available long enough to cross from the top band into
+    /// expanded controls without a jittery collapse/re-open cycle.
+    static let hoverCollapseDelayMilliseconds = 700
 
     @Published private(set) var isVisible = false
     @Published private(set) var phase: NotchPanelPhase = .collapsed
@@ -740,11 +743,12 @@ final class NotchPanelCoordinator: ObservableObject {
                 transition(to: .hovered, haptic: true)
             }
         } else {
-            let delayMs = phase == .expanded ? 280 : 150
             pendingCollapse = Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .milliseconds(delayMs))
+                try? await Task.sleep(for: .milliseconds(Self.hoverCollapseDelayMilliseconds))
                 guard !Task.isCancelled, let self else { return }
-                if self.panel?.frame.insetBy(dx: -3, dy: -3)
+                // Account for a fast pointer passing across the changing
+                // frame while the panel is expanding or collapsing.
+                if self.panel?.frame.insetBy(dx: -12, dy: -12)
                     .contains(NSEvent.mouseLocation) == true { return }
                 self.collapse()
             }
