@@ -26,12 +26,12 @@ from mcp.server.transport_security import TransportSecuritySettings
 from mcp.shared.auth import OAuthMetadata
 from mcp.types import ImageContent, ToolAnnotations
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, RedirectResponse
+from starlette.responses import HTMLResponse, RedirectResponse, Response
 
 from .config import authorized_path, load_config, public_base_url
 from .command_policy import reusable_command_family, command_family_label, validate_scope_prefix, suggested_scope_prefix
 from .oauth import LocalApprovalOAuthProvider, approval_redirect
-from . import control, command_jobs, screen_capture, state
+from . import control, command_jobs, screen_capture, screenshot_links, state
 from .state import (
     activate_project_session, consume, desktop_job_result, emergency_stop,
     project_session, queue_desktop_job, record_result, request,
@@ -80,6 +80,26 @@ mcp = MCPServer(
 @mcp.custom_route("/control/{path:path}", methods=["GET", "POST"])
 async def native_control(request: Request):
     return await control.handle(request)
+
+
+@mcp.custom_route("/screenshots/{token}", methods=["GET"])
+async def approved_screenshot_image(request: Request):
+    """Serve only an expiring, locally approved screenshot bearer URL."""
+    headers = {
+        "Cache-Control": "no-store, no-cache, max-age=0",
+        "Pragma": "no-cache",
+        "Referrer-Policy": "no-referrer",
+        "X-Content-Type-Options": "nosniff",
+        "X-Robots-Tag": "noindex, nofollow, noarchive",
+        "Content-Security-Policy": "default-src 'none'; sandbox",
+    }
+    if state.emergency_stop() or not screen_capture._enabled():
+        screenshot_links.store.revoke_all()
+        return Response(status_code=404, headers=headers)
+    image = screenshot_links.store.retrieve(request.path_params.get("token", ""))
+    if image is None:
+        return Response(status_code=404, headers=headers)
+    return Response(image, media_type="image/jpeg", headers=headers)
 
 if _public_base_url:
     _oauth_client_authenticator = ClientAuthenticator(_oauth_provider)
@@ -860,13 +880,18 @@ def request_screen_capture(scope: str = "display", target: str = "") -> dict:
 
 @mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=False))
 def capture_approved_screen(request_id: str) -> list:
-    """Return a JPEG image only after a fresh, local one-time capture approval.
+    """Return a JPEG and a short-lived HTTPS URL after a local Once approval.
 
-    Images are returned directly as MCP ImageContent with no saved screenshot
-    file or continuously running stream. Each subsequent frame requires a new
-    local approval. Secure/system-protected windows may be unavailable.
+    MCP clients without image-block support can fetch the image_url.
+    URLs are bearer credentials; keep them private. Every subsequent frame
+    requires its own approval. No image is written to disk.
     """
     metadata, image = screen_capture.capture_after_approval(request_id)
+    origin = public_base_url(load_config())
+    if origin:
+        metadata.update(screenshot_links.store.issue(image, origin))
+    else:
+        metadata["image_url_unavailable"] = "Configure a public HTTPS RelayOS tunnel"
     return [metadata, ImageContent(
         data=base64.b64encode(image).decode("ascii"), mime_type="image/jpeg"
     )]

@@ -276,6 +276,11 @@ def set_emergency_stop(enabled):
             connection.execute("UPDATE requests SET status = 'denied', decided_at = ? WHERE status = 'pending'", (now,))
             connection.execute("UPDATE command_grants SET revoked_at = ? WHERE revoked_at IS NULL", (now,))
         connection.commit()
+    if enabled:
+        # Emergency Stop immediately revokes temporary screenshot links,
+        # including if it is switched off before their natural expiry.
+        from .screenshot_links import store
+        store.revoke_all()
 
 
 def emergency_stop(connection=None):

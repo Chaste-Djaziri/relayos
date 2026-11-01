@@ -4,6 +4,9 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 
 ## Unreleased
 
+### Screen capture delivery
+- Add a memory-only screenshot URL fallback for MCP clients that discard image blocks: each locally approved JPEG is returned as MCP ImageContent and, when HTTPS tunnel configuration is present, an unguessable `/screenshots/{token}` link. Links expire after 120 seconds or 3 GETs, with bounded in-memory capacity, no-store response headers, and Emergency Stop revocation. Add focused security tests (137 Python tests passed, 19 subtests; one pre-existing warning). Installed application has not been updated or live link verified.
+
 ### Changed
 - Deployed the signed hybrid RelayOS bundle to /Applications/RelayOS.app with the packaged ScreenCaptureKit helper. Isolated MCP smoke checks and authenticated recovery passed; retained a timestamped rollback app. Screen capture remains disabled until locally enabled, and actual screenshot image delivery still requires an approved live QA check.
 - Refine ScreenCaptureKit sharing with an On-demand screen sharing setting in Tools & permissions; saving restarts the MCP helper without intentionally resetting ngrok. Identify exact screenshot targets in the Approval Inbox and cover the display model with a Swift regression test. Signed installed-app end-to-end capture remains to be validated.

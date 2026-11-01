@@ -3,8 +3,11 @@
 
 **Status:** Signed hybrid app installed at `/Applications/RelayOS.app` on
 2026-11-01 after isolated MCP smoke checks and a rollback-backed handover.
-The screen-sharing capability remains off until enabled locally, and an
-actual consented screenshot has **not** yet been visually validated in ChatGPT.
+The installed app still uses the prior capture implementation. The new
+short-lived HTTPS retrieval fallback is **source-only** pending a signed
+redeployment and a live visual acceptance test. The screen-sharing capability
+remains off until enabled locally, and an actual consented screenshot has
+**not** yet been visually validated in ChatGPT.
 
 This is **single-frame sharing**, not remote desktop control, hidden recording,
 or continuous video streaming. ChatGPT can request one capture of:
@@ -34,12 +37,26 @@ or continuous video streaming. ChatGPT can request one capture of:
    authorization is atomically consumed. A separate signed ScreenCaptureKit
    executable selects the requested app/window/display and captures one frame.
    The JPEG is bounded to 1600px width and 4 MB and returned as MCP
-   `ImageContent` for ChatGPT to inspect.
-6. There is **no continuous stream**, background interval capture or audio.
+   `ImageContent` **and**, if a public HTTPS origin is configured, the
+   metadata contains `image_url`, `image_url_expires_in_seconds`, and
+   `image_url_max_downloads`.
+6. If the MCP connector omits image content, ChatGPT may fetch the returned
+   HTTPS `image_url` through RelayOS's existing public tunnel. The GET route
+   `/screenshots/{token}` returns JPEG bytes and does not require an OAuth
+   bearer token: the high-entropy URL itself is a **bearer secret**. Keep it
+   private. It expires after **120 seconds or three downloads**, whichever
+   comes first. Use the link promptly; some image previewers consume a read.
+7. There is **no continuous stream**, background interval capture or audio.
    A second screenshot, including one of the same app, requires a new locally
-   approved request. The screenshot is passed through process memory, not
-   written to an image file. Only metadata (scope/target/timing) enters the
-   persistent audit history.
+   approved request. The screenshot is held only in a bounded in-process
+   memory store (at most four images), not written to an image file or cloud
+   storage. HTTP responses use `no-store`, no-referrer and no-index headers;
+   expired images are discarded on access or at the next capture. Emergency
+   Stop revokes all images immediately, and restarting RelayOS clears them.
+   Only metadata (scope/target/timing) enters persistent audit history; bearer
+   URLs and image content are not persisted. Without a configured public HTTPS
+   origin, the original MCP image response remains available and no link is
+   minted.
 
 Emergency Stop blocks the capture. Pending approvals expire after five
 minutes, and denying an approval cannot be bypassed. Once-used request tokens
@@ -52,11 +69,16 @@ tools from its published tool list.
   native ScreenCaptureKit image capture; separate Swift Package executable.
 - `src/laptop_bridge/screen_capture.py` — policy, local authorization
   enforcement, helper invocation and size/content validation.
-- `src/laptop_bridge/server.py` — MCP request and image-response tools.
+- `src/laptop_bridge/server.py` — MCP request, image-response tools and
+  ephemeral HTTP retrieval route.
+- `src/laptop_bridge/screenshot_links.py` — memory-only expiring token store,
+  bounded downloads and immediate revocation.
 - `Native/LaptopBridgeApp/Sources/LaptopBridgeApp/Views/Pages/ApprovalsPageView.swift`
   and `Views/QuickPanel/NotchPanel.swift` — local Once/Deny controls.
 - `scripts/build_relayos_app.sh` — embeds the helper with the bundled server.
 - `tests/test_screen_capture.py` — isolated Python authorization tests.
+- `tests/test_screenshot_links.py` — URL issuance, expiry, one-time capture
+  integration, HTTP no-store response and Emergency Stop regression tests.
 
 ## Remaining manual QA
 
@@ -64,7 +86,9 @@ tools from its published tool list.
   and external displays; verify exact content and protected-window behavior.
 - Verify that Apple's permission prompt targets the correct app identity and
   regrant/restart steps work after updating the signed application.
-- Verify MCP clients render image blocks from the installed bundle; current
-  Swift and Python unit tests do not demonstrate a real desktop capture.
+- Verify ChatGPT can **open an actual approved screenshot URL** over the
+  connected ngrok tunnel and visually inspect the JPEG. The unit tests cover
+  in-memory delivery, not the installed-app public path; do not claim success
+  until a real approved screenshot is received.
 - Later continuous sharing, automatic refresh sessions and interactive computer
   control require a separate explicit design and authorization model.

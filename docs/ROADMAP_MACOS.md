@@ -2,6 +2,12 @@
 Status: Phase 01 native runtime foundation in progress (2026-10-31)
 Scope: /Users/chastedjaziri/Documents/GitHub/laptop-bridge
 
+## Screen capture delivery — current development branch
+- [x] Preserve exact per-frame local approval and native ScreenCaptureKit JPEG response.
+- [x] Add memory-only HTTPS retrieval fallback through the existing tunnel, with expiring random tokens, bounded reads and Emergency Stop revocation.
+- [x] Run Python regression suite (137 passed, 19 subtests; one pre-existing Pydantic warning), confirm HTTP route registration/metadata contract, and pass git diff --check.
+- [ ] Deploy the signed bundle with a rollback backup, then verify a real consented full-screen JPEG is retrievable and inspectable from ChatGPT over the public tunnel.
+
 ## Product direction
 RelayOS is a persistent, locally controlled macOS agent exposing approved tools to ChatGPT and other authorized MCP clients. SwiftUI/AppKit powers the menu bar, dashboard and optional notch companion. The existing Python MCP/OAuth runtime stays in place until Swift parity is proven. Windows development is frozen; do not delete its code without a separate migration decision.
 
