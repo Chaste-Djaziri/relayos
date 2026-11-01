@@ -155,16 +155,24 @@ struct RelayOSCursorOrientation {
 struct RelayOSCursorArrivalGate {
     private(set) var hasBeenOutside = false
 
-    mutating func reset(pointer: CGPoint, target: CGPoint) {
-        hasBeenOutside = !RelayOSCursorPlacement.arrived(pointer: pointer, at: target)
+    mutating func reset(isInside: Bool) {
+        hasBeenOutside = !isInside
     }
 
-    mutating func update(pointer: CGPoint, target: CGPoint) -> Bool {
-        if !RelayOSCursorPlacement.arrived(pointer: pointer, at: target) {
+    mutating func update(isInside: Bool) -> Bool {
+        if !isInside {
             hasBeenOutside = true
             return false
         }
         return hasBeenOutside
+    }
+
+    mutating func reset(pointer: CGPoint, target: CGPoint) {
+        reset(isInside: RelayOSCursorPlacement.arrived(pointer: pointer, at: target))
+    }
+
+    mutating func update(pointer: CGPoint, target: CGPoint) -> Bool {
+        update(isInside: RelayOSCursorPlacement.arrived(pointer: pointer, at: target))
     }
 }
 
@@ -176,10 +184,15 @@ struct RelayOSPointerGuidance: Decodable {
     let x: Double?
     let y: Double?
     let expiresAt: Double?
+    let region: RelayOSHighlightSpec?
+    let proximityRadius: Double?
+    let showCursor: Bool?
 
     enum CodingKeys: String, CodingKey {
-        case active, id, display, x, y
+        case active, id, display, x, y, region
         case expiresAt = "expires_at"
+        case proximityRadius = "proximity_radius"
+        case showCursor = "show_cursor"
     }
 
     func targetScreen(in screens: [NSScreen]) -> NSScreen? {
@@ -290,6 +303,7 @@ final class RelayOSCursorCompanion {
     private var anchoredFrame: CGRect?
     private var arrivalGate = RelayOSCursorArrivalGate()
     private var dismissedID: String?
+    private let highlight = RelayOSScreenHighlight()
 
     private init() {}
 
@@ -339,6 +353,7 @@ final class RelayOSCursorCompanion {
         polling = false
         lastPoll = 0
         pollGeneration += 1
+        highlight.dismiss(immediately: true)
     }
 
     private func finishGuidance(_ id: String) {
@@ -349,6 +364,7 @@ final class RelayOSCursorCompanion {
         anchoredID = nil
         anchoredFrame = nil
         arrivalGate = RelayOSCursorArrivalGate()
+        highlight.dismiss()
         guard let token = MCPHealthMonitor.readLocalControlToken(),
               let url = URL(string: "http://127.0.0.1:8765/control/cursor-guidance/arrived"),
               let body = try? JSONSerialization.data(withJSONObject: ["id": id])
@@ -411,6 +427,7 @@ final class RelayOSCursorCompanion {
         var targetPoint: CGPoint?
         var chosenScreen: CGRect?
         var targetFrame: CGRect?
+        var highlightShouldRemain = false
 
         if let command = guidance, let id = command.id,
            let selected = command.targetScreen(in: screens),
@@ -426,16 +443,37 @@ final class RelayOSCursorCompanion {
                 } ?? pointer
                 anchoredFrame = RelayOSCursorPlacement.framePointing(
                     at: point, from: center, on: selected.frame)
-                arrivalGate.reset(pointer: pointer, target: point)
+                let inside: Bool
+                if let region = command.region, region.isValid {
+                    let radius = CGFloat(command.proximityRadius ?? 48)
+                    inside = RelayOSHighlightGeometry.isNear(
+                        pointer: pointer, region: region,
+                        screen: selected.frame, radius: radius)
+                } else {
+                    inside = RelayOSCursorPlacement.arrived(pointer: pointer, at: point)
+                }
+                arrivalGate.reset(isInside: inside)
             }
-            if arrivalGate.update(pointer: pointer, target: point) {
-                // The actual mouse reached the highlighted item. Stop the
-                // guide and smoothly rejoin the usual follow behavior.
+            let inside: Bool
+            if let region = command.region, region.isValid {
+                inside = RelayOSHighlightGeometry.isNear(
+                    pointer: pointer, region: region, screen: selected.frame,
+                    radius: CGFloat(command.proximityRadius ?? 48))
+            } else {
+                inside = RelayOSCursorPlacement.arrived(pointer: pointer, at: point)
+            }
+            if arrivalGate.update(isInside: inside) {
                 finishGuidance(id)
             } else {
-                chosenScreen = selected.frame
-                targetPoint = point
-                targetFrame = anchoredFrame
+                if let region = command.region, region.isValid {
+                    highlight.show(id: id, region: region, on: selected)
+                    highlightShouldRemain = true
+                }
+                if command.showCursor != false {
+                    chosenScreen = selected.frame
+                    targetPoint = point
+                    targetFrame = anchoredFrame
+                }
             }
         } else if guidance != nil {
             guidance = nil
@@ -443,6 +481,8 @@ final class RelayOSCursorCompanion {
             anchoredFrame = nil
             arrivalGate = RelayOSCursorArrivalGate()
         }
+
+        if !highlightShouldRemain { highlight.dismiss() }
 
         if targetFrame == nil {
             let frames = screens.map(\.frame)

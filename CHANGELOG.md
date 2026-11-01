@@ -4,6 +4,13 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 
 ## Unreleased
 
+### Animated screen-region highlights
+- Extend RelayOS's visual-only pointer guidance with `highlight_screen_region` (rect, rounded rect, ellipse), `highlight_screen_path` (closed polygon, open/closed freeform path), and `clear_screen_highlight` MCP actions. Geometry uses bounded normalized full-display coordinates; no additional screenshot or mouse input is performed.
+- Add a separate, transparent, mouse-click-through SwiftUI overlay panel. Accent-color outlines animate from the upper-left/first supplied vertex, followed by an optional translucent fill; the existing triangular cursor can move/rotate toward the same item.
+- Reuse one active target, authenticated loopback polling and ID-bound proximity acknowledgement: the drawn shape and directed cursor both clear when the real pointer approaches the region (configurable 0–200pt), after a 1–60s timeout, explicit clear, Emergency Stop or disabled guidance. Old targets cannot clear replacements.
+- Python regression suite: 153 passed, 53 subtests (one existing Pydantic warning). New native geometry tests added; Swift test execution was blocked by tool safety checks, so the installed app has **not** been replaced or visually tested.
+
+
 ### Guided RelayOS cursor
 - Extend the existing macOS equilateral, theme-accent cursor to accept ephemeral visual-only display targets from authenticated MCP via `point_screen_target` / `clear_screen_pointer`. Translate top-left normalized screenshot coordinates into macOS global points and animate the pointer toward a fixed 46-point standoff, rotating its tip toward the target without moving or clicking the real system mouse.
 - Hold the marker until the actual mouse enters a 64-point radius around the item (from outside), or until the configured 1–60-second timeout; then ease back into the existing mouse-follow mode. The local companion confirms arrival via a token-authenticated, target-ID-bound control endpoint; stale acknowledgments cannot dismiss new targets. Emergency Stop and disabled Screen Guidance clear pending targets.

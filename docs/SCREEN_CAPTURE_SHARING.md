@@ -101,6 +101,39 @@ MCP tool can only set a temporary visual target; it **never moves or clicks
 the real macOS pointer**, injects input or triggers a new capture. This
 feature remains source-only until the Swift app is rebuilt and deployed.
 
+## Animated shape highlights (development source only)
+
+After a fresh user-approved **full-display** screenshot is inspected, RelayOS
+can visually select the item instead of merely pointing at it:
+
+- `highlight_screen_region(shape, x, y, width, height, ...)`: `rect`,
+  `rounded_rect` or `ellipse`, all bounds normalized 0–1 from the top-left.
+- `highlight_screen_path(points, shape="polygon"|"path", ...)`: 2–96
+  normalized `[x,y]` vertices. A polygon is closed (3+ points); freeform
+  path may be open or closed, supporting nonuniform outlines.
+- `clear_screen_highlight()`: dismiss both the overlay and any directed cursor.
+
+Optional parameters: `display="main"`, `hold_seconds=20` (1–60),
+`proximity_radius=48` (0–200 macOS screen points),
+`show_cursor=true`, `fill_opacity=0.12` (0–0.25),
+`stroke_width=2.5` (1–6). Rectangles support
+`corner_radius=10` (0–40 points). An open path is never filled.
+
+The native UI displays a separate click-through, transparent overlay above the
+selected display. The accent-color outline animates from the top-left edge
+(rectangles) or first supplied vertex (paths), then a translucent fill fades in.
+The existing virtual triangle optionally moves toward the item, rotates and
+holds near it. A real mouse entering the shape or a configurable surrounding
+margin **from outside** dismisses the outline and returns the triangle to its
+normal follow mode. Timeouts, explicit clear, disabled guidance and Emergency
+Stop also dismiss. Only one target is active. No OS cursor manipulation,
+injected clicks, persistent image data or recording are involved.
+
+The running app must be rebuilt before this functionality is available;
+reconnecting the ChatGPT RelayOS connector may also be necessary to discover
+the new MCP tools. macOS-native tests and live visual behavior remain to be
+verified on the signed bundle.
+
 ## Remaining manual QA
 
 - Test the signed release app with the selected app, window and both internal

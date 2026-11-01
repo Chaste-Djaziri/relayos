@@ -8,6 +8,16 @@ Scope: /Users/chastedjaziri/Documents/GitHub/laptop-bridge
 - [x] Run Python regression suite (137 passed, 19 subtests; one pre-existing Pydantic warning), confirm HTTP route registration/metadata contract, and pass git diff --check.
 - [ ] Deploy the signed bundle with a rollback backup, then verify a real consented full-screen JPEG is retrievable and inspectable from ChatGPT over the public tunnel.
 
+## Animated screen-region highlight — source implementation
+- [x] Add full-display normalized rectangular, rounded-rectangular, and elliptical region highlighting with a draw-on stroke and optional translucent fill.
+- [x] Support bounded irregular polygons and open/closed freeform paths using 2–96 normalized vertices.
+- [x] Reuse the existing accent-color triangle, position/direction logic, local control token and target-ID-bound lifecycle; one active highlight at a time.
+- [x] Proximity to the actual region (not only its center) and timeout dismiss the overlay and return cursor to normal mouse-follow; retain the move-out/re-enter safeguard.
+- [x] Full Python tests: 153 passed, 53 subtests; native shape/proximity/decoding tests written.
+- [ ] Verify Swift build/test locally (execution tool blocked the command).
+- [ ] Signed rebuild/deployment with rollback; visually confirm rectangle, ellipse, irregular path, multi-display offsets and hold/dismiss behavior.
+- [ ] Ensure public MCP connector refresh discovers the new highlight tools.
+
 ## Native visual guidance cursor — current development branch
 - [x] Add visual-only `point_screen_target` MCP tool for user-requested item location on a recently approved **full-display** screenshot, with normalized top-left x/y coordinates.
 - [x] Animate existing theme-accent equilateral triangle to a fixed nearby target and rotate its apex to point toward the item from any direction.
