@@ -504,22 +504,15 @@ final class NotchMediaController: ObservableObject {
     }
 
     nonisolated private static func runAppleScript(_ source: String) -> String? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = ["-e", source]
-        let outPipe = Pipe()
-        process.standardOutput = outPipe
-        process.standardError = Pipe()
-        do {
-            try process.run()
-            process.waitUntilExit()
-            guard process.terminationStatus == 0 else { return nil }
-            let data = outPipe.fileHandleForReading.readDataToEndOfFile()
-            return String(data: data, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-        } catch {
-            return nil
-        }
+        // Execute the Apple Event from RelayOS rather than from a child
+        // `osascript` process. macOS can then show and retain the Automation
+        // consent for RelayOS itself (Music/Spotify), which is required for
+        // dependable now-playing updates and transport controls.
+        guard let script = NSAppleScript(source: source) else { return nil }
+        var error: NSDictionary?
+        let result = script.executeAndReturnError(&error)
+        guard error == nil else { return nil }
+        return result.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
