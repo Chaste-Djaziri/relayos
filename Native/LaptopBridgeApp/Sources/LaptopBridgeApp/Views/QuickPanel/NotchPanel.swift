@@ -276,6 +276,9 @@ enum NotchPanelPlacement {
 /// Non-activating top-edge panel that is excluded from screenshots/recordings
 /// and never constrained below the menu bar by AppKit.
 final class RelayOSNotchWindow: NSPanel {
+    private weak var trackedContentView: NSView?
+    private var pointerTrackingArea: NSTrackingArea?
+
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
@@ -313,6 +316,45 @@ final class RelayOSNotchWindow: NSPanel {
         backgroundColor = .clear
         hidesOnDeactivate = false
         isMovableByWindowBackground = false
+        // SwiftUI's onHover only receives events after its shaped content has
+        // won hit testing. The window-level tracker keeps hover expansion
+        // reliable for an external mouse and for the black camera silhouette.
+        acceptsMouseMovedEvents = true
+    }
+
+    func installPointerTracking() {
+        guard let contentView else { return }
+        if let pointerTrackingArea, trackedContentView === contentView {
+            contentView.removeTrackingArea(pointerTrackingArea)
+        }
+        let tracking = NSTrackingArea(
+            rect: .zero,
+            options: [.activeAlways, .inVisibleRect, .mouseEnteredAndExited, .mouseMoved],
+            owner: self,
+            userInfo: nil
+        )
+        contentView.addTrackingArea(tracking)
+        trackedContentView = contentView
+        pointerTrackingArea = tracking
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        NotchPanelCoordinator.shared.hover(true)
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        NotchPanelCoordinator.shared.hover(false)
+    }
+
+    override func sendEvent(_ event: NSEvent) {
+        // A non-activating panel may receive its first click while a different
+        // app owns key focus. Expand before passing that event to SwiftUI so a
+        // click on the physical silhouette is never discarded.
+        if event.type == .leftMouseDown,
+           NotchPanelCoordinator.shared.phase != .expanded {
+            NotchPanelCoordinator.shared.expand()
+        }
+        super.sendEvent(event)
     }
 
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
@@ -623,6 +665,7 @@ final class NotchPanelCoordinator: ObservableObject {
                 self?.triggerOpenMainWindow()
             }
         ))
+        window.installPointerTracking()
         panel = window
         window.orderFrontRegardless()
         isVisible = true
