@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Rebuilt the menu-bar RelayOS control center with status-first cards, an approvals shortcut, connected-client summary and confirmed service actions; added an optional theme-aware top-center notch companion, macOS Controls menu shortcuts, and a compact Settings toolbar. The Python-backed production runtime is retained; the installed app is unchanged.
 - Implement native development-only OAuth authorization-code/PKCE, refresh rotation and revocation, locally approved file writes/patches, safe asynchronous command jobs and native screen capture/guidance overlays. Approval inbox shows pending requests; Python code and installed production remain untouched. Full public MCP transport parity remains pending.
 - Add isolated Swift-only Xcode Debug mode (`RELAYOS_SWIFT_ONLY=1`) with in-app loopback MCP on port 18765, native system/process/project read tools, owner-only test credentials, folder consent through NSOpenPanel and verified no-Python startup path. Production Python backend remains unchanged until OAuth, approval, command/job and screen parity.
 - Xcode Command+R now launches the actual RelayOS Settings UI with live model/configuration, instead of BridgeModel.preview(); development mode monitors but never owns or restarts the installed MCP/ngrok services. SwiftUI #Preview blocks remain mock-data only.

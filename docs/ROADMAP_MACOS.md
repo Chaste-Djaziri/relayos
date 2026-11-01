@@ -297,3 +297,12 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [ ] Real Streamable HTTP/SSE, multi-client official MCP Swift SDK transport and production OAuth interoperability.
 - [ ] Fully persisted job history, full screen event observation, source compatibility for remaining tools, full UI parity and release-hardening.
 - [ ] No production replacement until signed staged acceptance and rollback exercise.
+
+## Menu bar, top controls and notch companion — 2026-11-01
+- [x] Replace the original form-style menu bar view with a compact control center: local/public MCP status, approvals, client summary and protected actions.
+- [x] Add RelayOS Controls macOS menu with ⌘⌥O (open) and ⌘⌥N (toggle notch panel).
+- [x] Add optional AppKit floating top-center companion below the actual menu bar, with real window navigation and dismiss controls.
+- [x] Keep Python-backed workflows in the normal app; enable menu bar actions in Swift-only Debug and surface its native approval count.
+- [x] Add layout tests for standard, small and negative-origin external displays and per-view SwiftUI previews.
+- [ ] Manually review the notch positioning, keyboard interactions, VoiceOver and light/dark contrast on real macOS displays.
+- [ ] Consider optional automatic collapse/pin preference only after interactive QA; never auto-display on first launch.
