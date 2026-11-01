@@ -122,7 +122,7 @@ class CommandJobManager:
             # The UI can activate emergency stop while a child is being
             # spawned or while its exit is being observed. Label such races
             # as cancellation, not an unexplained execution failure.
-            if reason is None and state.emergency_stop() and (process is None or process.returncode != 0):
+            if (reason is None or reason in ("launch_failed", "failed")) and state.emergency_stop() and (process is None or process.returncode != 0):
                 reason = "emergency_stop"
             status = (
                 "cancelled" if reason in ("cancelled", "emergency_stop", "session_expired")
