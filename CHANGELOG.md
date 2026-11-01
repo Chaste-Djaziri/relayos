@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Add isolated Swift-only Xcode Debug mode (`RELAYOS_SWIFT_ONLY=1`) with in-app loopback MCP on port 18765, native system/process/project read tools, owner-only test credentials, folder consent through NSOpenPanel and verified no-Python startup path. Production Python backend remains unchanged until OAuth, approval, command/job and screen parity.
 - Xcode Command+R now launches the actual RelayOS Settings UI with live model/configuration, instead of BridgeModel.preview(); development mode monitors but never owns or restarts the installed MCP/ngrok services. SwiftUI #Preview blocks remain mock-data only.
 - Begin native single-process Swift MCP migration: experimental loopback-only Network.framework listener, native SQLite authorization checks compatible with existing OAuth/session state, and three read-only MCP tools. Production Python service remains active until security and OAuth parity.
 - Replace separate Xcode preview showcase with local `#Preview` declarations alongside each native screen, setup step, reusable settings component, terminal row and permission guide. The Xcode Debug app now renders the real Settings window with inert sample state; no MCP/ngrok starts.

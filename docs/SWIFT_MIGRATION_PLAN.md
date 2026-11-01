@@ -48,14 +48,14 @@ Do not redesign the menu-bar/notch surfaces during the protocol migration, weake
 
 ## Native in-process transport implementation — 2026-11-01
 
-The first migration slice now compiles in the RelayOS app target. It is deliberately **experimental** and cannot replace production yet.
+The first migration slices now compile in the RelayOS app target, including a native-only isolated Debug mode. It is deliberately **experimental** and cannot replace production yet.
 
 - `Services/NativeMCPAuthorization.swift`: fail-closed, read-only access to the existing SQLite authorization schema. Revalidates emergency-stop, SHA-256-hashed legacy OAuth access tokens, session scope and folder scope per request.
 - `Services/NativeMCPProjectFiles.swift`: read-only, UTF-8 capped project listings and file reads; reject invalid sessions, traversal, symlinks escaping the project root, and oversized payloads. Permission scope is validated using current SQLite sessions rather than trusting a client-supplied root.
 - `Services/NativeMCPHTTP.swift`: a native Network.framework HTTP listener bound to `127.0.0.1` on development port `18765`; MCP initialize, ping, tools/list and three read-only tools are implemented. All writes, grants, shell/process commands and unported methods are rejected.
 - `Tests/LaptopBridgeAppTests/NativeMCPAuthorizationTests.swift`: authorization, expiration, emergency stop, scope, resource binding, traversal and HTTP enforcement tests.
 
-To opt into the **in-process native experiment**, choose the existing Xcode RelayOS Debug scheme, then Edit Scheme → Run → Arguments → Environment Variables; add `RELAYOS_NATIVE_MCP_EXPERIMENT=1`. The Debug bundle identifier must be `pro.micorp.relayos.dev`. Launching it starts only a native listener on `127.0.0.1:18765`, **not** Python and not ngrok. The standard Debug run remains an inert UI preview without the experimental listener.
+To opt into the **in-process native experiment**, choose the existing Xcode RelayOS Debug scheme, then Edit Scheme → Run → Arguments → Environment Variables; add `RELAYOS_SWIFT_ONLY=1`. The Debug bundle identifier must be `pro.micorp.relayos.dev`. Launching it starts only a native listener on `127.0.0.1:18765`, **not** Python and not ngrok. The standard Debug run remains an inert UI preview without the experimental listener.
 
 The current production service on `127.0.0.1:8765` and public ngrok remains Python-backed and should not be stopped until the following gates pass:
 1. Replace handcrafted experimental JSON-RPC/HTTP with the official MCP Swift SDK + fully validated transport and comprehensive protocol-version/session/SSE interoperability.
@@ -66,3 +66,15 @@ The current production service on `127.0.0.1:8765` and public ngrok remains Pyth
 6. Validate live protected multi-client auth flows, stable signing and recovery/rollback. Only then let the native app take port 8765 and preserve ngrok hostname and user data.
 
 Smoke test: the native listener was started on a randomly selected loopback port and served HTTP `200` on `/health` without Python. Initial listener argument configuration was corrected after this test detected a Network.framework bind error.\n\nKnown restrictions: the development transport is JSON-only with no MCP SSE/resumability or OAuth bootstrap; the `/health` endpoint is loopback-only and intentionally reports experimental status; no external client should rely on it. Existing SQLite data is only read by the experimental code, not migrated or modified.
+
+### Swift-only localhost checkpoint (2026-11-01)
+- [x] Debug-only `RELAYOS_SWIFT_ONLY=1` starts the native MCP listener **inside** the signed/debug macOS app. No Python helper, ngrok, or production process lock is started.
+- [x] Isolated developer state in `~/.relayos-swift-dev`, with owner-only test bearer token, SHA-256-digest SQLite record, and temporary NSOpenPanel-approved project sessions.
+- [x] UI detects Swift-only mode and replaces unsupported Python-dependent tabs with honest disabled placeholders; Appearance remains usable.
+- [x] Native `system_status`, fixed-command `list_processes`, scoped `list_project_files`, scoped `read_project_file` exposed in the local experimental MCP tool list.
+- [x] OAuth token scope/resource checks and end-to-end localhost read/revoke/invalid-bearer regression tests.
+- [x] Safe test build instructions in `docs/SWIFT_ONLY_LOCAL_TEST.md`; no production deployment.
+- [ ] OAuth 2.1 public registration, PKCE, authorization UI, refresh/revocation and token-binding parity.
+- [ ] Native Once/Session/Always approval inbox and atomic authorization for all permission-expanding commands and file writes.
+- [ ] Full protocol fidelity via official MCP Swift SDK and Streamable HTTP transport; this pilot is not client-compatible for all MCP clients.
+- [ ] Remaining tools, background jobs, screenshots, overlays and no-Python production packaging.

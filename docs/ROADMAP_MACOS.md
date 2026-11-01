@@ -280,3 +280,10 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Observe existing MCP authenticated local health and configured ngrok endpoint without taking the production service lock.
 - [x] Disable process restart and ngrok setup writes in the separate Debug bundle; show prominent notice about live approvals/revocations.
 - [ ] Complete the Swift in-process OAuth and tools migration before treating the development app as a fully standalone native server.
+
+## Native Swift-only local development — 2026-11-01
+- [x] Create isolated Swift-only Xcode Debug runtime behind `RELAYOS_SWIFT_ONLY=1` (port 18765) without Python or ngrok.
+- [x] Owner-only development test token, scoped Open-panel project grants, explicit disabled UI for unported features.
+- [x] Four read-only native tools with scope/resource verification; tests cover revoked sessions and invalid tokens over real HTTP.
+- [ ] Full OAuth/PKCE and native local approval/write/command/job/screen parity are **not completed**.
+- [ ] Production helper removal and handover remain blocked on protocol, security and packaging parity checks.

@@ -17,7 +17,7 @@ The project uses the existing app implementation, not a copied set of files. Do 
 
 ## Signing and system permissions
 
-- The Xcode Debug bundle uses `pro.micorp.relayos.dev` and launches the **actual Settings window using live RelayOS configuration and approval data**, not sample data. It does not acquire the production lock, start or restart Python/ngrok, or manage the installed app's processes. A visible development notice explains that explicit approval/revocation actions may affect the live authorization database. Optional `RELAYOS_NATIVE_MCP_EXPERIMENT=1` starts the experimental in-process Swift listener on 127.0.0.1:18765 in parallel, never on the installed service's port 8765.
+- The Xcode Debug bundle uses `pro.micorp.relayos.dev` and launches the **actual Settings window using live RelayOS configuration and approval data**, not sample data. It does not acquire the production lock, start or restart Python/ngrok, or manage the installed app's processes. A visible development notice explains that explicit approval/revocation actions may affect the live authorization database. For a **Swift-only, no-Python** local run, set `RELAYOS_SWIFT_ONLY=1` in the Debug scheme. This uses the separate `~/.relayos-swift-dev` database and starts the in-process Swift listener on 127.0.0.1:18765, never on the installed service's port 8765. See `docs/SWIFT_ONLY_LOCAL_TEST.md`.
 - The Release bundle identifier is `pro.micorp.relayos`. The currently installed legacy app may still use `rw.shangazi.relayos`; these are different macOS privacy identities. **Do not install an Xcode Release build over the live app**: it does not include the Python runtime helpers.
 - Keep a consistent signing team and certificate on successive builds. Ad-hoc signing may cause macOS screen-recording and accessibility permissions to be reported as missing after replacement.
 - **Do not grant Full Disk Access to the Debug build** merely for UI development. It has a distinct macOS app identity and permissions.
@@ -39,3 +39,7 @@ To distribute directly outside the Mac App Store, obtain a **Developer ID Applic
 ## Architecture boundary
 
 The UI is SwiftUI today; `src/laptop_bridge` still owns the production MCP/OAuth/authz implementation. See `docs/SWIFT_MIGRATION_PLAN.md`. Do not start both Python and Swift MCP servers on port 8765 simultaneously; preserve the live endpoint and saved SQLite authorization records throughout migration.
+
+### Native Swift-only test mode
+
+Run `sh scripts/test_swift_only.sh` to compile/test without launching or replacing the installed app. To run the local Swift-only app, set `RELAYOS_SWIFT_ONLY=1` in Xcode's Run environment. Only the four implemented read-only tools are available; unported settings display explicit placeholders and cannot call Python. Remove the flag to return to the existing observe-only Xcode workflow.
