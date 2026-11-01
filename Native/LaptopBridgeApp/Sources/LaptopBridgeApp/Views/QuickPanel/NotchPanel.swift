@@ -335,6 +335,10 @@ final class NotchMediaController: ObservableObject {
     @Published private(set) var albumName = ""
     @Published private(set) var playerName = "Music"
     @Published private(set) var playerBundleIdentifier = "com.apple.Music"
+    /// Whether a supported player is already running. Keeping this separate
+    /// from playback prevents a control click from launching Music merely
+    /// because no player has been discovered yet.
+    @Published private(set) var hasRunningPlayer = false
 
     private var pollTask: Task<Void, Never>?
 
@@ -371,6 +375,7 @@ final class NotchMediaController: ObservableObject {
         }.value
 
         if let snapshot {
+            if !hasRunningPlayer { hasRunningPlayer = true }
             if isPlaying != snapshot.isPlaying { isPlaying = snapshot.isPlaying }
             if trackTitle != snapshot.trackTitle { trackTitle = snapshot.trackTitle }
             if artistName != snapshot.artistName { artistName = snapshot.artistName }
@@ -380,15 +385,18 @@ final class NotchMediaController: ObservableObject {
                 playerBundleIdentifier = snapshot.playerBundleIdentifier
             }
         } else if isPlaying || !trackTitle.isEmpty {
+            hasRunningPlayer = false
             isPlaying = false
             trackTitle = ""
             artistName = ""
             albumName = ""
+        } else if hasRunningPlayer {
+            hasRunningPlayer = false
         }
     }
 
     func togglePlayPause() {
-        let targetApp = activeOrPreferredAppName()
+        guard let targetApp = runningPlayerName() else { return }
         Task.detached(priority: .userInitiated) {
             _ = Self.runAppleScript("tell application \"\(targetApp)\" to playpause")
             await self.refresh()
@@ -396,7 +404,7 @@ final class NotchMediaController: ObservableObject {
     }
 
     func nextTrack() {
-        let targetApp = activeOrPreferredAppName()
+        guard let targetApp = runningPlayerName() else { return }
         Task.detached(priority: .userInitiated) {
             _ = Self.runAppleScript("tell application \"\(targetApp)\" to next track")
             try? await Task.sleep(for: .milliseconds(180))
@@ -405,7 +413,7 @@ final class NotchMediaController: ObservableObject {
     }
 
     func previousTrack() {
-        let targetApp = activeOrPreferredAppName()
+        guard let targetApp = runningPlayerName() else { return }
         Task.detached(priority: .userInitiated) {
             _ = Self.runAppleScript("tell application \"\(targetApp)\" to previous track")
             try? await Task.sleep(for: .milliseconds(180))
@@ -435,7 +443,7 @@ final class NotchMediaController: ObservableObject {
     }
     #endif
 
-    private func activeOrPreferredAppName() -> String {
+    private func runningPlayerName() -> String? {
         let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
         if running.contains(playerBundleIdentifier) {
             return playerName
@@ -443,7 +451,10 @@ final class NotchMediaController: ObservableObject {
         if running.contains("com.spotify.client") {
             return "Spotify"
         }
-        return "Music"
+        if running.contains("com.apple.Music") {
+            return "Music"
+        }
+        return nil
     }
 
     nonisolated private static func queryRunningPlayers(runningBundles: Set<String>) -> Snapshot? {
@@ -515,10 +526,15 @@ final class NotchMediaController: ObservableObject {
 final class NotchPanelCoordinator: ObservableObject {
     static let shared = NotchPanelCoordinator()
     private static let enabledDefaultsKey = "relayos.notch.enabled"
+    private static let selectedSubpageDefaultsKey = "relayos.notch.selected-subpage"
 
     @Published private(set) var isVisible = false
     @Published private(set) var phase: NotchPanelPhase = .collapsed
-    @Published var selectedSubpage: NotchSubpage = .activity
+    @Published var selectedSubpage: NotchSubpage {
+        didSet {
+            UserDefaults.standard.set(selectedSubpage.rawValue, forKey: Self.selectedSubpageDefaultsKey)
+        }
+    }
 
     private(set) var panel: RelayOSNotchWindow?
     private var model: BridgeModel?
@@ -545,7 +561,10 @@ final class NotchPanelCoordinator: ObservableObject {
         return hasActiveJobs || isMusicPlaying
     }
 
-    private init() {}
+    private init() {
+        let saved = UserDefaults.standard.string(forKey: Self.selectedSubpageDefaultsKey)
+        selectedSubpage = NotchSubpage(rawValue: saved ?? "") ?? .activity
+    }
 
     func registerOpenMainWindow(_ handler: @escaping () -> Void) {
         self.openMainWindow = handler
@@ -681,7 +700,10 @@ final class NotchPanelCoordinator: ObservableObject {
         pendingCollapse?.cancel()
         pendingCollapse = nil
         let hasActiveJobs = model?.commandJobs.contains(where: \.active) ?? false
-        if !hasActiveJobs && NotchMediaController.shared.isPlaying {
+        // Prefer an active terminal job when one exists. Otherwise retain the
+        // user's page choice, except for the first music activity after launch.
+        if !hasActiveJobs && NotchMediaController.shared.isPlaying,
+           UserDefaults.standard.object(forKey: Self.selectedSubpageDefaultsKey) == nil {
             selectedSubpage = .music
         }
         transition(to: .expanded, haptic: true)
