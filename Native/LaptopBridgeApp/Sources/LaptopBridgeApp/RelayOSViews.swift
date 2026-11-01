@@ -216,6 +216,7 @@ struct DesktopWindowView: View {
                 SettingsView(model: model)
             }
         }
+        .ignoresSafeArea()
         .background(CustomWindowAccessor())
     }
 }
@@ -248,9 +249,9 @@ struct CustomWindowAccessor: NSViewRepresentable {
     }
 }
 
-// MARK: - Custom Traffic Lights and Navigation
+// MARK: - Custom Traffic Lights
 
-struct CustomTrafficLightsAndNav: View {
+struct CustomTrafficLights: View {
     @State private var isHovering = false
 
     var body: some View {
@@ -302,28 +303,12 @@ struct CustomTrafficLightsAndNav: View {
                     )
             }
             .buttonStyle(.plain)
-
-            Spacer().frame(width: 6)
-
-            HStack(spacing: 8) {
-                Button {} label: {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color(white: 0.45))
-                }
-                .buttonStyle(.plain)
-
-                Button {} label: {
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color(white: 0.28))
-                }
-                .buttonStyle(.plain)
-            }
         }
         .onHover { isHovering = $0 }
     }
 }
+
+typealias CustomTrafficLightsAndNav = CustomTrafficLights
 
 // MARK: - Reusable UI Components
 
@@ -737,10 +722,10 @@ struct CustomSidebarView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            CustomTrafficLightsAndNav()
-                .padding(.top, 8)
+            CustomTrafficLights()
+                .padding(.top, 14)
                 .padding(.leading, 16)
-                .padding(.bottom, 10)
+                .padding(.bottom, 14)
 
             Text("Settings")
                 .font(.system(size: 18, weight: .bold))
@@ -1208,6 +1193,7 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(red: 0.095, green: 0.095, blue: 0.095))
         }
+        .ignoresSafeArea()
         .background(CustomWindowAccessor())
         .onChange(of: model.approvalNavigationRequest) { _, _ in
             selected = .approvals
