@@ -9,6 +9,7 @@ struct CustomSidebarView: View {
         SidebarItemModel(tab: .general, title: "General", icon: "gearshape"),
         SidebarItemModel(tab: .appearance, title: "Appearance", icon: "paintpalette"),
         SidebarItemModel(tab: .security, title: "Security", icon: "lock.shield"),
+        SidebarItemModel(tab: .systemPermissions, title: "System permissions", icon: "hand.raised.fill"),
     ]
 
     private let accessItems: [SidebarItemModel] = [
@@ -142,3 +143,4 @@ struct CustomSidebarView: View {
         searchText.isEmpty || text.localizedCaseInsensitiveContains(searchText)
     }
 }
+
