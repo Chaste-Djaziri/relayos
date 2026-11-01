@@ -60,7 +60,7 @@ enum NotchSubpage: String, CaseIterable, Identifiable {
 
 /// Hardware-style notch silhouette whose top-left and top-right corners flare
 /// outwards flush with the very top edge (`y = 0`) and whose bottom corners
-/// curve inwards.
+/// curve smoothly inwards with continuous curvature.
 struct NotchShape: Shape {
     var topCornerRadius: CGFloat
     var bottomCornerRadius: CGFloat
@@ -74,45 +74,58 @@ struct NotchShape: Shape {
     }
 
     func path(in rect: CGRect) -> Path {
-        let topRadius = min(max(0, topCornerRadius), rect.width / 4, rect.height / 2)
-        let bodyWidth = max(0, rect.width - (topRadius * 2))
-        let bottomRadius = min(max(0, bottomCornerRadius), bodyWidth / 2, max(0, rect.height - topRadius))
+        let tr = min(max(0, topCornerRadius), rect.width / 4, rect.height / 2)
+        let bodyWidth = max(0, rect.width - (tr * 2))
+        let br = min(max(0, bottomCornerRadius), bodyWidth / 2, max(0, rect.height - tr))
 
-        let leftWallX = rect.minX + topRadius
-        let rightWallX = rect.maxX - topRadius
+        let leftWallX = rect.minX + tr
+        let rightWallX = rect.maxX - tr
 
         var path = Path()
         path.move(to: CGPoint(x: rect.minX, y: rect.minY))
 
-        // Top-left outward (concave) corner flaring from (minX, 0) into the left wall
-        if topRadius > 0 {
-            path.addArc(
-                tangent1End: CGPoint(x: leftWallX, y: rect.minY),
-                tangent2End: CGPoint(x: leftWallX, y: rect.minY + topRadius),
-                radius: topRadius
+        // Top-left continuous outward fillet (tangent to top display edge at minX, 0)
+        if tr > 0 {
+            path.addCurve(
+                to: CGPoint(x: leftWallX, y: rect.minY + tr),
+                control1: CGPoint(x: rect.minX + tr * 0.55, y: rect.minY),
+                control2: CGPoint(x: leftWallX, y: rect.minY + tr * 0.45)
             )
         }
 
-        // Bottom-left inward (convex) corner
-        path.addArc(
-            tangent1End: CGPoint(x: leftWallX, y: rect.maxY),
-            tangent2End: CGPoint(x: rightWallX, y: rect.maxY),
-            radius: bottomRadius
-        )
+        // Left vertical edge down to bottom fillet
+        path.addLine(to: CGPoint(x: leftWallX, y: rect.maxY - br))
 
-        // Bottom-right inward (convex) corner
-        path.addArc(
-            tangent1End: CGPoint(x: rightWallX, y: rect.maxY),
-            tangent2End: CGPoint(x: rightWallX, y: rect.minY),
-            radius: bottomRadius
-        )
+        // Bottom-left continuous inward fillet
+        if br > 0 {
+            path.addCurve(
+                to: CGPoint(x: leftWallX + br, y: rect.maxY),
+                control1: CGPoint(x: leftWallX, y: rect.maxY - br * 0.45),
+                control2: CGPoint(x: leftWallX + br * 0.45, y: rect.maxY)
+            )
+        }
 
-        // Top-right outward (concave) corner flaring from the right wall out to (maxX, 0)
-        if topRadius > 0 {
-            path.addArc(
-                tangent1End: CGPoint(x: rightWallX, y: rect.minY),
-                tangent2End: CGPoint(x: rect.maxX, y: rect.minY),
-                radius: topRadius
+        // Bottom horizontal edge
+        path.addLine(to: CGPoint(x: rightWallX - br, y: rect.maxY))
+
+        // Bottom-right continuous inward fillet
+        if br > 0 {
+            path.addCurve(
+                to: CGPoint(x: rightWallX, y: rect.maxY - br),
+                control1: CGPoint(x: rightWallX - br * 0.45, y: rect.maxY),
+                control2: CGPoint(x: rightWallX, y: rect.maxY - br * 0.45)
+            )
+        }
+
+        // Right vertical edge up to top fillet
+        path.addLine(to: CGPoint(x: rightWallX, y: rect.minY + tr))
+
+        // Top-right continuous outward fillet (tangent to top display edge at maxX, 0)
+        if tr > 0 {
+            path.addCurve(
+                to: CGPoint(x: rect.maxX, y: rect.minY),
+                control1: CGPoint(x: rightWallX, y: rect.minY + tr * 0.45),
+                control2: CGPoint(x: rect.maxX - tr * 0.55, y: rect.minY)
             )
         }
 
