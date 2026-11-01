@@ -41,7 +41,7 @@ def find_zone(token, hostname):
     raise CloudflareError("No active Cloudflare zone matches that hostname")
 
 
-def provision(token, hostname, tunnel_name="Laptop Bridge"):
+def provision(token, hostname, tunnel_name="RelayOS"):
     """Create a named tunnel, its ingress, and a proxied CNAME record."""
     hostname = hostname.strip().lower().rstrip(".")
     zone = find_zone(token, hostname)
