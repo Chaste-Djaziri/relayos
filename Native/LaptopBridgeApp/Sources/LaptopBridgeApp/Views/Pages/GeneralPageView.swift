@@ -5,6 +5,7 @@ struct GeneralPageView: View {
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage(ApprovalSound.preferenceKey) private var approvalSoundsEnabled = true
     @AppStorage(ApprovalArrivalNotification.enabledKey) private var approvalNotificationsEnabled = false
+    @State private var copiedEndpoint = false
 
     private var theme: ThemeColors {
         RelayOSTheme.colors(colorScheme)
@@ -22,8 +23,20 @@ struct GeneralPageView: View {
                             .font(.system(size: 11.5, design: .monospaced))
                             .foregroundStyle(theme.textPrimary)
                             .lineLimit(1)
-                        SettingsButton(title: "Copy", icon: "doc.on.doc", style: .secondary) {
+                        SettingsButton(
+                            title: copiedEndpoint ? "Copied" : "Copy",
+                            icon: copiedEndpoint ? "checkmark" : "doc.on.doc",
+                            style: copiedEndpoint ? .primary : .secondary
+                        ) {
                             model.copyEndpoint()
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                copiedEndpoint = true
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    copiedEndpoint = false
+                                }
+                            }
                         }
                     }
                 }
