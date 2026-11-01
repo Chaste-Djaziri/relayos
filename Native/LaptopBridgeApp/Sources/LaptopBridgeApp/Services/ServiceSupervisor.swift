@@ -41,6 +41,9 @@ final class ServiceSupervisor {
     @discardableResult
     func finishProbe(_ status: MCPHealthStatus, generation observedGeneration: Int? = nil) -> Bool {
         guard observedGeneration == nil || observedGeneration == generation else { return false }
+        if observedGeneration != nil {
+            generation += 1
+        }
         probeInProgress = false
         health = status
         if status == .healthy {
@@ -83,6 +86,8 @@ final class ServiceSupervisor {
     }
 
     func tunnelReady() {
+        tunnelGeneration += 1
+        tunnelProbeInProgress = false
         tunnelHealth = .healthy
         consecutiveTunnelFailures = 0
         tunnelFailures = 0
@@ -112,10 +117,13 @@ final class ServiceSupervisor {
     @discardableResult
     func finishTunnelProbe(_ status: TunnelHealthStatus, generation observedGeneration: Int) -> Bool {
         guard observedGeneration == tunnelGeneration else { return false }
+        tunnelGeneration += 1
         tunnelProbeInProgress = false
         tunnelHealth = status
         if status == .healthy {
             tunnelReady()
+        } else if status == .stopped {
+            consecutiveTunnelFailures = 0
         } else {
             consecutiveTunnelFailures += 1
         }
@@ -127,7 +135,17 @@ final class ServiceSupervisor {
     }
 
     func mayLaunchTunnel(at now: Date = Date()) -> Bool {
-        health == .healthy && now >= tunnelRetryAt
+        health == .healthy && !tunnelProbeInProgress && tunnelHealth == .stopped && now >= tunnelRetryAt
+    }
+
+    func resetServerForRestart() {
+        generation += 1
+        probeInProgress = false
+        nextProbeAt = .distantPast
+        serverFailures = 0
+        consecutiveServerFailures = 0
+        serverRetryAt = .distantPast
+        health = .unreachable
     }
 
     func resetForManualRestart() {

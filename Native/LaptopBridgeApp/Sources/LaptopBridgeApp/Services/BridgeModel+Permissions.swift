@@ -189,6 +189,7 @@ extension BridgeModel {
             process.standardOutput = output
             do {
                 try process.run()
+                _ = try? output.fileHandleForReading.readToEnd()
                 process.waitUntilExit()
                 guard process.terminationStatus == 0 else {
                     throw NSError(domain: "RelayOS", code: Int(process.terminationStatus),
@@ -217,13 +218,17 @@ extension BridgeModel {
         commandGrantsError = nil
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let process = Process()
+            let stdoutPipe = Pipe()
+            let stderrPipe = Pipe()
             process.executableURL = URL(fileURLWithPath: executable)
             process.arguments = ["-m", "laptop_bridge.approvals", "revoke-command-grant", id]
             self?.setApprovalWorkingDirectory(process, executable: executable)
-            process.standardOutput = Pipe()
-            process.standardError = Pipe()
+            process.standardOutput = stdoutPipe
+            process.standardError = stderrPipe
             do {
                 try process.run()
+                _ = try? stdoutPipe.fileHandleForReading.readToEnd()
+                _ = try? stderrPipe.fileHandleForReading.readToEnd()
                 process.waitUntilExit()
                 guard process.terminationStatus == 0 else {
                     throw NSError(domain: "RelayOS", code: Int(process.terminationStatus),

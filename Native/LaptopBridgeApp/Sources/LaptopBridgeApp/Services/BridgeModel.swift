@@ -52,6 +52,7 @@ final class BridgeModel: ObservableObject {
         set { tunnelSlot.assign(newValue) }
     }
     var shouldMaintainServices = false
+    var preserveTunnelOnTermination = false
     var approvalTimer: DispatchSourceTimer?
     var inboxPollInFlight = false
     let arrivalTracker = ApprovalArrivalTracker()

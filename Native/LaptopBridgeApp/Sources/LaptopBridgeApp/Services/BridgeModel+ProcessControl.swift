@@ -27,13 +27,18 @@ extension BridgeModel {
         }
     }
 
-    func shutdownServices() {
+    func shutdownServices(preserveTunnel: Bool = false) {
+        if preserveTunnel {
+            preserveTunnelOnTermination = true
+        }
         shouldMaintainServices = false
         approvalTimer?.cancel()
         approvalTimer = nil
-        stopOwnedProcess(tunnel)
+        if !preserveTunnelOnTermination {
+            stopOwnedProcess(tunnel)
+            Self.stopStaleRelayOSNgrokAgents()
+        }
         stopOwnedProcess(server)
-        Self.stopStaleRelayOSNgrokAgents()
         tunnel = nil
         server = nil
         running = false
@@ -76,12 +81,6 @@ extension BridgeModel {
     func startServices() {
         guard SingleInstanceCoordinator.shared.ownsLock else { return }
         shouldMaintainServices = true
-        DispatchQueue.global(qos: .utility).async {
-            // Do not block the AppKit main thread while reclaiming a tunnel
-            // left by an earlier RelayOS process. The normal health loop then
-            // launches and owns a fresh tunnel after cleanup completes.
-            Self.stopStaleRelayOSNgrokAgents()
-        }
         if approvalTimer == nil {
             let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
             timer.schedule(deadline: .now() + 1, repeating: 1)
@@ -143,6 +142,7 @@ extension BridgeModel {
         let ownsServer = server != nil
         stopOwnedProcess(tunnel)
         stopOwnedProcess(server)
+        Self.stopStaleRelayOSNgrokAgents()
         server = nil
         tunnel = nil
         running = false
@@ -164,7 +164,7 @@ extension BridgeModel {
         server = nil
         running = false
         mcpHealth = .unreachable
-        supervisor.resetForManualRestart()
+        supervisor.resetServerForRestart()
         if owned { startServices() }
     }
 
@@ -250,31 +250,39 @@ extension BridgeModel {
                 if status != .healthy, self.tunnel != nil {
                     self.tunnelHealth = .connecting
                 }
+                self.probeTunnelIfNeeded()
                 self.recoverServicesIfNeeded()
             }
         }
+        probeTunnelIfNeeded()
+        recoverServicesIfNeeded()
+    }
+
+    func probeTunnelIfNeeded() {
         // The tunnel can survive an app upgrade and still forward only to
         // RelayOS. Monitor its authenticated 401 response even when this app
         // did not create the Process instance, so the UI reports reality.
-        if mcpHealth == .healthy, ngrokIsConfigured(), supervisor.beginTunnelProbe() {
-            let observedTunnel = tunnel
-            let generation = supervisor.tunnelGeneration
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                let result = await self.tunnelMonitor.probe()
-                guard self.shouldMaintainServices,
-                      SingleInstanceCoordinator.shared.ownsLock,
-                      (observedTunnel == nil || self.tunnel === observedTunnel),
-                      self.supervisor.finishTunnelProbe(result.status, generation: generation)
-                else { return }
-                self.tunnelHealth = result.status
-                if let publicURL = result.publicURL {
-                    self.adoptNgrokEndpoint(publicURL.absoluteString)
-                }
-                self.recoverServicesIfNeeded()
+        guard mcpHealth == .healthy, ngrokIsConfigured(), supervisor.beginTunnelProbe() else { return }
+        let observedTunnel = tunnel
+        let generation = supervisor.tunnelGeneration
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let result = await self.tunnelMonitor.probe()
+            guard self.shouldMaintainServices,
+                  SingleInstanceCoordinator.shared.ownsLock,
+                  self.tunnel === observedTunnel
+            else { return }
+            let effectiveStatus: TunnelHealthStatus = (result.status == .inspectorUnavailable && self.tunnel == nil)
+                ? .stopped
+                : result.status
+            guard self.supervisor.finishTunnelProbe(effectiveStatus, generation: generation) else { return }
+            self.tunnelHealth = effectiveStatus
+            self.tunnelRunning = effectiveStatus == .healthy || result.publicURL != nil || (self.tunnel?.isRunning == true)
+            if let publicURL = result.publicURL {
+                self.adoptNgrokEndpoint(publicURL.absoluteString)
             }
+            self.recoverServicesIfNeeded()
         }
-        recoverServicesIfNeeded()
     }
 
     func recoverServicesIfNeeded() {
@@ -287,9 +295,13 @@ extension BridgeModel {
             mcpHealth = .unreachable
             supervisor.serverDidExit()
         }
-        if supervisor.shouldRecycleOwnedTunnel, let ownedTunnel = tunnel {
+        if supervisor.shouldRecycleOwnedTunnel {
             serviceNotice = "ngrok tunnel has not been reachable; reconnecting."
-            stopOwnedProcess(ownedTunnel)
+            if let ownedTunnel = tunnel {
+                stopOwnedProcess(ownedTunnel)
+            } else {
+                Self.stopStaleRelayOSNgrokAgents()
+            }
             tunnel = nil
             tunnelRunning = false
             tunnelHealth = .stopped

@@ -794,3 +794,48 @@ def test_activity_details_recorded_for_file_write_and_command_execution(project_
     assert cmd_entries[0]["exit_code"] == 0
 
 
+def test_approval_syncs_across_persistent_session_reconnect_and_direct_execution(project_dir):
+    state.grant_folder(str(project_dir))
+    first_session = server.propose_project_session(str(project_dir))["session_id"]
+
+    argv = ["git", "show", "HEAD:main.py"]
+    subprocess.run(["git", "init"], cwd=project_dir, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Tester"], cwd=project_dir, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=project_dir, check=True, capture_output=True)
+    subprocess.run(["git", "add", "main.py"], cwd=project_dir, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=project_dir, check=True, capture_output=True)
+
+    # 1. Client requests command authorization, user approves Always in companion UI.
+    pending = server.authorize_project_command(first_session, argv)
+    assert pending["requires_local_approval"] is True
+    assert state.decide_request(pending["request_id"], "persistent") is True
+
+    # Saved command grant is immediately visible and active even before a second authorize call.
+    saved = server.list_saved_command_grants()
+    assert len(saved) == 1
+    assert saved[0]["scope_prefix"] == ["git", "show"]
+
+    # 2. Client proposes project session again on the next turn; active session is reused.
+    second_session = server.propose_project_session(str(project_dir))["session_id"]
+    assert second_session == first_session
+
+    # 3. Direct execution without a second authorize call succeeds immediately.
+    direct = server.run_project_command(second_session, argv)
+    assert direct["executed"] is True
+    assert direct["exit_code"] == 0
+    assert "hello world" in direct["stdout"]
+
+    # 4. One-time approval also executes directly when client retries run_project_command.
+    once_argv = [sys.executable, "-c", "print('once-direct')"]
+    once_pending = server.authorize_project_command(second_session, once_argv)
+    assert once_pending["requires_local_approval"] is True
+    assert state.decide_request(once_pending["request_id"], "once") is True
+
+    once_run = server.run_project_command(second_session, once_argv)
+    assert once_run["executed"] is True
+    assert "once-direct" in once_run["stdout"]
+    # Single-use remains enforced on subsequent attempt.
+    assert server.run_project_command(second_session, once_argv)["requires_authorization"] is True
+
+
+

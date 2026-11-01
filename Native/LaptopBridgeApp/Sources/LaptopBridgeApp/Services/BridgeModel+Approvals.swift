@@ -98,6 +98,7 @@ extension BridgeModel {
             process.standardOutput = output
             do {
                 try process.run()
+                _ = try? output.fileHandleForReading.readToEnd()
                 process.waitUntilExit()
                 guard process.terminationStatus == 0 else {
                     throw NSError(domain: "RelayOSInbox", code: 2,
@@ -109,6 +110,8 @@ extension BridgeModel {
                     self?.approvalCenterError = nil
                     self?.refreshApprovalInbox()
                     self?.refreshApprovalActivity()
+                    self?.refreshPermissionGrants()
+                    self?.refreshCommandGrants()
                 }
             } catch {
                 Task { @MainActor [weak self] in

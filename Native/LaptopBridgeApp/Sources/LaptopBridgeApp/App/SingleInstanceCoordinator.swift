@@ -63,7 +63,7 @@ final class SingleInstanceCoordinator {
             forName: takeoverName, object: nil, queue: .main
         ) { _ in
             Task { @MainActor in
-                BridgeModel.shared.shutdownServices()
+                BridgeModel.shared.shutdownServices(preserveTunnel: true)
                 NSApplication.shared.terminate(nil)
             }
         }

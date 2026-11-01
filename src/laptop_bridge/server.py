@@ -575,17 +575,6 @@ def authorize_project_command(
     family = reusable_command_family(executable, argv) if scope_prefix is None else None
     family_label = command_family_label(family)
     scope_label = " ".join(scope_prefix) if scope_prefix is not None else family_label
-    if has_saved_command_grant(session["root"], executable, argv, str(directory), session_id=session_id):
-        return {
-            "authorization_token": None,
-            "grant": "reusable",
-            "reused_saved_grant": True,
-            "command_family": family_label,
-            "project_root": session["root"],
-            "working_directory": str(directory),
-            "message": "This command is already covered by a locally approved project/cwd-scoped grant.",
-        }
-
     approved_token = find_approved_command_request(
         session["root"], executable, argv, str(directory), grant, request_id,
         session_id=session_id, scope_prefix=scope_prefix
@@ -614,6 +603,17 @@ def authorize_project_command(
                 if effective_grant == "once"
                 else f"Locally approved {reusable_scope or 'this exact command'} for {effective_grant} in this project and working directory."
             ),
+        }
+
+    if request_id is None and has_saved_command_grant(session["root"], executable, argv, str(directory), session_id=session_id):
+        return {
+            "authorization_token": None,
+            "grant": "reusable",
+            "reused_saved_grant": True,
+            "command_family": family_label,
+            "project_root": session["root"],
+            "working_directory": str(directory),
+            "message": "This command is already covered by a locally approved project/cwd-scoped grant.",
         }
 
     pending_token = get_or_create_command_request(

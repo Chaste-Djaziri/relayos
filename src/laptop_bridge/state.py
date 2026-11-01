@@ -294,13 +294,24 @@ def deny(token):
     _decide(token, "denied")
 
 
+def _split_command_target(target, cwd=None):
+    if cwd and target.startswith(f"{cwd}:"):
+        return str(cwd), target[len(cwd) + 1:]
+    if ":/" in target:
+        root, exe = target.split(":/", 1)
+        return root, "/" + exe
+    if ":" in target:
+        return target.split(":", 1)
+    return None, None
+
+
 def decide_request(token, duration="once"):
     """Record a LOCAL user's choice; no approval can expand it later."""
     if duration not in {"once", "session", "persistent", "deny"}:
         raise ValueError("duration must be once, session, persistent, or deny")
     with _db() as connection:
         row = connection.execute(
-            "SELECT kind, target, status FROM requests WHERE token = ?", (token,)
+            "SELECT kind, target, argv_json, context_json, status FROM requests WHERE token = ?", (token,)
         ).fetchone()
     if row is None or row["status"] != "pending":
         return False
@@ -312,6 +323,21 @@ def decide_request(token, duration="once"):
         if duration == "persistent":
             grant_folder(row["target"], "persistent")
         activate_project_session(token)
+    elif row["kind"] == "project_command" and duration in {"session", "persistent"}:
+        argv = json.loads(row["argv_json"] or "[]")
+        context = json.loads(row["context_json"] or "{}")
+        cwd = context.get("cwd")
+        project_root, executable = _split_command_target(row["target"], cwd)
+        session_id = context.get("session_id")
+        if project_root and executable and cwd and argv and (duration == "persistent" or session_id):
+            grant_type = "always" if duration == "persistent" else "session"
+            try:
+                grant_project_command(
+                    project_root, executable, argv, cwd, grant_type,
+                    session_id=session_id, scope_prefix=context.get("scope_prefix"),
+                )
+            except (ValueError, PermissionError):
+                pass
     return True
 
 
@@ -612,7 +638,7 @@ def activate_project_session(request_id):
 
 
 def activate_granted_project_session(root):
-    """Create a session directly when an exact persistent folder grant exists."""
+    """Create or reuse a session directly when an exact persistent folder grant exists."""
     root = Path(root).expanduser().resolve(strict=False)
     if emergency_stop():
         raise PermissionError("Emergency stop is enabled")
@@ -620,13 +646,27 @@ def activate_granted_project_session(root):
         raise PermissionError("Folder does not have a persistent permission grant")
     root.mkdir(parents=True, exist_ok=True)
     root = root.resolve(strict=True)
-    token = secrets.token_urlsafe(18)
     now = time.time()
     with _db() as connection:
         connection.execute("BEGIN IMMEDIATE")
         if emergency_stop(connection):
             connection.rollback()
             raise PermissionError("Emergency stop is enabled")
+        _expire(connection, now)
+        existing = connection.execute(
+            "SELECT token FROM project_sessions WHERE root = ? AND status = 'active' AND expires_at > ? AND request_id IS NULL ORDER BY created_at DESC LIMIT 1",
+            (str(root), now),
+        ).fetchone()
+        if existing:
+            token = existing["token"]
+            connection.execute(
+                "UPDATE project_sessions SET expires_at = ? WHERE token = ?",
+                (now + PROJECT_SESSION_TTL, token),
+            )
+            _record(connection, "project_session", str(root), "persistent_grant_reused")
+            connection.commit()
+            return {"session_id": token, "root": str(root), "expires_at": now + PROJECT_SESSION_TTL}
+        token = secrets.token_urlsafe(18)
         connection.execute(
             "INSERT INTO project_sessions (token, root, created_at, expires_at, status, decided_at, request_id) VALUES (?, ?, ?, ?, 'active', ?, NULL)",
             (token, str(root), now, now + PROJECT_SESSION_TTL, now),
@@ -941,6 +981,24 @@ def find_approved_command_request(project_root, executable, argv, cwd, grant, re
                AND created_at >= ? ORDER BY created_at DESC LIMIT 1""",
             (*criteria, now - TTL),
         ).fetchone()
+        if row is None and request_id is None:
+            candidates = connection.execute(
+                """SELECT token, context_json FROM requests
+                   WHERE kind = 'project_command' AND target = ? AND argv_json = ?
+                   AND status = 'approved' AND created_at >= ?
+                   ORDER BY created_at DESC""",
+                (target, json.dumps(argv), now - TTL),
+            ).fetchall()
+            for candidate in candidates:
+                ctx = json.loads(candidate["context_json"] or "{}")
+                if (
+                    ctx.get("cwd") == str(cwd)
+                    and ctx.get("requested_grant") == grant
+                    and ctx.get("command_family") == family
+                    and ctx.get("scope_prefix") == scope_prefix
+                ):
+                    row = candidate
+                    break
         connection.commit()
         return row["token"] if row else None
 
@@ -1061,6 +1119,67 @@ def has_saved_command_grant(project_root, executable, argv, cwd, session_id=None
         return _reusable_command_grant(connection, project_root, executable, argv, cwd, session_id, time.time()) is not None
 
 
+def _consume_approved_command_request(connection, project_root, executable, argv, cwd, grant_token, session_id, now):
+    target = f"{project_root}:{executable}"
+    _expire(connection, now)
+    if grant_token:
+        rows = connection.execute(
+            """SELECT token, argv_json, context_json, approved_duration
+               FROM requests WHERE token = ? AND kind = 'project_command'
+               AND target = ? AND status = 'approved' AND created_at >= ?""",
+            (grant_token, target, now - TTL),
+        ).fetchall()
+    else:
+        rows = connection.execute(
+            """SELECT token, argv_json, context_json, approved_duration
+               FROM requests WHERE kind = 'project_command' AND target = ?
+               AND status = 'approved' AND created_at >= ?
+               ORDER BY created_at DESC""",
+            (target, now - TTL),
+        ).fetchall()
+    for row in rows:
+        try:
+            req_argv = json.loads(row["argv_json"] or "[]")
+            ctx = json.loads(row["context_json"] or "{}")
+        except (ValueError, TypeError):
+            continue
+        if ctx.get("cwd") != str(cwd):
+            continue
+        duration = row["approved_duration"] or "once"
+        req_session = ctx.get("session_id")
+        if duration == "once":
+            if req_argv != argv:
+                continue
+            connection.execute(
+                "UPDATE requests SET status = 'consumed', consumed_at = ? WHERE token = ?",
+                (now, row["token"]),
+            )
+            return "approved_once"
+        if duration in {"session", "persistent"}:
+            if duration == "session" and req_session and session_id and req_session != session_id:
+                continue
+            prefix = ctx.get("scope_prefix")
+            family = ctx.get("command_family")
+            matched = False
+            if prefix is not None:
+                try:
+                    matched = validate_scope_prefix(executable, argv, prefix) is not None
+                except (ValueError, TypeError):
+                    matched = False
+            elif family is not None:
+                matched = reusable_command_family(executable, argv) == family
+            else:
+                matched = req_argv == argv
+            if not matched:
+                continue
+            connection.execute(
+                "UPDATE requests SET status = 'consumed', consumed_at = ? WHERE token = ?",
+                (now, row["token"]),
+            )
+            return "approved_reusable"
+    return None
+
+
 def consume_project_command_grant(project_root, executable, argv, cwd, grant_token=None, session_id=None):
     """Atomically validate an exact one-use token or a locally chosen reusable scope."""
     with _db() as connection:
@@ -1077,18 +1196,30 @@ def consume_project_command_grant(project_root, executable, argv, cwd, grant_tok
                    AND revoked_at IS NULL AND expires_at > ?""",
                 (grant_token, project_root, executable, _command_digest(argv, cwd), cwd, now),
             ).fetchone()
-            if row is None:
-                connection.rollback()
-                raise PermissionError("Missing, expired, mismatched, or already-used command approval")
-            connection.execute("DELETE FROM command_grants WHERE token = ?", (grant_token,))
-            connection.commit()
-            return "approved_once"
-        row = _reusable_command_grant(connection, project_root, executable, argv, cwd, session_id, now)
-        if row is None:
+            if row is not None:
+                connection.execute("DELETE FROM command_grants WHERE token = ?", (grant_token,))
+                connection.commit()
+                return "approved_once"
+            direct = _consume_approved_command_request(
+                connection, project_root, executable, argv, cwd, grant_token, session_id, now
+            )
+            if direct is not None:
+                connection.commit()
+                return direct
             connection.rollback()
-            raise PermissionError("Command approval required for this project and command scope")
-        connection.commit()
-        return "approved_reusable"
+            raise PermissionError("Missing, expired, mismatched, or already-used command approval")
+        row = _reusable_command_grant(connection, project_root, executable, argv, cwd, session_id, now)
+        if row is not None:
+            connection.commit()
+            return "approved_reusable"
+        direct = _consume_approved_command_request(
+            connection, project_root, executable, argv, cwd, None, session_id, now
+        )
+        if direct is not None:
+            connection.commit()
+            return direct
+        connection.rollback()
+        raise PermissionError("Command approval required for this project and command scope")
 
 def _live_command_grants(connection, now):
     return connection.execute(

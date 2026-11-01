@@ -128,4 +128,38 @@ final class ServiceSupervisorTests: XCTestCase {
         XCTAssertFalse(coordinator.beginProbe(at: now.addingTimeInterval(1)))
         XCTAssertTrue(coordinator.beginProbe(at: now.addingTimeInterval(5)))
     }
+
+    @MainActor
+    func testAdoptedHealthyTunnelAndInFlightProbePreventDuplicateTunnelLaunch() {
+        let coordinator = ServiceSupervisor()
+        let now = Date(timeIntervalSince1970: 200)
+        coordinator.finishProbe(.healthy)
+        XCTAssertTrue(coordinator.mayLaunchTunnel(at: now))
+
+        // While a tunnel probe is in flight, do not launch a competing ngrok agent.
+        XCTAssertTrue(coordinator.beginTunnelProbe(at: now))
+        XCTAssertFalse(coordinator.mayLaunchTunnel(at: now))
+
+        // Adopting an already-verified tunnel keeps mayLaunchTunnel false.
+        let probeGen = coordinator.tunnelGeneration
+        XCTAssertTrue(coordinator.finishTunnelProbe(.healthy, generation: probeGen))
+        XCTAssertEqual(coordinator.tunnelHealth, .healthy)
+        XCTAssertFalse(coordinator.mayLaunchTunnel(at: now))
+
+        // An outdated tunnel probe result from the earlier generation cannot overwrite .healthy.
+        XCTAssertFalse(coordinator.finishTunnelProbe(.remoteUnavailable, generation: probeGen))
+        XCTAssertEqual(coordinator.tunnelHealth, .healthy)
+
+        // Restarting only the Python server preserves the verified tunnel status.
+        coordinator.resetServerForRestart()
+        XCTAssertEqual(coordinator.tunnelHealth, .healthy)
+        XCTAssertFalse(coordinator.mayLaunchTunnel(at: now))
+
+        // If the inspector is absent and no process is running (.stopped), launching is allowed again.
+        coordinator.finishProbe(.healthy)
+        XCTAssertTrue(coordinator.finishTunnelProbe(.stopped, generation: coordinator.tunnelGeneration))
+        XCTAssertEqual(coordinator.tunnelHealth, .stopped)
+        XCTAssertFalse(coordinator.shouldRecycleOwnedTunnel)
+        XCTAssertTrue(coordinator.mayLaunchTunnel(at: now))
+    }
 }
