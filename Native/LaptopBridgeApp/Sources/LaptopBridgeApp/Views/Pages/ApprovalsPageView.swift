@@ -78,13 +78,13 @@ struct ApprovalCenterView: View {
                 .overlay(RoundedRectangle(cornerRadius: 11).stroke(theme.cardBorder, lineWidth: 1))
             } else {
                 ForEach(visibleInbox) { item in
-                    SettingsCard(title: item.isOAuth ? "OAuth Connection Request" : "Command Execution Request") {
+                    SettingsCard(title: item.isScreenCapture ? "Screen Capture Request" : (item.isOAuth ? "OAuth Connection Request" : "Command Execution Request")) {
                         SettingsCardRow(
                             title: item.title,
                             subtitle: item.scopeDescription
                         ) {
                             StatusBadge(
-                                text: item.isOAuth ? "Connection" : "Local request",
+                                text: item.isScreenCapture ? "Screen share" : (item.isOAuth ? "Connection" : "Local request"),
                                 status: .warning
                             )
                         }
@@ -121,7 +121,7 @@ struct ApprovalCenterView: View {
                                     model.decideApproval(item, decision: "once")
                                 }
 
-                                if !item.isOAuth {
+                                if !item.isOAuth && !item.isScreenCapture {
                                     SettingsButton(title: "Session", style: .secondary) {
                                         model.decideApproval(item, decision: "session")
                                     }

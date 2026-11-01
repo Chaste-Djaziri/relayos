@@ -1414,7 +1414,7 @@ struct NotchPanelView: View {
                     Image(systemName: "exclamationmark.shield.fill")
                         .foregroundStyle(.orange)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(item.isOAuth ? "Connection approval" : "Command approval")
+                        Text(item.isScreenCapture ? "Screenshot approval" : (item.isOAuth ? "Connection approval" : "Command approval"))
                             .font(.system(size: 11.5, weight: .bold))
                         Text(item.title)
                             .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
@@ -1436,7 +1436,7 @@ struct NotchPanelView: View {
                     approvalButton("Once", icon: "checkmark", color: .green) {
                         model.decideApproval(item, decision: "once")
                     }
-                    if !item.isOAuth {
+                    if !item.isOAuth && !item.isScreenCapture {
                         approvalButton("Session", icon: "clock", color: .blue) {
                             model.decideApproval(item, decision: "session")
                         }

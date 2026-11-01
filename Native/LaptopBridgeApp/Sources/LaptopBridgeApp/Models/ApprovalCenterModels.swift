@@ -30,6 +30,7 @@ struct ApprovalInboxItem: Decodable, Identifiable, Equatable {
 
     var id: String { requestID }
     var isOAuth: Bool { kind == "oauth_connection" }
+    var isScreenCapture: Bool { kind == "screen_capture" }
     var isExpired: Bool { Date().timeIntervalSince1970 >= expiresAt }
 
     var title: String {
@@ -42,6 +43,9 @@ struct ApprovalInboxItem: Decodable, Identifiable, Equatable {
 
     var scopeDescription: String {
         if isOAuth { return "MCP access requires a local one-time approval." }
+        if isScreenCapture {
+            return "One screenshot of exactly \\(target) will be sent to the requesting AI client. Approve Once or Deny; no continuous sharing."
+        }
         if context.scopePrefix?.isEmpty == false || context.commandFamily != nil {
             return "Session / Always: the shown prefix is fixed; later arguments may change."
         }

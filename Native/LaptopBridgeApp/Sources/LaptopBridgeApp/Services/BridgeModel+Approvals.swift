@@ -86,7 +86,7 @@ extension BridgeModel {
             return
         }
         guard ["once", "session", "persistent", "deny"].contains(decision),
-              (!item.isOAuth || decision == "once" || decision == "deny") else { return }
+              (!(item.isOAuth || item.isScreenCapture) || decision == "once" || decision == "deny") else { return }
         approvalDecisionInFlight = item.id
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let process = Process()
