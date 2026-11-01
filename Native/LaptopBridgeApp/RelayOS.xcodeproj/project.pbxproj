@@ -7,13 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		FACCCCCCCCCCCCCCCCCCCCCC /* NativeMCPSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FABBBBBBBBBBBBBBBBBBBBBB /* NativeMCPSystem.swift */; };
-		FEEEEEEEEEEEEEEEEEEEEEEE /* NativeSwiftRuntimePageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDDDDDDDDDDDDDDDDDDDDDDD /* NativeSwiftRuntimePageView.swift */; };
-		FCCCCCCCCCCCCCCCCCCCCCCC /* NativeMCPDevelopmentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBBBBBBBBBBBBBBBBBBBBBBB /* NativeMCPDevelopmentStore.swift */; };
-		FAAAAAAAAAAAAAAAAAAAAAAA /* NativeMCPAuthorizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F99999999999999999999999 /* NativeMCPAuthorizationTests.swift */; };
-		F88888888888888888888888 /* NativeMCPProjectFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F77777777777777777777777 /* NativeMCPProjectFiles.swift */; };
-		F66666666666666666666666 /* NativeMCPHTTP.swift in Sources */ = {isa = PBXBuildFile; fileRef = F55555555555555555555555 /* NativeMCPHTTP.swift */; };
-		F44444444444444444444444 /* NativeMCPAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = F33333333333333333333333 /* NativeMCPAuthorization.swift */; };
 		0C6F487398FDD7AB91D7A548 /* NgrokTunnelMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */; };
 		1082C54EAC0015720F7AD15F /* CommandPermissionsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A20318397E308D076DE7F /* CommandPermissionsPageView.swift */; };
 		10C20CCAA3DBA57333534A8D /* SavedCommandGrant.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DCD2DF7385FBDF3D206AAFC /* SavedCommandGrant.swift */; };
@@ -24,13 +17,16 @@
 		2ABB0556B126CE0EB68FF233 /* SavedCommandGrantTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FA09765A5DC85740382BB61 /* SavedCommandGrantTests.swift */; };
 		2E07F8C23284AD4A004C90FD /* DiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CA8380B6A50B5CF1C4DD810 /* DiffView.swift */; };
 		33B6DE14D950D7F0C2E02183 /* GeneralPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0FC6EA3AE6683E2FD19EB01 /* GeneralPageView.swift */; };
+		39ADF6F4C8CDD27B05E22BBD /* NativeMCPAuthorizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60F66F1777D669CF509C134 /* NativeMCPAuthorizationTests.swift */; };
 		3FDFF94F9A02A21C15ED1B7B /* ServiceSupervisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8D5FF69919504CE19785BDA /* ServiceSupervisor.swift */; };
 		4057EB6DC2594F9AA0377C0E /* CustomTrafficLights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117EEB3A4505CFA882C6F27F /* CustomTrafficLights.swift */; };
 		426F1A673AE1B4B874689E03 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17FC7ACC1B8500D99CFA01C5 /* StatusBadge.swift */; };
 		467C1609E856C0D65DC5BB27 /* ActivitySummaryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0EBA458D20DA0AA757B7A81 /* ActivitySummaryRow.swift */; };
 		485444AD71723A6C144A4DDB /* ToolsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3748BFE19E365DC80B44E55 /* ToolsPageView.swift */; };
+		4F1AF772A81526E6A1079485 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = F62CB8233B4CE97753E22C0F /* MCP */; };
 		5682B24C3ACBA814EB2A9115 /* SystemPermissionAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 722D2821D95B5CA5B25F7ACF /* SystemPermissionAccess.swift */; };
 		5BE88EB67B976D012C4575BE /* DevelopmentRuntimeLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C90047B7CAEB4939575F3864 /* DevelopmentRuntimeLocator.swift */; };
+		5CA2F14A7E880C022DDBD8CE /* PreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A4BED36861238A9D5852ED0 /* PreviewSupport.swift */; };
 		5F69A09CB5D0CEA499D69E6D /* BridgeModel+CommandJobs.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA1547CE08DBD57A9DFA1396 /* BridgeModel+CommandJobs.swift */; };
 		5FBF89074C57D79FB72B3FB5 /* SettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECF57EB1E8A94922036D54B4 /* SettingsTab.swift */; };
 		60D82807200B9A20652B43E2 /* ApprovalArrivalTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73BCA19D4162B0993AAB68B9 /* ApprovalArrivalTracker.swift */; };
@@ -41,9 +37,11 @@
 		6AAF4AC47A074EEF9C6760F3 /* FreshSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2889B5D65542EA4A43A37FEC /* FreshSetupView.swift */; };
 		6B99344E704AD82C202228A8 /* SettingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1431B1972A552A6BD4503531 /* SettingsCard.swift */; };
 		6C10999D6B074EC5FB429C7D /* DesktopWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF620AE5C056396CFD9F836 /* DesktopWindowView.swift */; };
+		712333DEC9CE9601D19C1FA8 /* NativeSwiftRuntimePageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69449F9014113FB4EB7BA87F /* NativeSwiftRuntimePageView.swift */; };
 		74913A9BA4C1178043F221CF /* SystemPermissionsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F698E7F3F856A246A4878AB /* SystemPermissionsPageView.swift */; };
 		7B5F236A4C6B6EFEABADCC3A /* ApprovalSoundTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48AEEC9127B56E4240E8C5BE /* ApprovalSoundTests.swift */; };
 		7BD027BDD7E1E2EA0C0D490E /* ApprovalsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12E83C60B57771FC2D31462E /* ApprovalsPageView.swift */; };
+		7DD405A59B5B0844E46326CB /* NativeMCPSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B62F9FD9564BA09234B9C820 /* NativeMCPSystem.swift */; };
 		82DCB56CEFBCA0B18B79B17E /* CommandGrantGroupCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBFC8DFBEF74BE9B3F0F8183 /* CommandGrantGroupCard.swift */; };
 		82DE14E72189298BF2FD6410 /* ManagedProcessSlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF7EC9B8A1074531E5EC43E8 /* ManagedProcessSlot.swift */; };
 		8425F9972DE8C40423D42313 /* AppearancePageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6ECBB7F0469449A1B4C1679 /* AppearancePageView.swift */; };
@@ -51,12 +49,13 @@
 		8C7FAC30CC29619981EE8163 /* BridgeModel+Approvals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40017314B96D04DB9DF7025F /* BridgeModel+Approvals.swift */; };
 		8CD692DE3F2EF728E41BB660 /* CommandJobModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F8523F43A4AAE041F302654 /* CommandJobModelsTests.swift */; };
 		8D543F62066B8D94DC11FE28 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A75ABC2EF649483FACCE8E5 /* SettingsView.swift */; };
-		F22222222222222222222222 /* PreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11111111111111111111111 /* PreviewSupport.swift */; };
 		921010956D0573613A2CE1D0 /* RelayOSTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABDF00FAD2BE8C34B9A9EA20 /* RelayOSTheme.swift */; };
 		9607D773D0C2DEB2F23CF1EC /* CustomSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28C4A0F8F501A733194DE25E /* CustomSidebarView.swift */; };
 		9684BDA65EB9E5877050B290 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 160DA6357E98CDFF64BFC295 /* Keychain.swift */; };
 		9832DFC5790A3DB05C6A4CFD /* InstanceLeaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AAF3F10B93F830BC33B27E4 /* InstanceLeaseTests.swift */; };
 		9B9794F608EB97B1E819425C /* NgrokPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADEF7F916CC9B40C2956BFB0 /* NgrokPageView.swift */; };
+		9D6548FA22D02320900698AB /* NativeMCPAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 883F3D880993F435A52AD6B5 /* NativeMCPAuthorization.swift */; };
+		9DC38B230A00975957A04FC0 /* NativeMCPDevelopmentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14528F66396ABF533113585A /* NativeMCPDevelopmentStore.swift */; };
 		9E0C04877E8C049602380544 /* CommandGrantItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E636568FE028676BD8DC4F /* CommandGrantItemRow.swift */; };
 		9E4D8D3F612F8FFE5A46A568 /* ServiceSupervisorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF6B093555EF31A324DD474A /* ServiceSupervisorTests.swift */; };
 		9F6EE71DA784D1B6020E9E1B /* relayos-black.png in Resources */ = {isa = PBXBuildFile; fileRef = E3C19994A787B50E533DE7DE /* relayos-black.png */; };
@@ -70,6 +69,7 @@
 		C2B1F943CCDBABA72BF32661 /* ActivityPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4303862A504D6B755A0720 /* ActivityPageView.swift */; };
 		C47C604C813131975401521B /* BridgeModel+Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 074974C562F230CC62710F89 /* BridgeModel+Config.swift */; };
 		C6B6945B3F970815995F1B73 /* ApprovalArrivalNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B64825844B5227059987BE6 /* ApprovalArrivalNotification.swift */; };
+		C79F2FA5977E0D04FDB46684 /* NativeMCPProjectFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B011275ED3B8DB2E5DCAFA47 /* NativeMCPProjectFiles.swift */; };
 		C94FB612983A59EF639CB39C /* SettingsButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD620B4A3907C4DB20516D13 /* SettingsButton.swift */; };
 		CAC144368BE6D1B3FDF2C59A /* InstanceLease.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A141544AB9DFABBB18D053 /* InstanceLease.swift */; };
 		CE7CD965B1A669000A30F54A /* SettingsToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 139BB1F09BF5193F847A5FDD /* SettingsToggle.swift */; };
@@ -80,6 +80,7 @@
 		E40AEBC40B50EF1A64E8B874 /* SecurityPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8F22BF45B761B618C70CC1 /* SecurityPageView.swift */; };
 		E7036D84F04C4324B951656D /* BridgeModel+Permissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29739FD30F89DEF8044CA268 /* BridgeModel+Permissions.swift */; };
 		E7E3AE99D2E5CD6B44891B8C /* MCPHealthMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DFE6A41A2CDF9C522333953 /* MCPHealthMonitorTests.swift */; };
+		ED00DF5B4DB7A74138392679 /* NativeMCPHTTP.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D8F23734E7C4AC47103413 /* NativeMCPHTTP.swift */; };
 		F04D5EF531F6ADCD8BDF60F2 /* ApprovalCenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAC1EB8FF3BFA0F0F26D8D8C /* ApprovalCenterTests.swift */; };
 		F13E83639D9B1CADBAAB3FE7 /* CustomWindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBB57FD15B058094ADD00968 /* CustomWindowAccessor.swift */; };
 		FAFAE54B7AA70FB47C2B635E /* TerminalJobRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224FB2B0DF1453B35D63B411 /* TerminalJobRow.swift */; };
@@ -98,24 +99,18 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		FABBBBBBBBBBBBBBBBBBBBBB /* NativeMCPSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPSystem.swift; sourceTree = "<group>"; };
-		FDDDDDDDDDDDDDDDDDDDDDDD /* NativeSwiftRuntimePageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSwiftRuntimePageView.swift; sourceTree = "<group>"; };
-		FBBBBBBBBBBBBBBBBBBBBBBB /* NativeMCPDevelopmentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPDevelopmentStore.swift; sourceTree = "<group>"; };
-		F99999999999999999999999 /* NativeMCPAuthorizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPAuthorizationTests.swift; sourceTree = "<group>"; };
-		F77777777777777777777777 /* NativeMCPProjectFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPProjectFiles.swift; sourceTree = "<group>"; };
-		F55555555555555555555555 /* NativeMCPHTTP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPHTTP.swift; sourceTree = "<group>"; };
-		F33333333333333333333333 /* NativeMCPAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPAuthorization.swift; sourceTree = "<group>"; };
 		010C81D41E2B4A8F38171CA5 /* BridgeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeModel.swift; sourceTree = "<group>"; };
 		0606A340C321E3C38BC40B9C /* SingleInstanceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleInstanceCoordinator.swift; sourceTree = "<group>"; };
 		074974C562F230CC62710F89 /* BridgeModel+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+Config.swift"; sourceTree = "<group>"; };
+		0A4BED36861238A9D5852ED0 /* PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSupport.swift; sourceTree = "<group>"; };
 		0A75ABC2EF649483FACCE8E5 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		F11111111111111111111111 /* PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSupport.swift; sourceTree = "<group>"; };
 		0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NgrokTunnelMonitor.swift; sourceTree = "<group>"; };
 		0F698E7F3F856A246A4878AB /* SystemPermissionsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPermissionsPageView.swift; sourceTree = "<group>"; };
 		117EEB3A4505CFA882C6F27F /* CustomTrafficLights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTrafficLights.swift; sourceTree = "<group>"; };
 		12E83C60B57771FC2D31462E /* ApprovalsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalsPageView.swift; sourceTree = "<group>"; };
 		139BB1F09BF5193F847A5FDD /* SettingsToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsToggle.swift; sourceTree = "<group>"; };
 		1431B1972A552A6BD4503531 /* SettingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsCard.swift; sourceTree = "<group>"; };
+		14528F66396ABF533113585A /* NativeMCPDevelopmentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPDevelopmentStore.swift; sourceTree = "<group>"; };
 		160DA6357E98CDFF64BFC295 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
 		17FC7ACC1B8500D99CFA01C5 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
 		1CA8380B6A50B5CF1C4DD810 /* DiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffView.swift; sourceTree = "<group>"; };
@@ -136,6 +131,7 @@
 		5035C5D233584D80945951A4 /* ApprovalCenterModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalCenterModels.swift; sourceTree = "<group>"; };
 		5AAF3F10B93F830BC33B27E4 /* InstanceLeaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstanceLeaseTests.swift; sourceTree = "<group>"; };
 		61EEC49F3DCA38C9750BC9DF /* RelayOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RelayOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		69449F9014113FB4EB7BA87F /* NativeSwiftRuntimePageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSwiftRuntimePageView.swift; sourceTree = "<group>"; };
 		696C2E390D56A4200CCC662D /* BridgeModel+ProcessControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+ProcessControl.swift"; sourceTree = "<group>"; };
 		69F5F0E0D7B976FF390AEDEA /* PermissionGuidePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionGuidePanel.swift; sourceTree = "<group>"; };
 		6A41ED5BBC85B05E57B15CF7 /* SidebarItemModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarItemModel.swift; sourceTree = "<group>"; };
@@ -147,15 +143,19 @@
 		7A13002A0BF9351E8BC8C147 /* SettingsCollapsibleCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsCollapsibleCard.swift; sourceTree = "<group>"; };
 		7DFE6A41A2CDF9C522333953 /* MCPHealthMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPHealthMonitorTests.swift; sourceTree = "<group>"; };
 		7FFE0B2257A52C54B7F257D8 /* TerminalJobsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalJobsPageView.swift; sourceTree = "<group>"; };
+		883F3D880993F435A52AD6B5 /* NativeMCPAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPAuthorization.swift; sourceTree = "<group>"; };
 		8B4C7CB4A4D712541902C002 /* SettingsCardRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsCardRow.swift; sourceTree = "<group>"; };
 		8CF620AE5C056396CFD9F836 /* DesktopWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopWindowView.swift; sourceTree = "<group>"; };
 		8DCD2DF7385FBDF3D206AAFC /* SavedCommandGrant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedCommandGrant.swift; sourceTree = "<group>"; };
 		9B64825844B5227059987BE6 /* ApprovalArrivalNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalArrivalNotification.swift; sourceTree = "<group>"; };
 		A3184FA7CCA10909266F6728 /* QuickPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPanel.swift; sourceTree = "<group>"; };
+		A60F66F1777D669CF509C134 /* NativeMCPAuthorizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPAuthorizationTests.swift; sourceTree = "<group>"; };
 		A8D5FF69919504CE19785BDA /* ServiceSupervisor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceSupervisor.swift; sourceTree = "<group>"; };
 		ABDF00FAD2BE8C34B9A9EA20 /* RelayOSTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSTheme.swift; sourceTree = "<group>"; };
 		ADEF7F916CC9B40C2956BFB0 /* NgrokPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NgrokPageView.swift; sourceTree = "<group>"; };
 		AF7EC9B8A1074531E5EC43E8 /* ManagedProcessSlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedProcessSlot.swift; sourceTree = "<group>"; };
+		B011275ED3B8DB2E5DCAFA47 /* NativeMCPProjectFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPProjectFiles.swift; sourceTree = "<group>"; };
+		B62F9FD9564BA09234B9C820 /* NativeMCPSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPSystem.swift; sourceTree = "<group>"; };
 		BD620B4A3907C4DB20516D13 /* SettingsButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsButton.swift; sourceTree = "<group>"; };
 		C0209863FCD8E9B554E21541 /* CommandJobModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandJobModels.swift; sourceTree = "<group>"; };
 		C0EBA458D20DA0AA757B7A81 /* ActivitySummaryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySummaryRow.swift; sourceTree = "<group>"; };
@@ -172,6 +172,7 @@
 		EBB57FD15B058094ADD00968 /* CustomWindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomWindowAccessor.swift; sourceTree = "<group>"; };
 		ECF57EB1E8A94922036D54B4 /* SettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTab.swift; sourceTree = "<group>"; };
 		ED4303862A504D6B755A0720 /* ActivityPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityPageView.swift; sourceTree = "<group>"; };
+		F1D8F23734E7C4AC47103413 /* NativeMCPHTTP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPHTTP.swift; sourceTree = "<group>"; };
 		F3748BFE19E365DC80B44E55 /* ToolsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolsPageView.swift; sourceTree = "<group>"; };
 		F5910DC8365E4FB254B2A822 /* ConnectionRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionRow.swift; sourceTree = "<group>"; };
 		F7EA2B5E615FBC04E8BC4254 /* TerminalOutputConsole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalOutputConsole.swift; sourceTree = "<group>"; };
@@ -179,6 +180,17 @@
 		FE28214DB3F8EEB280FF8542 /* RelayOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSApp.swift; sourceTree = "<group>"; };
 		FF6B093555EF31A324DD474A /* ServiceSupervisorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceSupervisorTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		FDAAC42018BA3938D17310DA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4F1AF772A81526E6A1079485 /* MCP in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		174BC8B58A93F05499EA06DC /* LaptopBridgeApp */ = {
@@ -208,11 +220,6 @@
 			isa = PBXGroup;
 			children = (
 				010C81D41E2B4A8F38171CA5 /* BridgeModel.swift */,
-				F77777777777777777777777 /* NativeMCPProjectFiles.swift */,
-				F55555555555555555555555 /* NativeMCPHTTP.swift */,
-				F33333333333333333333333 /* NativeMCPAuthorization.swift */,
-				FBBBBBBBBBBBBBBBBBBBBBBB /* NativeMCPDevelopmentStore.swift */,
-				FABBBBBBBBBBBBBBBBBBBBBB /* NativeMCPSystem.swift */,
 				40017314B96D04DB9DF7025F /* BridgeModel+Approvals.swift */,
 				EA1547CE08DBD57A9DFA1396 /* BridgeModel+CommandJobs.swift */,
 				074974C562F230CC62710F89 /* BridgeModel+Config.swift */,
@@ -221,6 +228,11 @@
 				C90047B7CAEB4939575F3864 /* DevelopmentRuntimeLocator.swift */,
 				160DA6357E98CDFF64BFC295 /* Keychain.swift */,
 				2C5CAC742DE9F4E13B3FFD16 /* MCPHealthMonitor.swift */,
+				883F3D880993F435A52AD6B5 /* NativeMCPAuthorization.swift */,
+				14528F66396ABF533113585A /* NativeMCPDevelopmentStore.swift */,
+				F1D8F23734E7C4AC47103413 /* NativeMCPHTTP.swift */,
+				B011275ED3B8DB2E5DCAFA47 /* NativeMCPProjectFiles.swift */,
+				B62F9FD9564BA09234B9C820 /* NativeMCPSystem.swift */,
 				0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */,
 				A8D5FF69919504CE19785BDA /* ServiceSupervisor.swift */,
 				722D2821D95B5CA5B25F7ACF /* SystemPermissionAccess.swift */,
@@ -278,8 +290,8 @@
 				2F8523F43A4AAE041F302654 /* CommandJobModelsTests.swift */,
 				5AAF3F10B93F830BC33B27E4 /* InstanceLeaseTests.swift */,
 				45B18B25B4B4D6AD68891289 /* LaptopBridgeAppTests.swift */,
-				F99999999999999999999999 /* NativeMCPAuthorizationTests.swift */,
 				7DFE6A41A2CDF9C522333953 /* MCPHealthMonitorTests.swift */,
+				A60F66F1777D669CF509C134 /* NativeMCPAuthorizationTests.swift */,
 				FA5E94A049DF259A6CE6DB7E /* NgrokTunnelMonitorTests.swift */,
 				4FA09765A5DC85740382BB61 /* SavedCommandGrantTests.swift */,
 				FF6B093555EF31A324DD474A /* ServiceSupervisorTests.swift */,
@@ -300,8 +312,8 @@
 			isa = PBXGroup;
 			children = (
 				8CF620AE5C056396CFD9F836 /* DesktopWindowView.swift */,
+				0A4BED36861238A9D5852ED0 /* PreviewSupport.swift */,
 				0A75ABC2EF649483FACCE8E5 /* SettingsView.swift */,
-				F11111111111111111111111 /* PreviewSupport.swift */,
 				ECA9926118C9D66803AAD20E /* Pages */,
 				BF06DB6F457A775297D024B7 /* QuickPanel */,
 				5CB3942B4275CA4BA7FCC447 /* Setup */,
@@ -350,7 +362,7 @@
 				703325659C195B82C5568E16 /* ConnectionsPageView.swift */,
 				1CA8380B6A50B5CF1C4DD810 /* DiffView.swift */,
 				E0FC6EA3AE6683E2FD19EB01 /* GeneralPageView.swift */,
-				FDDDDDDDDDDDDDDDDDDDDDDD /* NativeSwiftRuntimePageView.swift */,
+				69449F9014113FB4EB7BA87F /* NativeSwiftRuntimePageView.swift */,
 				ADEF7F916CC9B40C2956BFB0 /* NgrokPageView.swift */,
 				69F5F0E0D7B976FF390AEDEA /* PermissionGuidePanel.swift */,
 				1E8F22BF45B761B618C70CC1 /* SecurityPageView.swift */,
@@ -396,6 +408,7 @@
 			buildPhases = (
 				06DBA6688911DE05E7A366E8 /* Sources */,
 				C1F5199D1B6E104DEF65D6B9 /* Resources */,
+				FDAAC42018BA3938D17310DA /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -403,6 +416,7 @@
 			);
 			name = RelayOS;
 			packageProductDependencies = (
+				F62CB8233B4CE97753E22C0F /* MCP */,
 			);
 			productName = RelayOS;
 			productReference = 61EEC49F3DCA38C9750BC9DF /* RelayOS.app */;
@@ -452,6 +466,9 @@
 			);
 			mainGroup = 803ADB52074DAC4899B47ABE;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B240AD2BE05FDF1F20DEF80B /* XCRemoteSwiftPackageReference "swift-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B73B3AA61539D822EFCD6D97 /* Products */;
 			projectDirPath = "";
@@ -494,11 +511,6 @@
 				E7036D84F04C4324B951656D /* BridgeModel+Permissions.swift in Sources */,
 				D12705F9869D63CEA6A8E576 /* BridgeModel+ProcessControl.swift in Sources */,
 				66ED3830CC3709D053488B80 /* BridgeModel.swift in Sources */,
-				F88888888888888888888888 /* NativeMCPProjectFiles.swift in Sources */,
-				F66666666666666666666666 /* NativeMCPHTTP.swift in Sources */,
-				F44444444444444444444444 /* NativeMCPAuthorization.swift in Sources */,
-				FCCCCCCCCCCCCCCCCCCCCCCC /* NativeMCPDevelopmentStore.swift in Sources */,
-				FACCCCCCCCCCCCCCCCCCCCCC /* NativeMCPSystem.swift in Sources */,
 				82DCB56CEFBCA0B18B79B17E /* CommandGrantGroupCard.swift in Sources */,
 				9E0C04877E8C049602380544 /* CommandGrantItemRow.swift in Sources */,
 				C0FFBE0E81E9C7124055CC4A /* CommandJobModels.swift in Sources */,
@@ -513,14 +525,20 @@
 				2E07F8C23284AD4A004C90FD /* DiffView.swift in Sources */,
 				6AAF4AC47A074EEF9C6760F3 /* FreshSetupView.swift in Sources */,
 				33B6DE14D950D7F0C2E02183 /* GeneralPageView.swift in Sources */,
-				FEEEEEEEEEEEEEEEEEEEEEEE /* NativeSwiftRuntimePageView.swift in Sources */,
 				CAC144368BE6D1B3FDF2C59A /* InstanceLease.swift in Sources */,
 				9684BDA65EB9E5877050B290 /* Keychain.swift in Sources */,
 				6989D8918649AE634984E2C9 /* MCPHealthMonitor.swift in Sources */,
 				82DE14E72189298BF2FD6410 /* ManagedProcessSlot.swift in Sources */,
+				9D6548FA22D02320900698AB /* NativeMCPAuthorization.swift in Sources */,
+				9DC38B230A00975957A04FC0 /* NativeMCPDevelopmentStore.swift in Sources */,
+				ED00DF5B4DB7A74138392679 /* NativeMCPHTTP.swift in Sources */,
+				C79F2FA5977E0D04FDB46684 /* NativeMCPProjectFiles.swift in Sources */,
+				7DD405A59B5B0844E46326CB /* NativeMCPSystem.swift in Sources */,
+				712333DEC9CE9601D19C1FA8 /* NativeSwiftRuntimePageView.swift in Sources */,
 				9B9794F608EB97B1E819425C /* NgrokPageView.swift in Sources */,
 				0C6F487398FDD7AB91D7A548 /* NgrokTunnelMonitor.swift in Sources */,
 				ABFFDF73F9860D8409937064 /* PermissionGuidePanel.swift in Sources */,
+				5CA2F14A7E880C022DDBD8CE /* PreviewSupport.swift in Sources */,
 				AC7B0895AC93C77ABA1A3B32 /* QuickPanel.swift in Sources */,
 				61A9F7371A3D7905FB4C6988 /* RelayOSApp.swift in Sources */,
 				921010956D0573613A2CE1D0 /* RelayOSTheme.swift in Sources */,
@@ -534,7 +552,6 @@
 				5FBF89074C57D79FB72B3FB5 /* SettingsTab.swift in Sources */,
 				CE7CD965B1A669000A30F54A /* SettingsToggle.swift in Sources */,
 				8D543F62066B8D94DC11FE28 /* SettingsView.swift in Sources */,
-				F22222222222222222222222 /* PreviewSupport.swift in Sources */,
 				209F367D5A545995122990B6 /* SidebarItemModel.swift in Sources */,
 				29BE237E49B747B5E15B2358 /* SidebarItemRow.swift in Sources */,
 				FDCFAB97EEEF00AE1DBDC584 /* SingleInstanceCoordinator.swift in Sources */,
@@ -559,6 +576,7 @@
 				9832DFC5790A3DB05C6A4CFD /* InstanceLeaseTests.swift in Sources */,
 				ABE652B39D6EDE743980F073 /* LaptopBridgeAppTests.swift in Sources */,
 				E7E3AE99D2E5CD6B44891B8C /* MCPHealthMonitorTests.swift in Sources */,
+				39ADF6F4C8CDD27B05E22BBD /* NativeMCPAuthorizationTests.swift in Sources */,
 				DA2031F59D8084379EA893B3 /* NgrokTunnelMonitorTests.swift in Sources */,
 				2ABB0556B126CE0EB68FF233 /* SavedCommandGrantTests.swift in Sources */,
 				9E4D8D3F612F8FFE5A46A568 /* ServiceSupervisorTests.swift in Sources */,
@@ -581,7 +599,6 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -600,8 +617,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = LS42X27YFY;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -625,7 +640,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -657,12 +671,10 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -676,7 +688,6 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -688,7 +699,6 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -704,7 +714,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -736,12 +745,10 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -762,7 +769,6 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -773,12 +779,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = LS42X27YFY;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Xcode/RelayOS-Info.plist";
@@ -828,6 +831,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B240AD2BE05FDF1F20DEF80B /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/modelcontextprotocol/swift-sdk.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.12.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F62CB8233B4CE97753E22C0F /* MCP */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B240AD2BE05FDF1F20DEF80B /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = MCP;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F1CAEB2DB19AB5F518638D47 /* Project object */;
 }
