@@ -274,9 +274,11 @@ extension BridgeModel {
             else { return }
             // An unavailable inspector does not prove the public route stopped.
             // Only a missing configured route and no owned child justify launch.
-            let effectiveStatus: TunnelHealthStatus = (result.status == .inspectorUnavailable
-                && self.tunnel == nil
-                && configuredEndpoint == nil)
+            // A previous public URL can still be configured after this app's
+            // child tunnel exited. Do not let a 404/timeout from that stale
+            // route suppress launch of a new owned tunnel; without an owned
+            // child there is nothing safe to adopt or monitor.
+            let effectiveStatus: TunnelHealthStatus = self.tunnel == nil
                 ? .stopped : result.status
             guard self.supervisor.finishTunnelProbe(effectiveStatus, generation: generation) else { return }
             self.tunnelHealth = effectiveStatus
