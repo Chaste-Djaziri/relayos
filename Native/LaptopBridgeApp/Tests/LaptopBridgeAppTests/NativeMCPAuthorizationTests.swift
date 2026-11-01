@@ -17,7 +17,7 @@ final class NativeMCPAuthorizationTests: XCTestCase {
         defer { sqlite3_close(db) }
         for sql in [
             "CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
-            "CREATE TABLE oauth_tokens (token_digest TEXT, token_type TEXT, expires_at REAL, revoked_at REAL, resource TEXT)",
+            "CREATE TABLE oauth_tokens (token_digest TEXT, token_type TEXT, expires_at REAL, revoked_at REAL, resource TEXT, scopes_json TEXT)",
             "CREATE TABLE project_sessions (token TEXT, root TEXT, status TEXT, expires_at REAL, revoked_at REAL)",
             "CREATE TABLE permission_grants (grant_type TEXT, scope TEXT, revoked_at REAL, expires_at REAL)"
         ] { XCTAssertEqual(sqlite3_exec(db, sql, nil, nil, nil), SQLITE_OK) }
@@ -45,7 +45,7 @@ final class NativeMCPAuthorizationTests: XCTestCase {
         let digest = SHA256.hash(data: Data("secret-access".utf8))
             .map { String(format: "%02x", $0) }.joined()
         let future = Date().addingTimeInterval(3600).timeIntervalSince1970
-        execute("INSERT INTO oauth_tokens VALUES ('\(digest)', 'access', \(future), NULL, 'https://agent.example/mcp')")
+        execute("INSERT INTO oauth_tokens VALUES ('\(digest)', 'access', \(future), NULL, 'https://agent.example/mcp', '[\"mcp\"]')")
         let auth = NativeMCPAuthorization(databaseURL: databaseURL)
         XCTAssertTrue(auth.validateAccessToken("secret-access", resource: "https://agent.example/mcp"))
         XCTAssertFalse(auth.validateAccessToken("other-access"))
@@ -54,10 +54,17 @@ final class NativeMCPAuthorizationTests: XCTestCase {
         XCTAssertFalse(auth.validateAccessToken("secret-access"))
     }
 
+    func testOAuthTokenMustIncludeExactMcpScope() {
+        let digest = SHA256.hash(data: Data("wrong-scope-token".utf8))
+            .map { String(format: "%02x", $0) }.joined()
+        execute("INSERT INTO oauth_tokens VALUES ('\(digest)', 'access', 9999999999, NULL, NULL, '[\"not-mcp\"]')")
+        XCTAssertFalse(NativeMCPAuthorization(databaseURL: databaseURL).validateAccessToken("wrong-scope-token"))
+    }
+
     func testEmergencyStopOverridesApprovedAccess() {
         let digest = SHA256.hash(data: Data("secret-access".utf8))
             .map { String(format: "%02x", $0) }.joined()
-        execute("INSERT INTO oauth_tokens VALUES ('\(digest)', 'access', 9999999999, NULL, NULL)")
+        execute("INSERT INTO oauth_tokens VALUES ('\(digest)', 'access', 9999999999, NULL, NULL, '[\"mcp\"]')")
         execute("INSERT INTO settings VALUES ('emergency_stop', 'true')")
         XCTAssertFalse(NativeMCPAuthorization(databaseURL: databaseURL).validateAccessToken("secret-access"))
     }
@@ -104,6 +111,64 @@ final class NativeMCPAuthorizationTests: XCTestCase {
         XCTFail("Native loopback listener never became ready: \(String(describing: lastError))")
     }
 
+
+    func testSwiftOnlyEndToEndLoopbackAuthenticationAndProjectReading() async throws {
+        let port = UInt16.random(in: 37000...49000)
+        let store = NativeMCPDevelopmentStore(
+            directory: directory.appendingPathComponent("native-network"),
+            port: port)
+        let auth = try store.bootstrap()
+        let folder = directory.appendingPathComponent("native-project")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try "verified Swift read".write(
+            to: folder.appendingPathComponent("hello.txt"),
+            atomically: true, encoding: .utf8)
+        let session = try store.grantProjectFolder(folder)
+        let token = try String(contentsOf: store.credentialURL, encoding: .utf8)
+        let listener = NativeMCPListener(port: port, authorization: auth)
+        try listener.start()
+        defer { listener.stop() }
+        let url = URL(string: "http://127.0.0.1:\(port)/mcp")!
+        var authorized = URLRequest(url: url)
+        authorized.httpMethod = "POST"
+        authorized.timeoutInterval = 2
+        authorized.setValue("127.0.0.1:\(port)", forHTTPHeaderField: "Host")
+        authorized.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        authorized.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        authorized.httpBody = try JSONSerialization.data(withJSONObject: [
+            "jsonrpc": "2.0", "id": 7, "method": "tools/call",
+            "params": [
+                "name": "read_project_file",
+                "arguments": [
+                    "session_id": session, "project_root": folder.path, "path": "hello.txt"
+                ]
+            ]
+        ] as [String: Any])
+        var lastError: Error?
+        var received = false
+        for _ in 0..<16 {
+            do {
+                let (data, response) = try await URLSession.shared.data(for: authorized)
+                XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
+                XCTAssertTrue(String(decoding: data, as: UTF8.self).contains("verified Swift read"))
+                received = true
+                break
+            } catch {
+                lastError = error
+                try await Task.sleep(nanoseconds: 80_000_000)
+            }
+        }
+        XCTAssertTrue(received, "Native listener did not reply: \(String(describing: lastError))")
+        try store.revokeSession(session)
+        let (revokedData, revokedResponse) = try await URLSession.shared.data(for: authorized)
+        XCTAssertEqual((revokedResponse as? HTTPURLResponse)?.statusCode, 200)
+        XCTAssertTrue(String(decoding: revokedData, as: UTF8.self).contains("-32003"))
+        var denied = authorized
+        denied.setValue("Bearer wrong-token", forHTTPHeaderField: "Authorization")
+        let (_, deniedResponse) = try await URLSession.shared.data(for: denied)
+        XCTAssertEqual((deniedResponse as? HTTPURLResponse)?.statusCode, 401)
+    }
+
     func testNativeReadToolsRequireProjectSessionAndStayInsideScope() throws {
         let root = directory.appendingPathComponent("workspace")
         let outside = directory.appendingPathComponent("secret.txt")
@@ -134,7 +199,7 @@ final class NativeMCPAuthorizationTests: XCTestCase {
                                    atomically: true, encoding: .utf8)
         let digest = SHA256.hash(data: Data("native-oauth".utf8))
             .map { String(format: "%02x", $0) }.joined()
-        execute("INSERT INTO oauth_tokens VALUES ('\(digest)', 'access', 9999999999, NULL, NULL)")
+        execute("INSERT INTO oauth_tokens VALUES ('\(digest)', 'access', 9999999999, NULL, NULL, '[\"mcp\"]')")
         execute("INSERT INTO project_sessions VALUES ('native-session', '\(root.path)', 'active', 9999999999, NULL)")
         let http = NativeMCPHTTP(authorization: .init(databaseURL: databaseURL), port: 18765)
         let headers = ["host": "127.0.0.1:18765", "authorization": "Bearer native-oauth"]
@@ -158,6 +223,42 @@ final class NativeMCPAuthorizationTests: XCTestCase {
         XCTAssertTrue(String(decoding: denied.body, as: UTF8.self).contains("-32601"))
         execute("INSERT INTO settings VALUES ('emergency_stop', 'true')")
         XCTAssertEqual(http.handle(method: "POST", path: "/mcp", headers: headers, body: data).status, 401)
+    }
+
+
+    func testSwiftOnlyDevelopmentStoreIsIsolatedAndLocallyApproved() throws {
+        let root = directory.appendingPathComponent("swift-only-project")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let store = NativeMCPDevelopmentStore(
+            directory: directory.appendingPathComponent("isolated-native-state"),
+            port: 18765)
+        let auth = try store.bootstrap()
+        let token = try String(contentsOf: store.credentialURL, encoding: .utf8)
+        XCTAssertGreaterThan(token.count, 30)
+        XCTAssertTrue(auth.validateAccessToken(token, resource: store.endpoint))
+        XCTAssertFalse(auth.validateAccessToken(token, resource: "https://unrelated.example/mcp"))
+        XCTAssertFalse(auth.validateAccessToken("guessed-test-token"))
+        let session = try store.grantProjectFolder(root, duration: 60)
+        XCTAssertTrue(auth.isProjectSessionActive(session, root: root))
+        XCTAssertFalse(auth.isProjectSessionActive(session, root: directory))
+        try store.revokeSession(session)
+        XCTAssertFalse(auth.isProjectSessionActive(session, root: root))
+        let mode = try FileManager.default.attributesOfItem(atPath: store.credentialURL.path)[.posixPermissions] as? NSNumber
+        XCTAssertEqual(mode?.intValue, 0o600)
+    }
+
+
+    func testNativeSystemStatusAndFixedReadOnlyProcessListing() throws {
+        let probe = NativeMCPSystem()
+        let status = probe.status()
+        XCTAssertTrue((status["hostname"] as? String)?.isEmpty == false)
+        XCTAssertTrue((status["os"] as? String)?.contains("macOS") == true)
+        let processes = try probe.listProcesses(limit: 8, sortBy: "memory")
+        XCTAssertLessThanOrEqual(processes.count, 8)
+        XCTAssertTrue(processes.allSatisfy { ($0["pid"] as? Int ?? 0) > 0 })
+        XCTAssertThrowsError(try probe.listProcesses(limit: 0, sortBy: "cpu"))
+        XCTAssertThrowsError(try probe.listProcesses(limit: 999, sortBy: "cpu"))
+        XCTAssertThrowsError(try probe.listProcesses(limit: 8, sortBy: "arbitrary"))
     }
 
     func testHTTPRejectsRequestsWithoutOAuthAndDangerousTools() {

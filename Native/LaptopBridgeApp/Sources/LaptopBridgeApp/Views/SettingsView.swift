@@ -41,7 +41,9 @@ struct SettingsView: View {
                         if model.isDevelopmentClient {
                             HStack(alignment: .top, spacing: 9) {
                                 Image(systemName: "hammer.fill")
-                                Text("Xcode development · Live settings and approvals. This app observes the installed MCP service without restarting it. Approval and revocation actions can affect live permissions.")
+                                Text(model.isSwiftOnly
+                                     ? "Swift-only local development · No Python or ngrok started. Unported settings are disabled."
+                                     : "Xcode development · Live settings and approvals. This app observes the installed MCP service without restarting it. Approval and revocation actions can affect live permissions.")
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             .font(.system(size: 11.5 * scale))
@@ -77,6 +79,24 @@ struct SettingsView: View {
 
     @ViewBuilder
     private func tabDetailView(_ tab: SettingsTab) -> some View {
+        if model.isSwiftOnly {
+            switch tab {
+            case .general:
+                NativeSwiftRuntimePageView(model: model)
+            case .appearance:
+                AppearancePageView()
+            default:
+                SettingsCard(title: "Not yet available in native Swift") {
+                    SettingsCardRow(
+                        title: tab.rawValue,
+                        subtitle: "This feature is still being migrated. Running Xcode in Swift-only mode will never launch its Python helper.",
+                        showDivider: false
+                    ) {
+                        Image(systemName: "lock.shield").foregroundStyle(.secondary)
+                    }
+                }
+            }
+        } else {
         switch tab {
         case .general:
             GeneralPageView(model: model)
@@ -100,6 +120,7 @@ struct SettingsView: View {
             CommandPermissionsView(model: model)
         case .terminalJobs:
             CommandJobsView(model: model)
+        }
         }
     }
 }

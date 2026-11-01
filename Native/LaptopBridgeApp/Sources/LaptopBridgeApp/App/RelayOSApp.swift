@@ -18,26 +18,32 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
     static var isXcodeDevelopment: Bool {
         Bundle.main.bundleIdentifier == "pro.micorp.relayos.dev"
     }
+    static var isSwiftOnlyDevelopment: Bool {
+        isXcodeDevelopment &&
+            ProcessInfo.processInfo.environment["RELAYOS_SWIFT_ONLY"] == "1"
+    }
     // The settings window is not the agent's lifetime. Explicit Quit terminates
     // RelayOS; simply closing Settings leaves its approved MCP services alive.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if Bundle.main.bundleIdentifier == "pro.micorp.relayos.dev" &&
-            ProcessInfo.processInfo.environment["RELAYOS_NATIVE_MCP_EXPERIMENT"] == "1" {
-            let listener = NativeMCPListener(port: 18765)
+        // SwiftUI Canvas must never bootstrap a token, listener, or helper.
+        guard !Self.isXcodeUIPreview else { return }
+        if Self.isSwiftOnlyDevelopment {
             do {
+                let auth = try NativeMCPDevelopmentStore().bootstrap()
+                let listener = NativeMCPListener(port: 18765, authorization: auth)
                 try listener.start()
                 nativeExperiment = listener
-                NSLog("RelayOS native read-only MCP experiment active on 127.0.0.1:18765")
+                BridgeModel.shared.nativeListenerStarted()
             } catch {
-                NSLog("RelayOS native MCP experiment did not start: %@", error.localizedDescription)
+                BridgeModel.shared.serviceNotice = "Swift-only listener failed: \(error.localizedDescription)"
+                BridgeModel.shared.mcpHealth = .unreachable
             }
         }
-        guard !Self.isXcodeUIPreview else { return }
         if Self.isXcodeDevelopment {
-            // Observe the installed agent without claiming its lock, launching
-            // Python/ngrok, or interrupting its authenticated MCP endpoint.
-            BridgeModel.shared.startDevelopmentObservation()
+            // Swift-only runs in the app itself; observation mode reads the
+            // installed backend but does not own or stop its processes.
+            if !Self.isSwiftOnlyDevelopment { BridgeModel.shared.startDevelopmentObservation() }
             return
         }
         guard SingleInstanceCoordinator.shared.claimOrReplaceExistingInstance() else {
@@ -102,7 +108,7 @@ struct RelayOSApp: App {
         .windowStyle(.hiddenTitleBar)
         MenuBarExtra {
             QuickPanel(model: model)
-                .allowsHitTesting(!model.isPreview)
+                .allowsHitTesting(!model.isPreview && !model.isSwiftOnly)
                 .preferredColorScheme(RelayOSTheme.scheme(appearance))
                 .tint(RelayOSTheme.accent(accent))
                 .frame(width: 360)

@@ -7,6 +7,10 @@ final class BridgeModel: ObservableObject {
     static let shared = BridgeModel()
     // Canvas/UI-only models never load the user's configuration or run helpers.
     let isPreview: Bool
+    var isSwiftOnly: Bool {
+        !isPreview && Bundle.main.bundleIdentifier == "pro.micorp.relayos.dev"
+            && ProcessInfo.processInfo.environment["RELAYOS_SWIFT_ONLY"] == "1"
+    }
     // Xcode Run uses the actual app model, not mock data, but never owns the
     // production server's process lease.
     var isDevelopmentClient: Bool {
@@ -76,8 +80,18 @@ final class BridgeModel: ObservableObject {
     init(preview: Bool = false) {
         isPreview = preview
         let home = FileManager.default.homeDirectoryForCurrentUser
-        configURL = home.appendingPathComponent(".laptop-bridge/config.json")
+        configURL = home.appendingPathComponent(
+            isPreview ? ".laptop-bridge/config.json"
+            : (Bundle.main.bundleIdentifier == "pro.micorp.relayos.dev"
+               && ProcessInfo.processInfo.environment["RELAYOS_SWIFT_ONLY"] == "1"
+               ? ".relayos-swift-dev/config.json" : ".laptop-bridge/config.json"))
         if preview { return }
+        if isSwiftOnly {
+            endpoint = NativeMCPDevelopmentStore().endpoint
+            serviceNotice = "Swift-only development: no Python, ngrok, or production credentials."
+            projectTools = true
+            return
+        }
         loadConfig()
         // Development instances observe the installed agent. Termination must
         // never invoke production service shutdown from the debug process.
@@ -97,9 +111,41 @@ final class BridgeModel: ObservableObject {
         }
     }
 
+    // MARK: - Swift-only native development
+    func nativeListenerStarted() {
+        guard isSwiftOnly else { return }
+        endpoint = NativeMCPDevelopmentStore().endpoint
+        mcpHealth = .unreachable
+        running = false
+        tunnelHealth = .stopped
+        tunnelRunning = false
+        serviceNotice = "Checking native Swift MCP on localhost:18765. OAuth onboarding and command tools are not implemented."
+        Task { @MainActor [weak self] in
+            guard let self, let url = URL(string: "http://127.0.0.1:18765/health") else { return }
+            var verified = false
+            for _ in 0..<15 {
+                var request = URLRequest(url: url)
+                request.timeoutInterval = 1
+                if let (data, response) = try? await URLSession.shared.data(for: request),
+                   (response as? HTTPURLResponse)?.statusCode == 200,
+                   String(decoding: data, as: UTF8.self).contains("native-experimental") {
+                    verified = true
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+            guard self.isSwiftOnly else { return }
+            self.running = verified
+            self.mcpHealth = verified ? .healthy : .unreachable
+            self.serviceNotice = verified
+                ? "Swift-only MCP verified at localhost:18765. No Python or ngrok was started."
+                : "The Swift-only listener did not answer its local health probe."
+        }
+    }
+
     // MARK: - Xcode development runtime (observe-only service supervision)
     func startDevelopmentObservation() {
-        guard isDevelopmentClient, developmentTimer == nil else { return }
+        guard isDevelopmentClient, !isSwiftOnly, developmentTimer == nil else { return }
         serviceNotice = "Xcode development build: viewing the installed RelayOS service. Service ownership and restart are disabled."
         refreshApprovalInbox()
         refreshApprovalActivity()

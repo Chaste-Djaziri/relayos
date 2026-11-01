@@ -50,7 +50,9 @@ struct NativeMCPHTTP {
         guard path == "/mcp" else { return Reply(404, ["error": "Not found"]) }
         guard method == "POST" else { return Reply(405, ["error": "Method not allowed"]) }
         guard let bearer = headers["authorization"], bearer.hasPrefix("Bearer "),
-              authorization.validateAccessToken(String(bearer.dropFirst(7)))
+              authorization.validateAccessToken(
+                String(bearer.dropFirst(7)),
+                resource: "http://127.0.0.1:\(port)/mcp")
         else { return Reply(401, ["error": "Unauthorized"]) }
         guard body.count <= 32768,
               let request = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
@@ -84,8 +86,17 @@ struct NativeMCPHTTP {
             ]
             return response(id, ["tools": [
                 ["name": "system_status",
-                 "description": "Read the health of the isolated native MCP experiment.",
+                 "description": "Read the native Mac's hostname, OS and available system measurements.",
                  "inputSchema": ["type": "object", "properties": [:]]],
+                ["name": "list_processes",
+                 "description": "List running Mac processes by CPU or memory usage (read-only).",
+                 "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "limit": ["type": "integer", "minimum": 1, "maximum": 200],
+                        "sort_by": ["type": "string", "enum": ["cpu", "memory"]]
+                    ]
+                 ]],
                 ["name": "list_project_files",
                  "description": "List files only under a previously locally approved project session.",
                  "inputSchema": sessionSchema],
@@ -98,10 +109,17 @@ struct NativeMCPHTTP {
             let tool = params["name"] as? String ?? ""
             let arguments = params["arguments"] as? [String: Any] ?? [:]
             if tool == "system_status" {
-                return toolText(id, [
-                    "platform": "macOS", "runtime": "swift-in-process",
-                    "mode": "experimental-read-only", "port": Int(port)
-                ])
+                return toolText(id, NativeMCPSystem().status())
+            }
+            if tool == "list_processes" {
+                let limit = arguments["limit"] as? Int ?? 50
+                let sorting = arguments["sort_by"] as? String ?? "cpu"
+                do {
+                    return toolText(id, try NativeMCPSystem().listProcesses(
+                        limit: limit, sortBy: sorting))
+                } catch {
+                    return failure(id, -32602, "Invalid process listing parameters")
+                }
             }
             if tool == "list_project_files" || tool == "read_project_file" {
                 guard let session = arguments["session_id"] as? String,

@@ -49,31 +49,45 @@ struct NativeMCPAuthorization {
         try scalarInt(db, sql: "SELECT COUNT(*) FROM settings WHERE key = 'emergency_stop' AND value = 'true'") > 0
     }
 
-    /// Existing Python-issued access tokens are stored as SHA-256 digests.
-    /// A valid, unexpired, unrevoked access token is required on every MCP call.
+    /// Require a real, unrevoked access token, an exact OAuth "mcp" scope,
+    /// and a resource binding for the local development listener.
+    /// Older tokens with no resource are accepted only for compatibility with
+    /// the existing local tests. Never accept a token bound to another MCP URL.
     func validateAccessToken(_ token: String, resource: String? = nil,
                              now: Date = Date()) -> Bool {
         guard !token.isEmpty, token.utf8.count <= 4096 else { return false }
-        let digest = SHA256.hash(data: Data(token.utf8)).map { String(format: "%02x", $0) }.joined()
+        let digest = SHA256.hash(data: Data(token.utf8))
+            .map { String(format: "%02x", $0) }.joined()
         do {
             return try withDatabase { db in
                 guard try !stopped(db) else { return false }
-                let statement = """
-                    SELECT COUNT(*) FROM oauth_tokens
+                var statement: OpaquePointer?
+                guard sqlite3_prepare_v2(db, """
+                    SELECT scopes_json, resource FROM oauth_tokens
                     WHERE token_digest = ? AND token_type = 'access'
                       AND revoked_at IS NULL AND expires_at > ?
-                    """
-                let accepted = try scalarInt(db, sql: statement,
-                                             values: [digest, String(now.timeIntervalSince1970)])
-                guard accepted == 1 else { return false }
-                if let resource {
-                    return try scalarInt(db, sql: """
-                        SELECT COUNT(*) FROM oauth_tokens
-                        WHERE token_digest = ? AND token_type = 'access'
-                          AND revoked_at IS NULL AND expires_at > ? AND resource = ?
-                        """, values: [digest, String(now.timeIntervalSince1970), resource]) == 1
+                """, -1, &statement, nil) == SQLITE_OK,
+                      let query = statement else {
+                    throw AuthorizationError.databaseUnavailable
                 }
-                return true
+                defer { sqlite3_finalize(query) }
+                let result = digest.withCString {
+                    sqlite3_bind_text(query, 1, $0, -1,
+                        unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+                }
+                guard result == SQLITE_OK else { return false }
+                sqlite3_bind_double(query, 2, now.timeIntervalSince1970)
+                guard sqlite3_step(query) == SQLITE_ROW,
+                      let scopeData = sqlite3_column_text(query, 0) else { return false }
+                let rawScopes = String(cString: scopeData)
+                guard let scopes = try? JSONSerialization.jsonObject(
+                    with: Data(rawScopes.utf8)) as? [String],
+                    scopes.contains("mcp") else { return false }
+                if let expectedResource = resource, sqlite3_column_type(query, 1) != SQLITE_NULL {
+                    guard let ptr = sqlite3_column_text(query, 1),
+                          String(cString: ptr) == expectedResource else { return false }
+                }
+                return sqlite3_step(query) == SQLITE_DONE
             }
         } catch { return false }
     }

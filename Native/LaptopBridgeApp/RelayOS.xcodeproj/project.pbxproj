@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FACCCCCCCCCCCCCCCCCCCCCC /* NativeMCPSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FABBBBBBBBBBBBBBBBBBBBBB /* NativeMCPSystem.swift */; };
+		FEEEEEEEEEEEEEEEEEEEEEEE /* NativeSwiftRuntimePageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDDDDDDDDDDDDDDDDDDDDDDD /* NativeSwiftRuntimePageView.swift */; };
+		FCCCCCCCCCCCCCCCCCCCCCCC /* NativeMCPDevelopmentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBBBBBBBBBBBBBBBBBBBBBBB /* NativeMCPDevelopmentStore.swift */; };
 		FAAAAAAAAAAAAAAAAAAAAAAA /* NativeMCPAuthorizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F99999999999999999999999 /* NativeMCPAuthorizationTests.swift */; };
 		F88888888888888888888888 /* NativeMCPProjectFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F77777777777777777777777 /* NativeMCPProjectFiles.swift */; };
 		F66666666666666666666666 /* NativeMCPHTTP.swift in Sources */ = {isa = PBXBuildFile; fileRef = F55555555555555555555555 /* NativeMCPHTTP.swift */; };
@@ -95,6 +98,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FABBBBBBBBBBBBBBBBBBBBBB /* NativeMCPSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPSystem.swift; sourceTree = "<group>"; };
+		FDDDDDDDDDDDDDDDDDDDDDDD /* NativeSwiftRuntimePageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSwiftRuntimePageView.swift; sourceTree = "<group>"; };
+		FBBBBBBBBBBBBBBBBBBBBBBB /* NativeMCPDevelopmentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPDevelopmentStore.swift; sourceTree = "<group>"; };
 		F99999999999999999999999 /* NativeMCPAuthorizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPAuthorizationTests.swift; sourceTree = "<group>"; };
 		F77777777777777777777777 /* NativeMCPProjectFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPProjectFiles.swift; sourceTree = "<group>"; };
 		F55555555555555555555555 /* NativeMCPHTTP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPHTTP.swift; sourceTree = "<group>"; };
@@ -205,6 +211,8 @@
 				F77777777777777777777777 /* NativeMCPProjectFiles.swift */,
 				F55555555555555555555555 /* NativeMCPHTTP.swift */,
 				F33333333333333333333333 /* NativeMCPAuthorization.swift */,
+				FBBBBBBBBBBBBBBBBBBBBBBB /* NativeMCPDevelopmentStore.swift */,
+				FABBBBBBBBBBBBBBBBBBBBBB /* NativeMCPSystem.swift */,
 				40017314B96D04DB9DF7025F /* BridgeModel+Approvals.swift */,
 				EA1547CE08DBD57A9DFA1396 /* BridgeModel+CommandJobs.swift */,
 				074974C562F230CC62710F89 /* BridgeModel+Config.swift */,
@@ -342,6 +350,7 @@
 				703325659C195B82C5568E16 /* ConnectionsPageView.swift */,
 				1CA8380B6A50B5CF1C4DD810 /* DiffView.swift */,
 				E0FC6EA3AE6683E2FD19EB01 /* GeneralPageView.swift */,
+				FDDDDDDDDDDDDDDDDDDDDDDD /* NativeSwiftRuntimePageView.swift */,
 				ADEF7F916CC9B40C2956BFB0 /* NgrokPageView.swift */,
 				69F5F0E0D7B976FF390AEDEA /* PermissionGuidePanel.swift */,
 				1E8F22BF45B761B618C70CC1 /* SecurityPageView.swift */,
@@ -488,6 +497,8 @@
 				F88888888888888888888888 /* NativeMCPProjectFiles.swift in Sources */,
 				F66666666666666666666666 /* NativeMCPHTTP.swift in Sources */,
 				F44444444444444444444444 /* NativeMCPAuthorization.swift in Sources */,
+				FCCCCCCCCCCCCCCCCCCCCCCC /* NativeMCPDevelopmentStore.swift in Sources */,
+				FACCCCCCCCCCCCCCCCCCCCCC /* NativeMCPSystem.swift in Sources */,
 				82DCB56CEFBCA0B18B79B17E /* CommandGrantGroupCard.swift in Sources */,
 				9E0C04877E8C049602380544 /* CommandGrantItemRow.swift in Sources */,
 				C0FFBE0E81E9C7124055CC4A /* CommandJobModels.swift in Sources */,
@@ -502,6 +513,7 @@
 				2E07F8C23284AD4A004C90FD /* DiffView.swift in Sources */,
 				6AAF4AC47A074EEF9C6760F3 /* FreshSetupView.swift in Sources */,
 				33B6DE14D950D7F0C2E02183 /* GeneralPageView.swift in Sources */,
+				FEEEEEEEEEEEEEEEEEEEEEEE /* NativeSwiftRuntimePageView.swift in Sources */,
 				CAC144368BE6D1B3FDF2C59A /* InstanceLease.swift in Sources */,
 				9684BDA65EB9E5877050B290 /* Keychain.swift in Sources */,
 				6989D8918649AE634984E2C9 /* MCPHealthMonitor.swift in Sources */,
