@@ -298,7 +298,10 @@ final class RelayOSNotchWindow: NSPanel {
         isFloatingPanel = true
         level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
         collectionBehavior = [
-            .canJoinAllSpaces,
+            // A physical notch belongs to the currently visible desktop, not
+            // to a copy of the panel left behind on every Space. AppKit moves
+            // this panel as Spaces change instead of duplicating it.
+            .moveToActiveSpace,
             .stationary,
             .ignoresCycle,
             .fullScreenAuxiliary
@@ -539,6 +542,7 @@ final class NotchPanelCoordinator: ObservableObject {
     private(set) var panel: RelayOSNotchWindow?
     private var model: BridgeModel?
     private var screenObserver: NSObjectProtocol?
+    private var activeSpaceObserver: NSObjectProtocol?
     private var openMainWindow: (() -> Void)?
     private var pendingCollapse: Task<Void, Never>?
     private var cancellables: Set<AnyCancellable> = []
@@ -637,6 +641,20 @@ final class NotchPanelCoordinator: ObservableObject {
                 queue: .main
             ) { [weak self] _ in
                 Task { @MainActor [weak self] in self?.reposition() }
+            }
+        }
+        if activeSpaceObserver == nil {
+            activeSpaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+                forName: NSWorkspace.activeSpaceDidChangeNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    // Reassert the top-edge frame after a Space swipe. This
+                    // also prevents AppKit retaining an old cloned frame.
+                    self?.reposition(animated: false)
+                    self?.panel?.orderFrontRegardless()
+                }
             }
         }
     }
@@ -762,6 +780,10 @@ final class NotchPanelCoordinator: ObservableObject {
         if let screenObserver {
             NotificationCenter.default.removeObserver(screenObserver)
             self.screenObserver = nil
+        }
+        if let activeSpaceObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(activeSpaceObserver)
+            self.activeSpaceObserver = nil
         }
     }
 }
