@@ -175,6 +175,8 @@ final class NotchPanelPlacementTests: XCTestCase {
         XCTAssertTrue(window.acceptsMouseMovedEvents)
         XCTAssertTrue(window.collectionBehavior.contains(.moveToActiveSpace))
         XCTAssertFalse(window.collectionBehavior.contains(.canJoinAllSpaces))
+        XCTAssertFalse(window.collectionBehavior.contains(.stationary))
+        XCTAssertFalse(window.collectionBehavior.contains(.fullScreenAuxiliary))
         XCTAssertEqual(window.constrainFrameRect(topRect, to: nil), topRect)
     }
 }
