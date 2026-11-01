@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ConnectionsPageView: View {
     @ObservedObject var model: BridgeModel
+    @State private var copiedEndpoint = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -29,8 +30,20 @@ struct ConnectionsPageView: View {
                     subtitle: "The public HTTPS URL configured for client connections",
                     showDivider: false
                 ) {
-                    SettingsButton(title: "Copy MCP endpoint", icon: "doc.on.doc", style: .primary) {
+                    SettingsButton(
+                        title: copiedEndpoint ? "Copied" : "Copy MCP endpoint",
+                        icon: copiedEndpoint ? "checkmark" : "doc.on.doc",
+                        style: .primary
+                    ) {
                         model.copyEndpoint()
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            copiedEndpoint = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                copiedEndpoint = false
+                            }
+                        }
                     }
                 }
             }
