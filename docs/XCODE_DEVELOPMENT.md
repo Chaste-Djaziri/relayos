@@ -17,11 +17,11 @@ The project uses the existing app implementation, not a copied set of files. Do 
 
 ## Signing and system permissions
 
-- The Xcode Debug bundle uses `pro.micorp.relayos` and shows an **inert demo window**. It neither takes the production instance lock nor starts the MCP server or ngrok.
-- The Release bundle identifier matches the existing installed production app: `rw.shangazi.relayos`. **Do not run or install an Xcode Release build over the real app yet**: it does not bundle the Python runtime helpers.
+- The Xcode Debug bundle uses `pro.micorp.relayos.dev` and shows an **inert demo window**. It neither takes the production instance lock nor starts the MCP server or ngrok.
+- The Release bundle identifier is `pro.micorp.relayos`. The currently installed legacy app may still use `rw.shangazi.relayos`; these are different macOS privacy identities. **Do not install an Xcode Release build over the live app**: it does not include the Python runtime helpers.
 - Keep a consistent signing team and certificate on successive builds. Ad-hoc signing may cause macOS screen-recording and accessibility permissions to be reported as missing after replacement.
 - **Do not grant Full Disk Access to the Debug UI preview** just to experiment with appearance settings.
-- The generated Xcode project is reproducible. Edits made exclusively in generated project settings may be overwritten by running XcodeGen again. Keep any permanent non-secret build-setting changes in `project.yml`; do not commit personal signing credentials or private keys.
+- The Xcode project has user-adjusted app-icon and scheme settings. They have been preserved. **Do not re-run XcodeGen until any other manually edited project/scheme settings are mirrored in `project.yml`**; project generation can overwrite them. The app identity, category, version and app-icon build setting are mirrored. Do not commit personal signing credentials or private keys.
 - Xcode's Debug build is for UI iteration, not production distribution. The currently working production packager is `scripts/build_relayos_app.sh`, run from the repository root after explicit local approval and with an isolated `DIST_DIR`.
 
 ## Build, preview, test

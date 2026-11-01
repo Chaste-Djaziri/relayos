@@ -7,7 +7,7 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
     // A UI-only development run never acquires the production process lease.
     static var isXcodeUIPreview: Bool {
         ProcessInfo.processInfo.environment["RELAYOS_XCODE_UI_PREVIEW"] == "1"
-            || Bundle.main.bundleIdentifier == "pro.micorp.relayos"
+            || Bundle.main.bundleIdentifier == "pro.micorp.relayos.dev"
     }
     // The settings window is not the agent's lifetime. Explicit Quit terminates
     // RelayOS; simply closing Settings leaves its approved MCP services alive.

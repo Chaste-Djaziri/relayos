@@ -92,8 +92,9 @@ cat > "$APP_PATH/Contents/Info.plist" <<'PLIST'
   <key>CFBundleDisplayName</key><string>RelayOS</string>
   <key>CFBundleName</key><string>RelayOS</string>
   <key>CFBundleExecutable</key><string>RelayOS</string>
-  <key>CFBundleIdentifier</key><string>rw.shangazi.relayos</string>
+  <key>CFBundleIdentifier</key><string>pro.micorp.relayos</string>
   <key>CFBundlePackageType</key><string>APPL</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
   <key>CFBundleShortVersionString</key><string>1.0.0</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>LSUIElement</key><true/>

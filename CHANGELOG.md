@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Align Xcode Release and packaged macOS bundle identity to `pro.micorp.relayos`, use `pro.micorp.relayos.dev` for isolated Debug, and configure RelayOS name, Utilities category, version 1.0.0, build 1 while preserving user-customized Xcode project and schemes.
 - Added an Xcode-managed macOS app project with a dedicated safe Debug UI preview scheme, distinct .dev bundle identity, automatic code-signing controls, shared existing SwiftUI sources, and native test target; the production Python MCP deployment remains unchanged.
 - Documented Xcode signing and distribution workflows plus a staged, authorization-preserving migration roadmap for replacing Python with native Swift services.
 - Window-first W01: keep RelayOS running when the Settings window closes; move managed-process termination waits and emergency-stop confirmation off the UI thread; avoid terminating unowned ngrok processes. Added constrained configured-endpoint HTTP 401 verification when ngrok's local inspector is unavailable, with regression tests.

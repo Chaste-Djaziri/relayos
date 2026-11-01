@@ -24,10 +24,11 @@ targets:
       properties:
         CFBundleDisplayName: RelayOS
         CFBundleName: RelayOS
+        LSApplicationCategoryType: public.app-category.utilities
         CFBundleExecutable: RelayOS
         CFBundlePackageType: APPL
-        CFBundleShortVersionString: "1.0.0"
-        CFBundleVersion: "1"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSUIElement: true
         NSHighResolutionCapable: true
         NSAppleEventsUsageDescription: "RelayOS controls other apps only after explicit local approval."
@@ -37,15 +38,20 @@ targets:
         PRODUCT_NAME: RelayOS
         PRODUCT_MODULE_NAME: LaptopBridgeApp
         GENERATE_INFOPLIST_FILE: NO
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_KEY_CFBundleDisplayName: RelayOS
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
         ENABLE_HARDENED_RUNTIME: YES
         SWIFT_EMIT_LOC_STRINGS: YES
       configs:
         Debug:
-          PRODUCT_BUNDLE_IDENTIFIER: pro.micorp.relayos
+          PRODUCT_BUNDLE_IDENTIFIER: pro.micorp.relayos.dev
           ENABLE_PREVIEWS: YES
         Release:
-          PRODUCT_BUNDLE_IDENTIFIER: rw.shangazi.relayos
+          PRODUCT_BUNDLE_IDENTIFIER: pro.micorp.relayos
     scheme: {}
   RelayOSTests:
     type: bundle.unit-test
@@ -56,7 +62,7 @@ targets:
       - target: RelayOS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: rw.shangazi.relayos.tests
+        PRODUCT_BUNDLE_IDENTIFIER: pro.micorp.relayos.tests
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/RelayOS.app/Contents/MacOS/RelayOS"
         BUNDLE_LOADER: "$(TEST_HOST)"
 schemes:
