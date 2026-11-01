@@ -249,4 +249,12 @@ final class NotchPanelPlacementTests: XCTestCase {
         XCTAssertEqual(NotchPlaybackTimeline.clock(nil), "–:––")
     }
 
+
+    func testGlobalMediaKeyMappingMatchesSystemMediaEvents() {
+        XCTAssertEqual(RelayOSMediaKeys.Key.toggle.rawValue, 16)
+        XCTAssertEqual(RelayOSMediaKeys.Key.next.rawValue, 17)
+        XCTAssertEqual(RelayOSMediaKeys.Key.previous.rawValue, 18)
+        // Do not post a global CGEvent from unit tests.
+    }
+
 }

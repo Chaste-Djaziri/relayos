@@ -1,5 +1,7 @@
 // Path: Native/LaptopBridgeApp/Sources/LaptopBridgeApp/Views/QuickPanel/NotchPanel.swift
 import AppKit
+import AVKit
+import ApplicationServices
 import Combine
 import SwiftUI
 
@@ -392,6 +394,47 @@ enum NotchPlaybackTimeline {
     }
 }
 
+/// Sends the same media-key events as a hardware keyboard, only after the
+/// person explicitly grants RelayOS Accessibility access. No private
+/// MediaRemote entitlements or system process injection are used.
+enum RelayOSMediaKeys {
+    enum Key: Int { case toggle = 16, next = 17, previous = 18 }
+
+    static var isAuthorized: Bool { AXIsProcessTrusted() }
+
+    @discardableResult
+    static func requestPermission() -> Bool {
+        AXIsProcessTrustedWithOptions([
+            kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
+        ] as CFDictionary)
+    }
+
+    @discardableResult
+    static func send(_ key: Key) -> Bool {
+        guard isAuthorized else { return false }
+        for down in [true, false] {
+            let data = (key.rawValue << 16) | (down ? 0xA00 : 0xB00)
+            guard let event = NSEvent.otherEvent(
+                with: .systemDefined, location: .zero,
+                modifierFlags: [], timestamp: 0,
+                windowNumber: 0, context: nil,
+                subtype: 8, data1: data, data2: -1
+            )?.cgEvent else { return false }
+            event.post(tap: .cghidEventTap)
+        }
+        return true
+    }
+}
+
+/// AirPlay routes shown by AVKit are associated with the local app's media
+/// session. For routing *other* apps, use macOS Sound output settings below.
+struct RelayOSAirPlayPicker: NSViewRepresentable {
+    func makeNSView(context: Context) -> AVRoutePickerView {
+        AVRoutePickerView(frame: NSRect(x: 0, y: 0, width: 28, height: 28))
+    }
+    func updateNSView(_ nsView: AVRoutePickerView, context: Context) {}
+}
+
 /// A system-wide "currently playing" reader is not available through Apple's
 /// public media APIs. This native adapter supports already-running Music and
 /// Spotify via their AppleScript dictionaries and macOS Automation consent.
@@ -413,6 +456,8 @@ final class NotchMediaController: ObservableObject {
     @Published private(set) var observedAt = Date()
     @Published private(set) var artworkURL: URL?
     @Published private(set) var commandInFlight = false
+    @Published private(set) var sourceMessage = "Checking playback sources…"
+    @Published private(set) var automationPermissionNeeded = false
 
     private var pollTask: Task<Void, Never>?
 
@@ -471,10 +516,13 @@ final class NotchMediaController: ObservableObject {
 
     func refresh() async {
         let runningBundles = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
-        let snapshot = await Task.detached(priority: .utility) {
+        let lookup = await Task.detached(priority: .utility) {
             Self.queryRunningPlayers(runningBundles: runningBundles)
         }.value
+        let snapshot = lookup.snapshot
         guard !Task.isCancelled else { return }
+        sourceMessage = lookup.message
+        automationPermissionNeeded = lookup.automationDenied
         if let snapshot {
             let changedTrack = trackTitle != snapshot.trackTitle ||
                 artistName != snapshot.artistName ||
@@ -505,6 +553,9 @@ final class NotchMediaController: ObservableObject {
     }
 
     func togglePlayPause() { send(.toggle) }
+    func requestMediaKeyAccess() {
+        _ = RelayOSMediaKeys.requestPermission()
+    }
     func nextTrack() { send(.next) }
     func previousTrack() { send(.previous) }
 
@@ -526,6 +577,13 @@ final class NotchMediaController: ObservableObject {
 
     private enum PlaybackAction {
         case toggle, next, previous
+        var mediaKey: RelayOSMediaKeys.Key {
+            switch self {
+            case .toggle: .toggle
+            case .next: .next
+            case .previous: .previous
+            }
+        }
         var script: String {
             switch self {
             case .toggle: "playpause"
@@ -536,14 +594,23 @@ final class NotchMediaController: ObservableObject {
     }
 
     private func send(_ action: PlaybackAction) {
-        guard let target = runningPlayerName(), hasRunningPlayer, !commandInFlight else { return }
+        guard !commandInFlight else { return }
+        guard let target = runningPlayerName(), hasRunningPlayer else {
+            if !RelayOSMediaKeys.send(action.mediaKey) {
+                sourceMessage = "Enable Accessibility for RelayOS to use system-wide media keys."
+            }
+            return
+        }
         commandInFlight = true
         Task { [weak self] in
-            _ = await Task.detached(priority: .userInitiated) {
+            let result = await Task.detached(priority: .userInitiated) {
                 Self.runAppleScript("tell application \"\(target)\" to \(action.script)")
             }.value
             guard let self else { return }
             self.commandInFlight = false
+            if result.message != nil, !RelayOSMediaKeys.send(action.mediaKey) {
+                self.sourceMessage = "Playback command blocked. Check Automation, or enable Accessibility for system media keys."
+            }
             await self.refresh()
         }
     }
@@ -577,56 +644,104 @@ final class NotchMediaController: ObservableObject {
         return nil
     }
 
+    struct PlayerLookup: Sendable {
+        let snapshot: Snapshot?
+        let message: String
+        let automationDenied: Bool
+    }
+
     nonisolated private static func queryRunningPlayers(
         runningBundles: Set<String>
-    ) -> Snapshot? {
+    ) -> PlayerLookup {
         let candidates: [(bundle: String, name: String)] = [
             ("com.apple.Music", "Music"),
             ("com.spotify.client", "Spotify")
         ]
         var pausedCandidate: Snapshot?
+        var permissionBlocked = false
+        var firstFailure: String?
+        var sawRunningApp = false
 
         for candidate in candidates where runningBundles.contains(candidate.bundle) {
+            sawRunningApp = true
+            // Different AppleScript dictionaries: Music does not recognize
+            // Spotify's artwork URL term, even inside a conditional clause.
+            let artworkScript = candidate.name == "Spotify" ? """
+                try
+                    set artAddress to artwork url of currentSong as text
+                end try
+            """ : ""
             let script = """
             tell application "\(candidate.name)"
-                try
-                    set playbackState to player state as text
-                    if playbackState is not "playing" and playbackState is not "paused" then return "stopped"
-                    set currentSong to current track
-                    set trackPosition to player position as text
-                    set trackDuration to duration of currentSong as text
-                    set artAddress to ""
-                    if "\(candidate.name)" is "Spotify" then
-                        try
-                            set artAddress to artwork url of currentSong as text
-                        end try
-                    end if
-                    set sep to ASCII character 30
-                    return playbackState & sep & (name of currentSong as text) & sep & (artist of currentSong as text) & sep & (album of currentSong as text) & sep & trackPosition & sep & trackDuration & sep & artAddress
-                on error
-                    return "stopped"
-                end try
+                set playbackState to "stopped"
+                if player state is playing then
+                    set playbackState to "playing"
+                else if player state is paused then
+                    set playbackState to "paused"
+                end if
+                if playbackState is "stopped" then return "stopped"
+                set currentSong to current track
+                set trackPosition to player position as text
+                set trackDuration to duration of currentSong as text
+                set artAddress to ""
+                \(artworkScript)
+                set sep to ASCII character 30
+                return playbackState & sep & (name of currentSong as text) & sep & (artist of currentSong as text) & sep & (album of currentSong as text) & sep & trackPosition & sep & trackDuration & sep & artAddress
             end tell
             """
-            guard let raw = runAppleScript(script),
+            let result = runAppleScript(script)
+            if result.code == -1743 {
+                permissionBlocked = true
+                continue
+            }
+            if let error = result.message {
+                firstFailure = firstFailure ?? "\(candidate.name): \(error)"
+            }
+            guard let raw = result.value,
                   let snapshot = parseSnapshot(raw, player: candidate.name,
-                                               bundle: candidate.bundle)
-            else { continue }
-            if snapshot.isPlaying { return snapshot }
+                                               bundle: candidate.bundle) else { continue }
+            if snapshot.isPlaying {
+                return PlayerLookup(snapshot: snapshot, message: "Playing in \(candidate.name)",
+                                    automationDenied: false)
+            }
             if pausedCandidate == nil { pausedCandidate = snapshot }
         }
-        return pausedCandidate
+        if let pausedCandidate {
+            return PlayerLookup(snapshot: pausedCandidate,
+                                message: "Paused in \(pausedCandidate.playerName)",
+                                automationDenied: false)
+        }
+        if permissionBlocked {
+            return PlayerLookup(snapshot: nil,
+                                message: "Allow RelayOS to control Music or Spotify in System Settings → Privacy & Security → Automation.",
+                                automationDenied: true)
+        }
+        if let firstFailure {
+            return PlayerLookup(snapshot: nil,
+                                message: "Unable to read playback: \(String(firstFailure.prefix(135)))",
+                                automationDenied: false)
+        }
+        return PlayerLookup(snapshot: nil, message: sawRunningApp
+                            ? "Music or Spotify is open, but not reporting a track."
+                            : "No supported desktop player. Browser audio shown in Control Center is protected by macOS.",
+                            automationDenied: false)
     }
 
-    nonisolated private static func runAppleScript(_ source: String) -> String? {
-        // Apple Events originate from RelayOS so macOS grants Automation
-        // permission to RelayOS itself, not a spawned osascript helper.
-        guard let script = NSAppleScript(source: source) else { return nil }
+    nonisolated private static func runAppleScript(_ source: String)
+        -> (value: String?, code: Int?, message: String?) {
+        guard let script = NSAppleScript(source: source) else {
+            return (nil, nil, "AppleScript could not be prepared")
+        }
         var error: NSDictionary?
         let result = script.executeAndReturnError(&error)
-        guard error == nil else { return nil }
-        return result.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let error {
+            return (nil, error["NSAppleScriptErrorNumber"] as? Int,
+                    error["NSAppleScriptErrorMessage"] as? String)
+        }
+        return (result.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
+                nil, nil)
     }
+
 }
 
 /// Manages the persistent hardware-notch companion window.
@@ -1506,7 +1621,7 @@ struct NotchMusicControlsView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .lineLimit(1)
                     Text(media.artistName.isEmpty
-                         ? "Start playback in Music or Spotify"
+                         ? media.sourceMessage
                          : (media.albumName.isEmpty
                             ? media.artistName
                             : "\(media.artistName) · \(media.albumName)"))
@@ -1551,7 +1666,7 @@ struct NotchMusicControlsView: View {
                             }
                         )
                         .tint(.pink)
-                        .disabled(!media.hasRunningPlayer || media.commandInFlight)
+                        .disabled(media.commandInFlight)
                         .accessibilityLabel("Playback position")
                         .accessibilityValue(
                             NotchPlaybackTimeline.clock(
@@ -1577,6 +1692,43 @@ struct NotchMusicControlsView: View {
                     .foregroundStyle(muted)
                 }
             }
+            HStack(spacing: 9) {
+                RelayOSAirPlayPicker()
+                    .frame(width: 27, height: 24)
+                    .help("Native AirPlay chooser for RelayOS-owned playback, not a system-wide audio switch")
+                    .accessibilityLabel("AirPlay destinations")
+
+                Button {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension") {
+                        NSWorkspace.shared.open(url)
+                    }
+                } label: {
+                    Label("System output", systemImage: "hifispeaker")
+                        .font(.system(size: 10))
+                }
+                .buttonStyle(.plain)
+                .help("Change the Mac's default sound output, including supported AirPlay devices")
+
+                Spacer(minLength: 0)
+
+                if !media.hasRunningPlayer {
+                    if !RelayOSMediaKeys.isAuthorized {
+                        Button("Enable media keys") {
+                            media.requestMediaKeyAccess()
+                        }
+                        .font(.system(size: 10))
+                        .buttonStyle(.plain)
+                    }
+                    Button {
+                        Task { await media.refresh() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.plain)
+                    .help("Refresh supported playback metadata")
+                }
+            }
+            .foregroundStyle(muted)
         }
         .padding(.horizontal, 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
