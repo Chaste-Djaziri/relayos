@@ -53,6 +53,8 @@ struct SettingsView: View {
             RelayOSAppearanceView()
         case .security:
             SecurityPageView(model: model)
+        case .systemPermissions:
+            SystemPermissionsPageView(model: model)
         case .approvals:
             ApprovalCenterView(model: model)
         case .activity:
@@ -70,3 +72,4 @@ struct SettingsView: View {
         }
     }
 }
+
