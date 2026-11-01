@@ -26,10 +26,10 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-STAGED = ROOT / "dist/notch-three-tab-staged/RelayOS.app"
+STAGED = ROOT / "dist/RelayOS.app"
 INSTALLED = Path("/Applications/RelayOS.app")
 STATE = Path.home() / ".laptop-bridge"
-LOG_DIR = ROOT / "dist/notch-three-tab-staged"
+LOG_DIR = ROOT / "dist/screen-capture-handover"
 STATUS = LOG_DIR / "handover-status.json"
 LOG = LOG_DIR / "handover.log"
 EXEC_REL = "Contents/MacOS/RelayOS"
@@ -49,7 +49,8 @@ def check_bundle(app: Path) -> None:
     if info.get("CFBundleIdentifier") != BUNDLE_ID:
         raise RuntimeError(f"Unexpected bundle identifier: {info.get('CFBundleIdentifier')}")
     for relative in (EXEC_REL, "Contents/Resources/Runtime/RelayOSMCPServer",
-                     "Contents/Resources/Runtime/RelayOSApprovals"):
+                     "Contents/Resources/Runtime/RelayOSApprovals",
+                     "Contents/Resources/Runtime/RelayOSScreenCapture"):
         path = app / relative
         if not path.is_file() or not os.access(path, os.X_OK):
             raise RuntimeError(f"Missing executable: {path}")
