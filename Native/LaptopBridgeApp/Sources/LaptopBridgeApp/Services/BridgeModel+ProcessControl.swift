@@ -148,7 +148,9 @@ extension BridgeModel {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         let domain = ngrokDomain()
-        process.arguments = domain.map { ["http", "127.0.0.1:8765", "--url", "https://\($0)"] } ?? ["http", "127.0.0.1:8765", "--pooling-enabled"]
+        // Endpoint pooling is not a supported `ngrok http` CLI flag. Passing
+        // it makes free endpoints fail or compete with a pre-existing tunnel.
+        process.arguments = domain.map { ["http", "127.0.0.1:8765", "--url", "https://\($0)"] } ?? ["http", "127.0.0.1:8765"]
         var environment = ProcessInfo.processInfo.environment
         environment["NGROK_AUTHTOKEN"] = token
         process.environment = environment
@@ -220,7 +222,10 @@ extension BridgeModel {
                 self.recoverServicesIfNeeded()
             }
         }
-        if tunnel != nil, mcpHealth == .healthy, supervisor.beginTunnelProbe() {
+        // The tunnel can survive an app upgrade and still forward only to
+        // RelayOS. Monitor its authenticated 401 response even when this app
+        // did not create the Process instance, so the UI reports reality.
+        if mcpHealth == .healthy, ngrokIsConfigured(), supervisor.beginTunnelProbe() {
             let observedTunnel = tunnel
             let generation = supervisor.tunnelGeneration
             Task { @MainActor [weak self] in
