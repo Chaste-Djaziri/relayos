@@ -5,6 +5,7 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Replace the oversized notch control panel with a compact, physical-notch-aware black build monitor. Left/right ears occupy only the measured menu-bar side regions, the center remains transparent, and a lower tray opens live Terminal Jobs. Includes in-file previews and display geometry tests; installed app remains unchanged.
 - Make terminal jobs observable throughout the macOS app lifecycle: authenticated local job-list/cancel endpoints, compatibility fallback for older hybrid bundles, live output following with byte offsets and command-reported progress, optional completion notifications, job counts in the menu bar/notch/sidebar, and UTF-8-safe incremental output. Python backend retained and live installed app unchanged.
 - Rebuilt the menu-bar RelayOS control center with status-first cards, an approvals shortcut, connected-client summary and confirmed service actions; added an optional theme-aware top-center notch companion, macOS Controls menu shortcuts, and a compact Settings toolbar. The Python-backed production runtime is retained; the installed app is unchanged.
 - Implement native development-only OAuth authorization-code/PKCE, refresh rotation and revocation, locally approved file writes/patches, safe asynchronous command jobs and native screen capture/guidance overlays. Approval inbox shows pending requests; Python code and installed production remain untouched. Full public MCP transport parity remains pending.

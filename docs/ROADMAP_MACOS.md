@@ -316,3 +316,11 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Offer opt-in completion notifications without leaking command arguments or output.
 - [x] Preserve whole UTF-8 scalars across chunk boundaries; run Python/Swift suites and Xcode Debug build.
 - [ ] Perform staged/manual end-to-end UI QA with approved disposable jobs before replacing the installed app.
+
+## Physical-notch-aware build monitor — 2026-11-01
+- [x] Replace large notch dashboard with compact black left/right ears and a lower active-build tray.
+- [x] Use NSScreen auxiliary top areas to reserve the real physical camera/notch gap; fall back below menu bar on external monitors.
+- [x] Show native application logo at left and selected active build name plus elapsed time at right.
+- [x] Use live, existing Terminal Jobs model for status/count and one-click navigation to live output.
+- [x] Add four geometry tests, in-file SwiftUI previews and Xcode Debug compilation.
+- [ ] Inspect appearance, click targets and menu-bar overlap manually on a real notched MacBook before deployment.
