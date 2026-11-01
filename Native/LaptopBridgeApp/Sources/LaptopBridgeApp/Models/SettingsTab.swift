@@ -4,6 +4,7 @@ enum SettingsTab: String, Hashable, CaseIterable {
     case general = "General"
     case appearance = "Appearance"
     case security = "Security"
+    case systemPermissions = "System permissions"
     case approvals = "Approvals"
     case activity = "Activity"
     case connections = "Connections"
@@ -12,3 +13,4 @@ enum SettingsTab: String, Hashable, CaseIterable {
     case commandPermissions = "Command permissions"
     case terminalJobs = "Terminal jobs"
 }
+
