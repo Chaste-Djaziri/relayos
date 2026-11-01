@@ -15,6 +15,16 @@ SWIFT_BUILD_DIR="$STAGE_DIR/swift-build"
 PYTHON_BIN=${PYTHON_BIN:-"$ROOT_DIR/.venv/bin/python"}
 SIGNING_IDENTITY=${RELAYOS_SIGNING_IDENTITY:-${LAPTOP_BRIDGE_SIGNING_IDENTITY:-}}
 
+# An ad-hoc signature changes on every build, which makes macOS privacy
+# services (Accessibility and Screen Recording) treat each replacement as a
+# new app. Prefer the locally available Apple Development identity when the
+# caller did not explicitly select a signing identity, so installed updates
+# keep a stable designated requirement.
+if [ -z "$SIGNING_IDENTITY" ] && command -v security >/dev/null 2>&1; then
+  SIGNING_IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null \
+    | awk -F'"' '/Apple Development:/ { print $2; exit }')
+fi
+
 if [ ! -x "$PYTHON_BIN" ]; then
   PYTHON_BIN=$(command -v python3 || true)
 fi
