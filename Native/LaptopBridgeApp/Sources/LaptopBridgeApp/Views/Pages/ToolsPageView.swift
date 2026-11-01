@@ -65,20 +65,6 @@ struct ToolsPageView: View {
                     }
                 }
             }
-
-            SettingsCard(title: "macOS system permissions") {
-                SettingsCardRow(
-                    title: "Screen recording",
-                    subtitle: "Managed by macOS Privacy & Security. Screen capture tools require user authorization in System Settings.",
-                    showDivider: false
-                ) {
-                    SettingsButton(title: "Open Privacy & Security", icon: "lock.shield", style: .secondary) {
-                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }
-                }
-            }
         }
     }
 }
