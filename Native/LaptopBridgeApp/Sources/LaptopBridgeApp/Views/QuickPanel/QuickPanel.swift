@@ -111,6 +111,40 @@ struct QuickPanel: View {
                 .strokeBorder(palette.cardBorder, lineWidth: 1))
             .padding(.bottom, 12)
 
+            if !model.isSwiftOnly {
+                Button {
+                    if let active = model.commandJobs.first(where: \.active) {
+                        model.selectCommandJob(active.id)
+                    }
+                    model.showTerminalJobs()
+                    openWindow(id: "main")
+                    NSApp.activate(ignoringOtherApps: true)
+                } label: {
+                    HStack(spacing: 9) {
+                        Image(systemName: "terminal.fill")
+                            .foregroundStyle(model.activeCommandJobsCount > 0 ? Color.green : accentColor)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Terminal jobs")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(model.activeCommandJobsCount > 0
+                                 ? "\(model.activeCommandJobsCount) running or queued · Tap to follow output"
+                                 : "\(model.commandJobs.count) recorded · View history")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(12)
+                    .background(palette.cardBackground, in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(palette.cardBorder, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 12)
+            }
+
             if !model.connectedClients.isEmpty && !model.isSwiftOnly {
                 HStack(spacing: 7) {
                     Image(systemName: "person.2")

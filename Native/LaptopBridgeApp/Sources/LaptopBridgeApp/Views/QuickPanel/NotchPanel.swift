@@ -5,7 +5,7 @@ import AppKit
 /// Places the panel at the top-center of the usable screen area. Its contents
 /// never overlap the hardware notch or take over the macOS menu bar.
 enum NotchPanelPlacement {
-    static func frame(in visibleFrame: CGRect, preferredSize: CGSize = .init(width: 432, height: 350),
+    static func frame(in visibleFrame: CGRect, preferredSize: CGSize = .init(width: 432, height: 392),
                       gap: CGFloat = 10) -> CGRect {
         let availableWidth = max(1, visibleFrame.width - 24)
         let availableHeight = max(1, visibleFrame.height - 24)
@@ -34,7 +34,7 @@ final class NotchPanelCoordinator: ObservableObject {
     private var panel: NSPanel?
     private var screenObserver: NSObjectProtocol?
     private var openMainWindow: (() -> Void)?
-    private let preferredSize = CGSize(width: 432, height: 350)
+    private let preferredSize = CGSize(width: 432, height: 392)
 
     private init() {}
 
@@ -173,6 +173,36 @@ struct NotchPanelView: View {
             .padding(.horizontal, 17)
             .padding(.top, 12)
 
+            if !model.isSwiftOnly {
+                HStack(spacing: 10) {
+                    Image(systemName: "terminal.fill")
+                        .foregroundStyle(model.activeCommandJobsCount > 0 ? Color.green : .secondary)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Terminal jobs")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(model.activeCommandJobsCount > 0
+                             ? "\(model.activeCommandJobsCount) active · Live output available"
+                             : "No running jobs")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Follow") {
+                        if let active = model.commandJobs.first(where: \.active) {
+                            model.selectCommandJob(active.id)
+                        }
+                        model.showTerminalJobs()
+                        openSettings(approvals: false)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                .padding(12)
+                .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal, 17)
+                .padding(.top, 10)
+            }
+
             HStack(spacing: 8) {
                 if !model.isSwiftOnly && !model.connectedClients.isEmpty {
                     Label("\(model.connectedClients.count) clients", systemImage: "person.2")
@@ -261,12 +291,12 @@ struct NotchPanelView: View {
 #if DEBUG
 #Preview("Notch · Dark") {
     NotchPanelView(model: BridgeModel.preview(), onClose: {}, onOpenMain: {})
-        .frame(width: 432, height: 350)
+        .frame(width: 432, height: 392)
         .preferredColorScheme(.dark)
 }
 #Preview("Notch · Light") {
     NotchPanelView(model: BridgeModel.preview(), onClose: {}, onOpenMain: {})
-        .frame(width: 432, height: 350)
+        .frame(width: 432, height: 392)
         .preferredColorScheme(.light)
 }
 #endif

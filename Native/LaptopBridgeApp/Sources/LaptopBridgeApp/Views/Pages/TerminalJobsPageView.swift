@@ -1,5 +1,4 @@
 import SwiftUI
-import Combine
 
 struct CommandJobsView: View {
     @ObservedObject var model: BridgeModel
@@ -8,7 +7,7 @@ struct CommandJobsView: View {
     @AppStorage(RelayOSTheme.accentKey) private var accentName = "blue"
 
     @State private var filter = ""
-    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    @AppStorage(CommandJobCompletionNotification.enabledKey) private var notifyOnFinish = false
 
     private var theme: ThemeColors {
         RelayOSTheme.colors(colorScheme)
@@ -60,6 +59,18 @@ struct CommandJobsView: View {
                         model.refreshCommandJobOutput()
                     }
                 }
+            }
+
+            HStack(spacing: 10) {
+                Toggle("Notify when a job finishes", isOn: $notifyOnFinish)
+                    .toggleStyle(.checkbox)
+                    .onChange(of: notifyOnFinish) { _, newValue in
+                        if newValue { ApprovalArrivalNotification.requestPermission() }
+                    }
+                Spacer()
+                Text("Updates automatically every 2 seconds")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             // Search bar
@@ -127,7 +138,7 @@ struct CommandJobsView: View {
                     Spacer()
 
                     StatusBadge(
-                        text: activeCount > 0 ? "Streaming live" : "Idle",
+                        text: activeCount > 0 ? "Monitoring" : "Idle",
                         status: activeCount > 0 ? .healthy : .offline
                     )
                 }
@@ -141,9 +152,11 @@ struct CommandJobsView: View {
             if let job = selectedJob {
                 TerminalOutputConsole(
                     job: job,
-                    output: model.commandJobOutput
+                    output: model.commandJobOutput,
+                    receivedBytes: model.commandJobStdoutOffset + model.commandJobStderrOffset,
+                    followLive: $model.commandJobFollowEnabled
                 ) {
-                    model.selectedCommandJobID = nil
+                    model.clearSelectedCommandJob()
                 }
             }
 
@@ -177,14 +190,15 @@ struct CommandJobsView: View {
                             isSelected: model.selectedCommandJobID == job.id,
                             onToggleOutput: {
                                 if model.selectedCommandJobID == job.id {
-                                    model.selectedCommandJobID = nil
+                                    model.clearSelectedCommandJob()
                                 } else {
                                     model.selectCommandJob(job.id)
                                 }
                             },
                             onCancel: {
                                 model.cancelCommandJob(job.id)
-                            }
+                            },
+                            canCancel: !model.isDevelopmentClient
                         )
 
                         if index < matches.count - 1 {
@@ -201,33 +215,27 @@ struct CommandJobsView: View {
             SettingsCard(title: "Process Isolation & Security") {
                 SettingsCardRow(
                     title: "Direct Process Execution",
-                    subtitle: "No shell environment is spawned. Jobs are invoked directly with strict arguments and isolated file descriptors."
+                    subtitle: "Python MCP executes the exact locally approved executable and arguments without invoking a shell."
                 ) {
-                    StatusBadge(text: "Sandboxed", status: .healthy)
+                    StatusBadge(text: "Locally approved", status: .healthy)
                 }
 
                 SettingsCardRow(
                     title: "Stream Retention",
-                    subtitle: "Process output streams locally in memory through the MCP server. Metadata survives restarts while ephemeral buffers clear safely.",
+                    subtitle: "Output stays in bounded temporary files in the MCP server; job metadata survives restart, but previous output buffers do not.",
                     showDivider: false
                 ) {
-                    StatusBadge(text: "Ephemeral memory", status: .healthy)
+                    StatusBadge(text: "Temporary buffers", status: .warning)
                 }
             }
         }
         .onAppear {
             guard !model.isPreview else { return }
+            // Polling belongs to the app lifecycle, not this view. Returning
+            // to this page still performs an immediate refresh.
+            model.startCommandJobMonitoring()
             model.refreshCommandJobs()
-            if model.selectedCommandJobID != nil {
-                model.refreshCommandJobOutput()
-            }
-        }
-        .onReceive(ticker) { _ in
-            guard !model.isPreview else { return }
-            model.refreshCommandJobs()
-            if model.selectedCommandJobID != nil {
-                model.refreshCommandJobOutput()
-            }
+            if model.selectedCommandJobID != nil { model.refreshCommandJobOutput() }
         }
     }
 }

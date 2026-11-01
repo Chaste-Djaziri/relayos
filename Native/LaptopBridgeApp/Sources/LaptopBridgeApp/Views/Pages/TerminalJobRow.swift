@@ -5,6 +5,7 @@ struct TerminalJobRow: View {
     let isSelected: Bool
     let onToggleOutput: () -> Void
     let onCancel: () -> Void
+    var canCancel: Bool = true
 
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage(RelayOSTheme.fontSizeKey) private var userFontSize = 14.0
@@ -110,7 +111,7 @@ struct TerminalJobRow: View {
                     onToggleOutput()
                 }
 
-                if job.active {
+                if job.active && canCancel {
                     SettingsButton(
                         title: "Cancel",
                         icon: "xmark.circle",

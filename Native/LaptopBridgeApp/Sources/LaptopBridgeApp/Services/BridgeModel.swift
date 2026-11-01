@@ -37,8 +37,10 @@ final class BridgeModel: ObservableObject {
     @Published var permissionGrants: [[String: Any]] = []
     @Published var commandGrants: [SavedCommandGrant] = []
     @Published var commandJobs: [CommandJobEntry] = []
+    @Published var commandJobsNavigationRequest = 0
     @Published var selectedCommandJobID: String?
     @Published var commandJobOutput = ""
+    @Published var commandJobFollowEnabled = true
     @Published var commandJobError: String?
     @Published var commandGrantsBusy = false
     @Published var commandGrantDuplicateCount = 0
@@ -75,6 +77,8 @@ final class BridgeModel: ObservableObject {
     var commandJobStdoutOffset = 0
     var commandJobStderrOffset = 0
     var commandJobPollInFlight = false
+    var commandJobMonitoringTimer: DispatchSourceTimer?
+    var commandJobListInitialized = false
     var commandOutputPollInFlight = false
     private var terminationObserver: NSObjectProtocol?
 
@@ -219,6 +223,12 @@ final class BridgeModel: ObservableObject {
     // MARK: - Navigation & Utility
     func showApprovalCenter() {
         approvalNavigationRequest += 1
+    }
+
+    var activeCommandJobsCount: Int { commandJobs.filter(\.active).count }
+
+    func showTerminalJobs() {
+        commandJobsNavigationRequest += 1
     }
 
     func copyEndpoint() {

@@ -8,7 +8,7 @@ final class NotchPanelPlacementTests: XCTestCase {
         let visible = CGRect(x: 0, y: 24, width: 1512, height: 890)
         let frame = NotchPanelPlacement.frame(in: visible)
         XCTAssertEqual(frame.width, 432)
-        XCTAssertEqual(frame.height, 350)
+        XCTAssertEqual(frame.height, 392)
         XCTAssertEqual(frame.midX, visible.midX, accuracy: 0.01)
         XCTAssertEqual(frame.maxY, visible.maxY - 10, accuracy: 0.01)
         XCTAssertGreaterThanOrEqual(frame.minY, visible.minY)

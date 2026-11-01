@@ -58,6 +58,16 @@ struct SettingsView: View {
                                     }
                             }
                             .buttonStyle(.borderless)
+                            if !model.isSwiftOnly {
+                                Button {
+                                    model.showTerminalJobs()
+                                } label: {
+                                    Label("Jobs \(model.activeCommandJobsCount > 0 ? "(\(model.activeCommandJobsCount))" : "")",
+                                          systemImage: "terminal")
+                                        .font(.system(size: 11 * scale))
+                                }
+                                .buttonStyle(.borderless)
+                            }
                             Button {
                                 notch.toggle(model: model) {
                                     openWindow(id: "main")
@@ -114,13 +124,19 @@ struct SettingsView: View {
         .onAppear {
             // A menu-bar/notch action can request the inbox before this window
             // is recreated. Honor that intent on first display as well.
-            if model.approvalNavigationRequest > 0 {
+            if model.commandJobsNavigationRequest > 0 && !model.isSwiftOnly {
+                selected = .terminalJobs
+            } else if model.approvalNavigationRequest > 0 {
                 selected = model.isSwiftOnly ? .general : .approvals
             }
         }
         .onChange(of: model.approvalNavigationRequest) { _, newValue in
             guard newValue > 0 else { return }
             selected = model.isSwiftOnly ? .general : .approvals
+        }
+        .onChange(of: model.commandJobsNavigationRequest) { _, newValue in
+            guard newValue > 0, !model.isSwiftOnly else { return }
+            selected = .terminalJobs
         }
     }
 

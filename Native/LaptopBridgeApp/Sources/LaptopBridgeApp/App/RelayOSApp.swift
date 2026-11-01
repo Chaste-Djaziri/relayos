@@ -44,7 +44,10 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
         if Self.isXcodeDevelopment {
             // Swift-only runs in the app itself; observation mode reads the
             // installed backend but does not own or stop its processes.
-            if !Self.isSwiftOnlyDevelopment { BridgeModel.shared.startDevelopmentObservation() }
+            if !Self.isSwiftOnlyDevelopment {
+                BridgeModel.shared.startDevelopmentObservation()
+                BridgeModel.shared.startCommandJobMonitoring()
+            }
             return
         }
         guard SingleInstanceCoordinator.shared.claimOrReplaceExistingInstance() else {
@@ -52,12 +55,14 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
             return
         }
         BridgeModel.shared.startServices()
+        BridgeModel.shared.startCommandJobMonitoring()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         nativeExperiment?.stop()
         nativeExperiment = nil
         BridgeModel.shared.stopNativeInboxPolling()
+        BridgeModel.shared.stopCommandJobMonitoring()
         guard !Self.isXcodeUIPreview else { return }
         if Self.isXcodeDevelopment {
             BridgeModel.shared.stopDevelopmentObservation()

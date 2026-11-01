@@ -135,7 +135,8 @@ struct CustomSidebarView: View {
                                 SidebarItemRow(
                                     title: item.title,
                                     systemImage: item.icon,
-                                    isSelected: selected == item.tab
+                                    isSelected: selected == item.tab,
+                                    badgeCount: item.tab == .terminalJobs ? model.activeCommandJobsCount : 0
                                 ) {
                                     selected = item.tab
                                 }
