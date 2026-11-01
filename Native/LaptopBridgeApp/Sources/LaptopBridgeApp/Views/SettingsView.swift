@@ -5,6 +5,18 @@ struct SettingsView: View {
     @State private var selected: SettingsTab = .general
     @State private var searchText: String = ""
 
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(RelayOSTheme.sidebarTransparencyKey) private var sidebarTransparency = true
+    @AppStorage(RelayOSTheme.fontSizeKey) private var userFontSize = 14.0
+
+    private var theme: ThemeColors {
+        RelayOSTheme.colors(colorScheme)
+    }
+
+    private var scale: CGFloat {
+        RelayOSTheme.scale(userFontSize)
+    }
+
     private var pageTitle: String { selected.rawValue }
 
     var body: some View {
@@ -12,7 +24,7 @@ struct SettingsView: View {
             CustomSidebarView(model: model, selected: $selected, searchText: $searchText)
 
             Rectangle()
-                .fill(Color(white: 0.14))
+                .fill(theme.cardDivider)
                 .frame(width: 1)
 
             VStack(alignment: .leading, spacing: 0) {
@@ -22,9 +34,9 @@ struct SettingsView: View {
                 ScrollView(.vertical) {
                     VStack(alignment: .leading, spacing: 22) {
                         Text(pageTitle)
-                            .font(.system(size: 30, weight: .semibold))
+                            .font(.system(size: 30 * scale, weight: .semibold))
                             .tracking(-0.7)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(theme.textPrimary)
 
                         tabDetailView(selected)
                     }
@@ -35,10 +47,15 @@ struct SettingsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(red: 0.095, green: 0.095, blue: 0.095))
+            .background(theme.windowBackground)
         }
         .ignoresSafeArea()
-        .background(CustomWindowAccessor())
+        .background(
+            CustomWindowAccessor(
+                sidebarTransparency: sidebarTransparency,
+                isDark: colorScheme == .dark
+            )
+        )
         .onChange(of: model.approvalNavigationRequest) { _, _ in
             selected = .approvals
         }
@@ -50,7 +67,7 @@ struct SettingsView: View {
         case .general:
             GeneralPageView(model: model)
         case .appearance:
-            RelayOSAppearanceView()
+            AppearancePageView()
         case .security:
             SecurityPageView(model: model)
         case .systemPermissions:
@@ -72,4 +89,3 @@ struct SettingsView: View {
         }
     }
 }
-
