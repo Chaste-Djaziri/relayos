@@ -50,6 +50,12 @@ swift build -c release --package-path Native/LaptopBridgeApp --scratch-path "$SW
 cp "$SWIFT_BUILD_DIR/arm64-apple-macosx/release/LaptopBridgeApp" "$APP_PATH/Contents/MacOS/RelayOS" 2>/dev/null || \
   cp "$SWIFT_BUILD_DIR/out/Products/Release/LaptopBridgeApp" "$APP_PATH/Contents/MacOS/RelayOS"
 
+# Separate signed ScreenCaptureKit executable. The Python MCP server can
+# invoke it only after a locally approved one-time capture request. It emits
+# image bytes to stdout, never to a screenshot file.
+cp "$SWIFT_BUILD_DIR/arm64-apple-macosx/release/RelayOSScreenCapture" "$APP_PATH/Contents/Resources/Runtime/RelayOSScreenCapture" 2>/dev/null || \
+  cp "$SWIFT_BUILD_DIR/out/Products/Release/RelayOSScreenCapture" "$APP_PATH/Contents/Resources/Runtime/RelayOSScreenCapture"
+
 # Build only the MCP server entrypoint. PyInstaller follows the server's
 # imports directly; collecting the entire optional MCP CLI would require the
 # unrelated `typer` extra and would make the desktop bundle unnecessarily
@@ -106,10 +112,15 @@ cat > "$APP_PATH/Contents/Info.plist" <<'PLIST'
 PLIST
 
 if [ -n "$SIGNING_IDENTITY" ]; then
+  # Keep the native capture helper on a stable signed identity so macOS can
+  # attribute Screen Recording permission predictably across updates.
+  codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" "$APP_PATH/Contents/Resources/Runtime/RelayOSScreenCapture"
   codesign --deep --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" "$APP_PATH"
 else
+  codesign --force --sign - "$APP_PATH/Contents/Resources/Runtime/RelayOSScreenCapture"
   codesign --deep --force --sign - "$APP_PATH"
 fi
+codesign --verify --strict "$APP_PATH/Contents/Resources/Runtime/RelayOSScreenCapture"
 codesign --verify --deep --strict "$APP_PATH"
 mkdir -p "$DIST_DIR"
 echo "Built $APP_PATH"

@@ -5,7 +5,8 @@ let package = Package(
     name: "LaptopBridgeApp",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "LaptopBridgeApp", targets: ["LaptopBridgeApp"])
+        .executable(name: "LaptopBridgeApp", targets: ["LaptopBridgeApp"]),
+        .executable(name: "RelayOSScreenCapture", targets: ["RelayOSScreenCapture"])
     ],
     dependencies: [
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", exact: "0.12.1")
@@ -16,6 +17,7 @@ let package = Package(
             dependencies: [.product(name: "MCP", package: "swift-sdk")],
             resources: [.process("Assets")]
         ),
+        .executableTarget(name: "RelayOSScreenCapture", path: "ScreenCapture"),
         .testTarget(name: "LaptopBridgeAppTests", dependencies: ["LaptopBridgeApp"])
     ],
     swiftLanguageVersions: [.v5]
