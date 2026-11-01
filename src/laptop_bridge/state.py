@@ -315,6 +315,10 @@ def decide_request(token, duration="once"):
         ).fetchone()
     if row is None or row["status"] != "pending":
         return False
+    # A screenshot request is never reusable, even if a generic client
+    # submits a Session/Always choice to the local approval helper.
+    if row["kind"] == "screen_capture" and duration not in {"once", "deny"}:
+        raise ValueError("Screen captures require Approve Once or Deny")
     if duration == "deny":
         _decide(token, "denied")
         return True
@@ -364,7 +368,7 @@ def _decide(token, status, duration="once"):
         connection.commit()
 
 
-def consume(token):
+def consume(token, expected_kind=None):
     with _db() as connection:
         connection.execute("BEGIN IMMEDIATE")
         if emergency_stop(connection):
@@ -373,9 +377,9 @@ def consume(token):
         now = time.time()
         _expire(connection, now)
         row = connection.execute("SELECT kind, target, argv_json, context_json, approved_duration FROM requests WHERE token = ? AND status = 'approved' AND created_at >= ?", (token, now - TTL)).fetchone()
-        if row is None:
+        if row is None or (expected_kind is not None and row["kind"] != expected_kind):
             connection.rollback()
-            raise PermissionError("Missing, expired, or unapproved request")
+            raise PermissionError("Missing, expired, or incorrectly scoped approval")
         connection.execute("UPDATE requests SET status = 'consumed', consumed_at = ? WHERE token = ?", (now, token))
         connection.commit()
     return {"kind": row["kind"], "details": {"target": row["target"], "argv": json.loads(row["argv_json"]), "context": json.loads(row["context_json"] or "{}")}, "approved_duration": row["approved_duration"] or "once"}
