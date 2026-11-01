@@ -15,7 +15,7 @@ struct NativeMCPProjectFiles {
         case oversized
     }
 
-    private func validatedPath(sessionID: String, projectRoot: String,
+    func validatedPath(sessionID: String, projectRoot: String,
                                relativePath: String) throws -> URL {
         let root = URL(fileURLWithPath: projectRoot, isDirectory: true)
             .standardizedFileURL.resolvingSymlinksInPath()

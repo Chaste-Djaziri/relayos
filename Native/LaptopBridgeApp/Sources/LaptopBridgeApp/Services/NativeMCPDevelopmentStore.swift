@@ -261,6 +261,18 @@ struct NativeMCPApprovalStore {
         """)
     }
 
+    private func record(_ db: OpaquePointer, id: String, event: String, now: Date) throws {
+        let stmt = try prepare(db, """
+            INSERT INTO native_approval_audit (request_id, event, recorded_at)
+            VALUES (?, ?, ?)
+        """)
+        defer { sqlite3_finalize(stmt) }
+        try bind(id, stmt, 1)
+        try bind(event, stmt, 2)
+        sqlite3_bind_double(stmt, 3, now.timeIntervalSince1970)
+        guard sqlite3_step(stmt) == SQLITE_DONE else { throw StoreError.unavailable }
+    }
+
     private func isEmergencyStopped(_ db: OpaquePointer) throws -> Bool {
         let statement = try prepare(db, "SELECT value FROM settings WHERE key = 'emergency_stop'")
         defer { sqlite3_finalize(statement) }
@@ -304,6 +316,7 @@ struct NativeMCPApprovalStore {
             sqlite3_bind_double(statement, 4, now.timeIntervalSince1970)
             sqlite3_bind_double(statement, 5, request.expiresAt.timeIntervalSince1970)
             guard sqlite3_step(statement) == SQLITE_DONE else { throw StoreError.unavailable }
+            try record(db, id: request.id, event: "pending", now: now)
             try execute(db, "COMMIT")
             return request
         } catch {
@@ -335,11 +348,65 @@ struct NativeMCPApprovalStore {
             guard sqlite3_step(statement) == SQLITE_DONE, sqlite3_changes(db) == 1 else {
                 throw StoreError.expiredOrDecided
             }
+            try record(db, id: id, event: decision.rawValue, now: now)
             try execute(db, "COMMIT")
         } catch {
             try? execute(db, "ROLLBACK")
             throw error
         }
+    }
+
+    func activity(limit: Int = 30) throws -> [[String: String]] {
+        let db = try connect()
+        defer { sqlite3_close(db) }
+        try setup(db)
+        let stmt = try prepare(db, """
+            SELECT request_id, event, recorded_at FROM native_approval_audit
+            ORDER BY id DESC LIMIT ?
+        """)
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_int(stmt, 1, Int32(min(max(1, limit), 100)))
+        var result: [[String: String]] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            guard let request = sqlite3_column_text(stmt, 0),
+                  let event = sqlite3_column_text(stmt, 1) else { continue }
+            result.append([
+                "request_id": String(cString: request),
+                "event": String(cString: event),
+                "recorded_at": String(sqlite3_column_double(stmt, 2))
+            ])
+        }
+        return result
+    }
+
+    /// Snapshot of pending requests for the *local* inbox UI. Never callable
+    /// as a remote tool that can approve or deny requests.
+    func pending(now: Date = Date()) throws -> [Request] {
+        let db = try connect()
+        defer { sqlite3_close(db) }
+        try setup(db)
+        try expire(db, now: now)
+        let query = try prepare(db, """
+            SELECT id, kind, target, created_at, expires_at
+            FROM native_approval_requests
+            WHERE status = 'pending' AND expires_at > ?
+            ORDER BY created_at DESC LIMIT 100
+        """)
+        defer { sqlite3_finalize(query) }
+        sqlite3_bind_double(query, 1, now.timeIntervalSince1970)
+        var results: [Request] = []
+        while sqlite3_step(query) == SQLITE_ROW {
+            guard let id = sqlite3_column_text(query, 0),
+                  let kind = sqlite3_column_text(query, 1),
+                  let target = sqlite3_column_text(query, 2) else { continue }
+            results.append(Request(
+                id: String(cString: id), kind: String(cString: kind),
+                target: String(cString: target),
+                createdAt: Date(timeIntervalSince1970: sqlite3_column_double(query, 3)),
+                expiresAt: Date(timeIntervalSince1970: sqlite3_column_double(query, 4))
+            ))
+        }
+        return results
     }
 
     /// Consumes an approval once, in the same transaction used to validate it.
@@ -374,6 +441,7 @@ struct NativeMCPApprovalStore {
             guard sqlite3_step(update) == SQLITE_DONE, sqlite3_changes(db) == 1 else {
                 throw StoreError.expiredOrDecided
             }
+            try record(db, id: id, event: "consumed", now: now)
             try execute(db, "COMMIT")
             return ApprovedRequest(id: id, kind: String(cString: kind), target: String(cString: target), decision: decision)
         } catch {

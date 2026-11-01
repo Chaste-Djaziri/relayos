@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F60606060606060606060606 /* NativeGuidanceSessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50505050505050505050505 /* NativeGuidanceSessions.swift */; };
+		F40404040404040404040404 /* NativeMCPVisual.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30303030303030303030303 /* NativeMCPVisual.swift */; };
+		F20202020202020202020202 /* NativeMCPOAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10101010101010101010101 /* NativeMCPOAuthTests.swift */; };
+		F0F0F0F0F0F0F0F0F0F0F0F0 /* NativeMCPOAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0E0E0E0E0E0E0E0E0E0E0E0 /* NativeMCPOAuth.swift */; };
+		F0D0D0D0D0D0D0D0D0D0D0D0 /* NativeMCPActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0C0C0C0C0C0C0C0C0C0C0C0 /* NativeMCPActionTests.swift */; };
+		F0B0B0B0B0B0B0B0B0B0B0B0 /* NativeMCPActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A0A0A0A0A0A0A0A0A0A0A0 /* NativeMCPActions.swift */; };
 		0C6F487398FDD7AB91D7A548 /* NgrokTunnelMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */; };
 		1082C54EAC0015720F7AD15F /* CommandPermissionsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A20318397E308D076DE7F /* CommandPermissionsPageView.swift */; };
 		10C20CCAA3DBA57333534A8D /* SavedCommandGrant.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DCD2DF7385FBDF3D206AAFC /* SavedCommandGrant.swift */; };
@@ -99,6 +105,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F50505050505050505050505 /* NativeGuidanceSessions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeGuidanceSessions.swift; sourceTree = "<group>"; };
+		F30303030303030303030303 /* NativeMCPVisual.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPVisual.swift; sourceTree = "<group>"; };
+		F10101010101010101010101 /* NativeMCPOAuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPOAuthTests.swift; sourceTree = "<group>"; };
+		F0E0E0E0E0E0E0E0E0E0E0E0 /* NativeMCPOAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPOAuth.swift; sourceTree = "<group>"; };
+		F0C0C0C0C0C0C0C0C0C0C0C0 /* NativeMCPActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPActionTests.swift; sourceTree = "<group>"; };
+		F0A0A0A0A0A0A0A0A0A0A0A0 /* NativeMCPActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPActions.swift; sourceTree = "<group>"; };
 		010C81D41E2B4A8F38171CA5 /* BridgeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeModel.swift; sourceTree = "<group>"; };
 		0606A340C321E3C38BC40B9C /* SingleInstanceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleInstanceCoordinator.swift; sourceTree = "<group>"; };
 		074974C562F230CC62710F89 /* BridgeModel+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+Config.swift"; sourceTree = "<group>"; };
@@ -233,6 +245,10 @@
 				F1D8F23734E7C4AC47103413 /* NativeMCPHTTP.swift */,
 				B011275ED3B8DB2E5DCAFA47 /* NativeMCPProjectFiles.swift */,
 				B62F9FD9564BA09234B9C820 /* NativeMCPSystem.swift */,
+				F0A0A0A0A0A0A0A0A0A0A0A0 /* NativeMCPActions.swift */,
+				F0E0E0E0E0E0E0E0E0E0E0E0 /* NativeMCPOAuth.swift */,
+				F30303030303030303030303 /* NativeMCPVisual.swift */,
+				F50505050505050505050505 /* NativeGuidanceSessions.swift */,
 				0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */,
 				A8D5FF69919504CE19785BDA /* ServiceSupervisor.swift */,
 				722D2821D95B5CA5B25F7ACF /* SystemPermissionAccess.swift */,
@@ -292,6 +308,8 @@
 				45B18B25B4B4D6AD68891289 /* LaptopBridgeAppTests.swift */,
 				7DFE6A41A2CDF9C522333953 /* MCPHealthMonitorTests.swift */,
 				A60F66F1777D669CF509C134 /* NativeMCPAuthorizationTests.swift */,
+				F0C0C0C0C0C0C0C0C0C0C0C0 /* NativeMCPActionTests.swift */,
+				F10101010101010101010101 /* NativeMCPOAuthTests.swift */,
 				FA5E94A049DF259A6CE6DB7E /* NgrokTunnelMonitorTests.swift */,
 				4FA09765A5DC85740382BB61 /* SavedCommandGrantTests.swift */,
 				FF6B093555EF31A324DD474A /* ServiceSupervisorTests.swift */,
@@ -534,6 +552,10 @@
 				ED00DF5B4DB7A74138392679 /* NativeMCPHTTP.swift in Sources */,
 				C79F2FA5977E0D04FDB46684 /* NativeMCPProjectFiles.swift in Sources */,
 				7DD405A59B5B0844E46326CB /* NativeMCPSystem.swift in Sources */,
+				F0B0B0B0B0B0B0B0B0B0B0B0 /* NativeMCPActions.swift in Sources */,
+				F0F0F0F0F0F0F0F0F0F0F0F0 /* NativeMCPOAuth.swift in Sources */,
+				F40404040404040404040404 /* NativeMCPVisual.swift in Sources */,
+				F60606060606060606060606 /* NativeGuidanceSessions.swift in Sources */,
 				712333DEC9CE9601D19C1FA8 /* NativeSwiftRuntimePageView.swift in Sources */,
 				9B9794F608EB97B1E819425C /* NgrokPageView.swift in Sources */,
 				0C6F487398FDD7AB91D7A548 /* NgrokTunnelMonitor.swift in Sources */,
@@ -577,6 +599,8 @@
 				ABE652B39D6EDE743980F073 /* LaptopBridgeAppTests.swift in Sources */,
 				E7E3AE99D2E5CD6B44891B8C /* MCPHealthMonitorTests.swift in Sources */,
 				39ADF6F4C8CDD27B05E22BBD /* NativeMCPAuthorizationTests.swift in Sources */,
+				F0D0D0D0D0D0D0D0D0D0D0D0 /* NativeMCPActionTests.swift in Sources */,
+				F20202020202020202020202 /* NativeMCPOAuthTests.swift in Sources */,
 				DA2031F59D8084379EA893B3 /* NgrokTunnelMonitorTests.swift in Sources */,
 				2ABB0556B126CE0EB68FF233 /* SavedCommandGrantTests.swift in Sources */,
 				9E4D8D3F612F8FFE5A46A568 /* ServiceSupervisorTests.swift in Sources */,

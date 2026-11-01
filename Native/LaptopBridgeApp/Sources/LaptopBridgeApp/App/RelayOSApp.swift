@@ -31,7 +31,8 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
         if Self.isSwiftOnlyDevelopment {
             do {
                 let auth = try NativeMCPDevelopmentStore().bootstrap()
-                let listener = NativeMCPListener(port: 18765, authorization: auth)
+                let listener = NativeMCPListener(port: 18765, authorization: auth, approvalStore: NativeMCPApprovalStore(databaseURL: NativeMCPDevelopmentStore().databaseURL),
+                                                 oauth: NativeMCPOAuth(store: NativeMCPDevelopmentStore()))
                 try listener.start()
                 nativeExperiment = listener
                 BridgeModel.shared.nativeListenerStarted()

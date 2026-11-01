@@ -83,7 +83,8 @@ struct NativeMCPAuthorization {
                 guard let scopes = try? JSONSerialization.jsonObject(
                     with: Data(rawScopes.utf8)) as? [String],
                     scopes.contains("mcp") else { return false }
-                if let expectedResource = resource, sqlite3_column_type(query, 1) != SQLITE_NULL {
+                if let expectedResource = resource {
+                    guard sqlite3_column_type(query, 1) != SQLITE_NULL else { return false }
                     guard let ptr = sqlite3_column_text(query, 1),
                           String(cString: ptr) == expectedResource else { return false }
                 }

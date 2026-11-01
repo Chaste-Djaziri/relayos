@@ -3,23 +3,41 @@ import Foundation
 import Network
 import MCP
 
-/// Experimental, read-only in-process MCP transport.
-/// It is NOT production-compatible until OAuth registration, authorization and
-/// every currently exported Python tool are ported and parity-tested.
+/// Experimental in-process MCP transport with localhost OAuth and locally
+/// approved native mutations. Full Streamable HTTP/SSE interoperability and
+/// public deployment review are still required.
 struct NativeMCPHTTP {
     struct Reply {
         let status: Int
         let body: Data
         let contentType: String
+        let extraHeaders: [String: String]
         init(_ status: Int, _ object: Any, contentType: String = "application/json") {
             self.status = status
+            self.extraHeaders = [:]
             self.body = (try? JSONSerialization.data(withJSONObject: object)) ?? Data("{}".utf8)
             self.contentType = contentType
+        }
+        init(status: Int, raw: String, contentType: String, headers: [String: String] = [:]) {
+            self.status = status
+            self.body = Data(raw.utf8)
+            self.contentType = contentType
+            self.extraHeaders = headers
         }
     }
 
     let authorization: NativeMCPAuthorization
     let port: UInt16
+    let actions: NativeMCPActions?
+    let oauth: NativeMCPOAuth?
+
+    init(authorization: NativeMCPAuthorization, port: UInt16, actions: NativeMCPActions? = nil,
+         oauth: NativeMCPOAuth? = nil) {
+        self.authorization = authorization
+        self.port = port
+        self.actions = actions
+        self.oauth = oauth
+    }
 
     private func response(_ id: Any, _ result: Any) -> Reply {
         Reply(200, ["jsonrpc": "2.0", "id": id, "result": result])
@@ -36,6 +54,75 @@ struct NativeMCPHTTP {
         return response(id, ["content": [["type": "text", "text": text]], "isError": false])
     }
 
+    private func oauthResponse(method: String, path: String, body: Data) -> Reply? {
+        guard let oauth,
+              let components = URLComponents(string: "http://localhost" + path) else { return nil }
+        let route = components.path
+        let params = Dictionary((components.queryItems ?? []).compactMap { item -> (String, String)? in
+            guard let value = item.value else { return nil }
+            return (item.name, value)
+        }, uniquingKeysWith: { first, _ in first })
+        do {
+            if method == "GET" && route == "/.well-known/oauth-authorization-server" {
+                return Reply(200, oauth.metadata())
+            }
+            if method == "GET" && route == "/.well-known/oauth-protected-resource/mcp" {
+                return Reply(200, ["resource": oauth.store.endpoint,
+                                   "authorization_servers": [oauth.issuer],
+                                   "scopes_supported": ["mcp"]])
+            }
+            if method == "POST" && route == "/register" {
+                guard let payload = try JSONSerialization.jsonObject(with: body) as? [String: Any]
+                else { return Reply(400, ["error": "invalid_client_metadata"]) }
+                return Reply(201, try oauth.register(payload))
+            }
+            if method == "GET" && route == "/authorize" {
+                let id = try oauth.authorize(params)
+                return Reply(status: 302, raw: "", contentType: "text/plain",
+                             headers: ["Location": "/oauth/approval/" + id])
+            }
+            if method == "GET" && route.hasPrefix("/oauth/approval/") {
+                let id = String(route.dropFirst("/oauth/approval/".count))
+                switch try oauth.approvalStatus(id) {
+                case .pending:
+                    return Reply(status: 200, raw: """
+                        <!doctype html><html><head><meta http-equiv="refresh" content="2"></head>
+                        <body><h2>RelayOS authorization pending</h2>
+                        <p>Approve or deny this connection in the local RelayOS window.</p></body></html>
+                        """, contentType: "text/html; charset=utf-8")
+                case .denied:
+                    return Reply(status: 403, raw: "Authorization denied or expired.",
+                                 contentType: "text/plain")
+                case .redirect(let url):
+                    return Reply(status: 302, raw: "", contentType: "text/plain",
+                                 headers: ["Location": url.absoluteString])
+                }
+            }
+            if method == "POST" && (route == "/token" || route == "/revoke") {
+                guard let data = String(data: body, encoding: .utf8),
+                      data.utf8.count < 16_384 else {
+                    return Reply(400, ["error": "invalid_request"])
+                }
+                let forms = URLComponents(string: "http://localhost/?" + data
+                    .replacingOccurrences(of: "+", with: "%20"))?.queryItems ?? []
+                let arguments = Dictionary(forms.compactMap { item -> (String, String)? in
+                    guard let value = item.value else { return nil }
+                    return (item.name, value)
+                }, uniquingKeysWith: { first, _ in first })
+                if route == "/token" { return Reply(200, try oauth.token(arguments)) }
+                guard let token = arguments["token"], let client = arguments["client_id"] else {
+                    return Reply(400, ["error": "invalid_request"])
+                }
+                try oauth.revoke(token: token, clientID: client)
+                return Reply(200, [:])
+            }
+        } catch {
+            return Reply(400, ["error": "invalid_request",
+                               "error_description": "Invalid or expired authorization request"])
+        }
+        return nil
+    }
+
     func handle(method: String, path: String, headers: [String: String],
                 body: Data) -> Reply {
         // No browser-controlled Origin can access this local API.
@@ -47,6 +134,9 @@ struct NativeMCPHTTP {
         else { return Reply(400, ["error": "Invalid host"]) }
         if method == "GET" && path == "/health" {
             return Reply(200, ["status": "native-experimental", "production": false])
+        }
+        if let authorizationResponse = oauthResponse(method: method, path: path, body: body) {
+            return authorizationResponse
         }
         guard path == "/mcp" else { return Reply(404, ["error": "Not found"]) }
         guard method == "POST" else { return Reply(405, ["error": "Method not allowed"]) }
@@ -85,6 +175,45 @@ struct NativeMCPHTTP {
                 ],
                 "required": ["session_id", "project_root", "path"]
             ]
+            let actionSchema: [String: Any] = [
+                "type": "object",
+                "properties": [
+                    "kind": ["type": "string", "enum": [
+                        "write_project_file", "apply_project_patch", "run_project_command",
+                        "start_project_command_job", "screen_snapshot", "show_guidance",
+                        "start_guidance_session"
+                    ]],
+                    "arguments": ["type": "object"]
+                ],
+                "required": ["kind", "arguments"]
+            ]
+            let executionSchema: [String: Any] = [
+                "type": "object",
+                "properties": [
+                    "kind": ["type": "string"],
+                    "arguments": ["type": "object"],
+                    "request_id": ["type": "string"]
+                ],
+                "required": ["kind", "arguments", "request_id"]
+            ]
+            let jobSchema: [String: Any] = [
+                "type": "object",
+                "properties": [
+                    "session_id": ["type": "string"],
+                    "project_root": ["type": "string"],
+                    "job_id": ["type": "string"]
+                ],
+                "required": ["session_id", "project_root", "job_id"]
+            ]
+            let guidanceSchema: [String: Any] = [
+                "type": "object",
+                "properties": [
+                    "session_id": ["type": "string"],
+                    "project_root": ["type": "string"],
+                    "guidance_session_id": ["type": "string"]
+                ],
+                "required": ["session_id", "project_root", "guidance_session_id"]
+            ]
             return response(id, ["tools": [
                 ["name": "system_status",
                  "description": "Read the native Mac's hostname, OS and available system measurements.",
@@ -103,7 +232,23 @@ struct NativeMCPHTTP {
                  "inputSchema": sessionSchema],
                 ["name": "read_project_file",
                  "description": "Read UTF-8 files only under a previously locally approved project session.",
-                 "inputSchema": sessionSchema]
+                 "inputSchema": sessionSchema],
+                ["name": "propose_native_action", "inputSchema": actionSchema,
+                 "description": "Request local approval for an exact file or command operation."],
+                ["name": "execute_native_action", "inputSchema": executionSchema,
+                 "description": "Run the exact action approved in the native window."],
+                ["name": "read_project_command_job", "inputSchema": jobSchema,
+                 "description": "Read output for an owned native terminal job."],
+                ["name": "cancel_project_command_job", "inputSchema": jobSchema,
+                 "description": "Cancel an owned native terminal job."],
+                ["name": "clear_guidance", "inputSchema": ["type": "object"],
+                 "description": "Remove guidance overlays created by the Swift app."],
+                ["name": "guidance_session_status", "inputSchema": guidanceSchema,
+                 "description": "Read an approved, time-limited native guidance session."],
+                ["name": "refresh_guidance_screen", "inputSchema": guidanceSchema,
+                 "description": "Capture the screen during an active, locally approved guidance session."],
+                ["name": "stop_guidance_session", "inputSchema": guidanceSchema,
+                 "description": "Stop an active, locally approved guidance session."]
             ]])
         case "tools/call":
             let params = request["params"] as? [String: Any] ?? [:]
@@ -141,8 +286,41 @@ struct NativeMCPHTTP {
                     return failure(id, -32003, "Denied, out of scope, unavailable, or oversized file")
                 }
             }
-            // Never execute a command, create a grant, or mutate a file here.
-            return failure(id, -32601, "Tool is unavailable in native experimental mode")
+            if let actions {
+                do {
+                    switch tool {
+                    case "propose_native_action":
+                        guard let kind = arguments["kind"] as? String,
+                              let args = arguments["arguments"] as? [String: Any] else {
+                            return failure(id, -32602, "Missing kind or arguments")
+                        }
+                        return toolText(id, try actions.propose(kind: kind, args: args))
+                    case "execute_native_action":
+                        guard let kind = arguments["kind"] as? String,
+                              let args = arguments["arguments"] as? [String: Any],
+                              let requestID = arguments["request_id"] as? String else {
+                            return failure(id, -32602, "Missing request data")
+                        }
+                        return toolText(id, try actions.execute(kind: kind, args: args, requestID: requestID))
+                    case "read_project_command_job":
+                        return toolText(id, try actions.readJob(arguments))
+                    case "cancel_project_command_job":
+                        return toolText(id, try actions.cancelJob(arguments))
+                    case "clear_guidance":
+                        return toolText(id, actions.clearGuidance())
+                    case "guidance_session_status":
+                        return toolText(id, try actions.guidanceStatus(arguments))
+                    case "refresh_guidance_screen":
+                        return toolText(id, try actions.guidanceCapture(arguments))
+                    case "stop_guidance_session":
+                        return toolText(id, try actions.guidanceStop(arguments))
+                    default: break
+                    }
+                } catch {
+                    return failure(id, -32003, "Operation denied or invalid")
+                }
+            }
+            return failure(id, -32601, "Unimplemented tool")
         default:
             return failure(id, -32601, "Unknown method")
         }
@@ -154,11 +332,16 @@ struct NativeMCPHTTP {
 final class NativeMCPListener {
     private let queue = DispatchQueue(label: "pro.micorp.relayos.native-mcp", qos: .utility)
     private let handler: NativeMCPHTTP
+    private let jobs: NativeMCPJobs?
     private var listener: NWListener?
 
     init(port: UInt16 = 18765,
-         authorization: NativeMCPAuthorization = NativeMCPAuthorization()) {
-        self.handler = NativeMCPHTTP(authorization: authorization, port: port)
+         authorization: NativeMCPAuthorization = NativeMCPAuthorization(),
+         approvalStore: NativeMCPApprovalStore? = nil,
+         oauth: NativeMCPOAuth? = nil) {
+        let actions = approvalStore.map { NativeMCPActions(authorization: authorization, approvals: $0) }
+        self.handler = NativeMCPHTTP(authorization: authorization, port: port, actions: actions, oauth: oauth)
+        self.jobs = actions?.jobs
     }
 
     func start() throws {
@@ -177,6 +360,7 @@ final class NativeMCPListener {
     }
 
     func stop() {
+        jobs?.shutdown()
         listener?.cancel()
         listener = nil
     }
@@ -206,7 +390,7 @@ final class NativeMCPListener {
                 let lines = text.components(separatedBy: "\r\n")
                 let first = lines.first?.split(separator: " ").map(String.init) ?? []
                 guard first.count == 3, first[2].hasPrefix("HTTP/1."),
-                      first[1].hasPrefix("/"), !first[1].contains("?")
+                      first[1].hasPrefix("/"), !first[1].contains("#"), first[1].utf8.count < 8192
                 else {
                     self.send(NativeMCPHTTP.Reply(400, ["error": "Bad request"]), to: connection)
                     return
@@ -252,6 +436,8 @@ final class NativeMCPListener {
         let reason: String
         switch reply.status {
         case 200: reason = "OK"
+        case 201: reason = "Created"
+        case 302: reason = "Found"
         case 202: reason = "Accepted"
         case 400: reason = "Bad Request"
         case 401: reason = "Unauthorized"
@@ -262,7 +448,7 @@ final class NativeMCPListener {
         default: reason = "Error"
         }
         let header = "HTTP/1.1 \(reply.status) \(reason)\r\nContent-Type: \(reply.contentType)\r\nContent-Length: \(reply.body.count)\r\nConnection: close\r\nCache-Control: no-store\r\n\r\n"
-        var output = Data(header.utf8)
+        var output = Data((header.replacingOccurrences(of: "\r\n\r\n", with: "\r\n" + reply.extraHeaders.map { "\($0.key): \($0.value)\r\n" }.joined() + "\r\n")).utf8)
         output.append(reply.body)
         connection.send(content: output, completion: .contentProcessed { _ in
             connection.cancel()

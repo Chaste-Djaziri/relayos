@@ -199,7 +199,7 @@ final class NativeMCPAuthorizationTests: XCTestCase {
                                    atomically: true, encoding: .utf8)
         let digest = SHA256.hash(data: Data("native-oauth".utf8))
             .map { String(format: "%02x", $0) }.joined()
-        execute("INSERT INTO oauth_tokens VALUES ('\(digest)', 'access', 9999999999, NULL, NULL, '[\"mcp\"]')")
+        execute("INSERT INTO oauth_tokens VALUES ('\(digest)', 'access', 9999999999, NULL, 'http://127.0.0.1:18765/mcp', '[\"mcp\"]')")
         execute("INSERT INTO project_sessions VALUES ('native-session', '\(root.path)', 'active', 9999999999, NULL)")
         let http = NativeMCPHTTP(authorization: .init(databaseURL: databaseURL), port: 18765)
         let headers = ["host": "127.0.0.1:18765", "authorization": "Bearer native-oauth"]
