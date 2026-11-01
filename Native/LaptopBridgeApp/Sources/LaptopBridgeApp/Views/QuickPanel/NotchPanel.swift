@@ -28,7 +28,7 @@ enum NotchPanelPhase: String, CaseIterable {
         switch self {
         case .collapsed: 0
         case .hovered: 6
-        case .expanded: 138
+        case .expanded: 174
         }
     }
 }
@@ -36,6 +36,7 @@ enum NotchPanelPhase: String, CaseIterable {
 /// Extensible sub-pages hosted inside the expanded notch tray.
 enum NotchSubpage: String, CaseIterable, Identifiable {
     case activity
+    case approvals
     case music
     case services
 
@@ -44,6 +45,7 @@ enum NotchSubpage: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .activity: "Activity"
+        case .approvals: "Approve"
         case .music: "Music"
         case .services: "System"
         }
@@ -52,6 +54,7 @@ enum NotchSubpage: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .activity: "terminal.fill"
+        case .approvals: "checkmark.shield.fill"
         case .music: "music.note"
         case .services: "slider.horizontal.3"
         }
@@ -598,7 +601,8 @@ final class NotchPanelCoordinator: ObservableObject {
     var hasLiveActivity: Bool {
         let hasActiveJobs = model?.commandJobs.contains(where: \.active) ?? false
         let isMusicPlaying = NotchMediaController.shared.isPlaying
-        return hasActiveJobs || isMusicPlaying
+        let hasApprovals = model.map { $0.isSwiftOnly ? $0.nativePendingCount > 0 : !$0.approvalInbox.isEmpty } ?? false
+        return hasActiveJobs || isMusicPlaying || hasApprovals
     }
 
     private init() {
@@ -715,6 +719,20 @@ final class NotchPanelCoordinator: ObservableObject {
                 self?.reposition(animated: true)
             }
             .store(in: &cancellables)
+
+        model.$approvalInbox
+            .map { !$0.isEmpty }
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.reposition(animated: true) }
+            .store(in: &cancellables)
+
+        model.$nativePendingCount
+            .map { $0 > 0 }
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.reposition(animated: true) }
+            .store(in: &cancellables)
     }
 
     func triggerOpenMainWindow() {
@@ -759,6 +777,12 @@ final class NotchPanelCoordinator: ObservableObject {
         guard isVisible, phase != .expanded else { return }
         pendingCollapse?.cancel()
         pendingCollapse = nil
+        let hasApprovals = model.map { $0.isSwiftOnly ? $0.nativePendingCount > 0 : !$0.approvalInbox.isEmpty } ?? false
+        if hasApprovals {
+            selectedSubpage = .approvals
+            transition(to: .expanded, haptic: true)
+            return
+        }
         let hasActiveJobs = model?.commandJobs.contains(where: \.active) ?? false
         // Prefer an active terminal job when one exists. Otherwise retain the
         // user's page choice, except for the first music activity after launch.
@@ -847,7 +871,7 @@ struct NotchPanelView: View {
     private var primaryJob: CommandJobEntry? { jobs.first }
     private var isRunningJob: Bool { !jobs.isEmpty }
     private var isPlayingMusic: Bool { media.isPlaying }
-    private var hasLiveActivity: Bool { isRunningJob || isPlayingMusic }
+    private var hasLiveActivity: Bool { isRunningJob || isPlayingMusic || pendingApprovalsCount > 0 }
     private var pendingApprovalsCount: Int {
         model.isSwiftOnly ? model.nativePendingCount : model.approvalInbox.count
     }
@@ -871,6 +895,12 @@ struct NotchPanelView: View {
     }
 
     private let muted = Color.white.opacity(0.62)
+    private var visibleTabs: [NotchSubpage] {
+        var tabs: [NotchSubpage] = [.activity]
+        if pendingApprovalsCount > 0 || coordinator.selectedSubpage == .approvals { tabs.append(.approvals) }
+        tabs += [.music, .services]
+        return tabs
+    }
 
     var body: some View {
         let shape = NotchShape(
@@ -941,7 +971,14 @@ struct NotchPanelView: View {
             HStack(spacing: 0) {
                 // Left live-activity wing
                 HStack(spacing: 6) {
-                    if isRunningJob {
+                    if pendingApprovalsCount > 0 {
+                        Image(systemName: "checkmark.shield.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.orange)
+                        Text("Approval request")
+                            .font(.system(size: 10.5, weight: .semibold))
+                            .lineLimit(1)
+                    } else if isRunningJob {
                         Circle()
                             .fill(Color.green)
                             .frame(width: 6, height: 6)
@@ -973,7 +1010,14 @@ struct NotchPanelView: View {
                 // Right live-activity wing
                 HStack(spacing: 6) {
                     Spacer(minLength: 0)
-                    if let job = primaryJob {
+                    if pendingApprovalsCount > 0 {
+                        Text("\(pendingApprovalsCount) waiting")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.orange)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.orange)
+                    } else if let job = primaryJob {
                         TimelineView(.periodic(from: .now, by: 1)) { context in
                             Text(CommandJobProgress.elapsedLabel(job, at: context.date))
                                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
@@ -1044,7 +1088,7 @@ struct NotchPanelView: View {
             // Right header ear: Sub-page tabs + Collapse button
             HStack(spacing: 4) {
                 Spacer(minLength: 0)
-                ForEach(NotchSubpage.allCases) { page in
+                ForEach(visibleTabs) { page in
                     Button {
                         coordinator.selectedSubpage = page
                     } label: {
@@ -1098,6 +1142,8 @@ struct NotchPanelView: View {
                 switch coordinator.selectedSubpage {
                 case .activity:
                     activitySubpageView
+                case .approvals:
+                    approvalsSubpageView
                 case .music:
                     musicSubpageView
                 case .services:
@@ -1196,6 +1242,84 @@ struct NotchPanelView: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    @ViewBuilder
+    private var approvalsSubpageView: some View {
+        if let item = model.approvalInbox.first, !model.isSwiftOnly {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.shield.fill")
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(item.isOAuth ? "Connection approval" : "Command approval")
+                            .font(.system(size: 11.5, weight: .bold))
+                        Text(item.title)
+                            .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
+                            .lineLimit(1)
+                            .foregroundStyle(muted)
+                    }
+                    Spacer(minLength: 0)
+                    Text("\(pendingApprovalsCount) pending")
+                        .font(.system(size: 9.5, weight: .bold))
+                        .foregroundStyle(.orange)
+                }
+
+                Text(item.scopeDescription)
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(muted)
+                    .lineLimit(2)
+
+                HStack(spacing: 6) {
+                    approvalButton("Once", icon: "checkmark", color: .green) {
+                        model.decideApproval(item, decision: "once")
+                    }
+                    if !item.isOAuth {
+                        approvalButton("Session", icon: "clock", color: .blue) {
+                            model.decideApproval(item, decision: "session")
+                        }
+                        approvalButton("Always", icon: "infinity", color: .purple) {
+                            model.decideApproval(item, decision: "persistent")
+                        }
+                    }
+                    approvalButton("Deny", icon: "xmark", color: .red) {
+                        model.decideApproval(item, decision: "deny")
+                    }
+                }
+                .disabled(item.isExpired || model.approvalDecisionInFlight != nil)
+            }
+            .padding(.horizontal, 4)
+        } else {
+            VStack(spacing: 8) {
+                Image(systemName: "checkmark.shield")
+                    .font(.system(size: 22))
+                    .foregroundStyle(muted)
+                Text(model.isSwiftOnly && pendingApprovalsCount > 0
+                     ? "Open RelayOS to review this native request"
+                     : "No pending approvals")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(muted)
+                if model.isSwiftOnly && pendingApprovalsCount > 0 {
+                    Button("Open approvals", action: openApprovals)
+                        .buttonStyle(.bordered)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private func approvalButton(
+        _ title: String, icon: String, color: Color, action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.system(size: 10, weight: .bold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+                .background(color.opacity(0.20), in: RoundedRectangle(cornerRadius: 8))
+                .foregroundStyle(color)
+        }
+        .buttonStyle(.plain)
     }
 
     private var musicSubpageView: some View {
