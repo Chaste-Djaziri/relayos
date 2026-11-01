@@ -1,0 +1,787 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0C6F487398FDD7AB91D7A548 /* NgrokTunnelMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */; };
+		1082C54EAC0015720F7AD15F /* CommandPermissionsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A20318397E308D076DE7F /* CommandPermissionsPageView.swift */; };
+		10C20CCAA3DBA57333534A8D /* SavedCommandGrant.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DCD2DF7385FBDF3D206AAFC /* SavedCommandGrant.swift */; };
+		172F38A8DED5F1667BCF3ED0 /* XcodePreviewShowcaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56DC7029AA0FED98ED2DD114 /* XcodePreviewShowcaseView.swift */; };
+		18A5EE9DDF88CE710907B224 /* relayos-white.png in Resources */ = {isa = PBXBuildFile; fileRef = 4D0A37E94818963512C7A078 /* relayos-white.png */; };
+		206496E93863EB0166776E27 /* WindowPreviewFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACEF0A696201F2FEA64C8F63 /* WindowPreviewFixtures.swift */; };
+		209F367D5A545995122990B6 /* SidebarItemModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A41ED5BBC85B05E57B15CF7 /* SidebarItemModel.swift */; };
+		2508024A777268584D880B1D /* SettingsCardRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B4C7CB4A4D712541902C002 /* SettingsCardRow.swift */; };
+		29BE237E49B747B5E15B2358 /* SidebarItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D79D365EF6A27D13BCE24C92 /* SidebarItemRow.swift */; };
+		2ABB0556B126CE0EB68FF233 /* SavedCommandGrantTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FA09765A5DC85740382BB61 /* SavedCommandGrantTests.swift */; };
+		2E07F8C23284AD4A004C90FD /* DiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CA8380B6A50B5CF1C4DD810 /* DiffView.swift */; };
+		33B6DE14D950D7F0C2E02183 /* GeneralPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0FC6EA3AE6683E2FD19EB01 /* GeneralPageView.swift */; };
+		3FDFF94F9A02A21C15ED1B7B /* ServiceSupervisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8D5FF69919504CE19785BDA /* ServiceSupervisor.swift */; };
+		4057EB6DC2594F9AA0377C0E /* CustomTrafficLights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117EEB3A4505CFA882C6F27F /* CustomTrafficLights.swift */; };
+		426F1A673AE1B4B874689E03 /* StatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17FC7ACC1B8500D99CFA01C5 /* StatusBadge.swift */; };
+		467C1609E856C0D65DC5BB27 /* ActivitySummaryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0EBA458D20DA0AA757B7A81 /* ActivitySummaryRow.swift */; };
+		485444AD71723A6C144A4DDB /* ToolsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3748BFE19E365DC80B44E55 /* ToolsPageView.swift */; };
+		5682B24C3ACBA814EB2A9115 /* SystemPermissionAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 722D2821D95B5CA5B25F7ACF /* SystemPermissionAccess.swift */; };
+		5BE88EB67B976D012C4575BE /* DevelopmentRuntimeLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C90047B7CAEB4939575F3864 /* DevelopmentRuntimeLocator.swift */; };
+		5F69A09CB5D0CEA499D69E6D /* BridgeModel+CommandJobs.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA1547CE08DBD57A9DFA1396 /* BridgeModel+CommandJobs.swift */; };
+		5FBF89074C57D79FB72B3FB5 /* SettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECF57EB1E8A94922036D54B4 /* SettingsTab.swift */; };
+		60D82807200B9A20652B43E2 /* ApprovalArrivalTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73BCA19D4162B0993AAB68B9 /* ApprovalArrivalTracker.swift */; };
+		61A9F7371A3D7905FB4C6988 /* RelayOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE28214DB3F8EEB280FF8542 /* RelayOSApp.swift */; };
+		66ED3830CC3709D053488B80 /* BridgeModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 010C81D41E2B4A8F38171CA5 /* BridgeModel.swift */; };
+		682D99ABA596F6FB38FC5309 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CCB44FBECF23FB23825AD9F /* VisualEffectView.swift */; };
+		6989D8918649AE634984E2C9 /* MCPHealthMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C5CAC742DE9F4E13B3FFD16 /* MCPHealthMonitor.swift */; };
+		6AAF4AC47A074EEF9C6760F3 /* FreshSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2889B5D65542EA4A43A37FEC /* FreshSetupView.swift */; };
+		6B99344E704AD82C202228A8 /* SettingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1431B1972A552A6BD4503531 /* SettingsCard.swift */; };
+		6C10999D6B074EC5FB429C7D /* DesktopWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF620AE5C056396CFD9F836 /* DesktopWindowView.swift */; };
+		74913A9BA4C1178043F221CF /* SystemPermissionsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F698E7F3F856A246A4878AB /* SystemPermissionsPageView.swift */; };
+		7B5F236A4C6B6EFEABADCC3A /* ApprovalSoundTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48AEEC9127B56E4240E8C5BE /* ApprovalSoundTests.swift */; };
+		7BD027BDD7E1E2EA0C0D490E /* ApprovalsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12E83C60B57771FC2D31462E /* ApprovalsPageView.swift */; };
+		82DCB56CEFBCA0B18B79B17E /* CommandGrantGroupCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBFC8DFBEF74BE9B3F0F8183 /* CommandGrantGroupCard.swift */; };
+		82DE14E72189298BF2FD6410 /* ManagedProcessSlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF7EC9B8A1074531E5EC43E8 /* ManagedProcessSlot.swift */; };
+		8425F9972DE8C40423D42313 /* AppearancePageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6ECBB7F0469449A1B4C1679 /* AppearancePageView.swift */; };
+		8AA273FB86F6D44259DF5CCF /* ConnectionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5910DC8365E4FB254B2A822 /* ConnectionRow.swift */; };
+		8C7FAC30CC29619981EE8163 /* BridgeModel+Approvals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40017314B96D04DB9DF7025F /* BridgeModel+Approvals.swift */; };
+		8CD692DE3F2EF728E41BB660 /* CommandJobModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F8523F43A4AAE041F302654 /* CommandJobModelsTests.swift */; };
+		8D543F62066B8D94DC11FE28 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A75ABC2EF649483FACCE8E5 /* SettingsView.swift */; };
+		921010956D0573613A2CE1D0 /* RelayOSTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABDF00FAD2BE8C34B9A9EA20 /* RelayOSTheme.swift */; };
+		9607D773D0C2DEB2F23CF1EC /* CustomSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28C4A0F8F501A733194DE25E /* CustomSidebarView.swift */; };
+		9684BDA65EB9E5877050B290 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 160DA6357E98CDFF64BFC295 /* Keychain.swift */; };
+		9832DFC5790A3DB05C6A4CFD /* InstanceLeaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AAF3F10B93F830BC33B27E4 /* InstanceLeaseTests.swift */; };
+		9B9794F608EB97B1E819425C /* NgrokPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADEF7F916CC9B40C2956BFB0 /* NgrokPageView.swift */; };
+		9E0C04877E8C049602380544 /* CommandGrantItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E636568FE028676BD8DC4F /* CommandGrantItemRow.swift */; };
+		9E4D8D3F612F8FFE5A46A568 /* ServiceSupervisorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF6B093555EF31A324DD474A /* ServiceSupervisorTests.swift */; };
+		9F6EE71DA784D1B6020E9E1B /* relayos-black.png in Resources */ = {isa = PBXBuildFile; fileRef = E3C19994A787B50E533DE7DE /* relayos-black.png */; };
+		ABE652B39D6EDE743980F073 /* LaptopBridgeAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45B18B25B4B4D6AD68891289 /* LaptopBridgeAppTests.swift */; };
+		ABFFDF73F9860D8409937064 /* PermissionGuidePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69F5F0E0D7B976FF390AEDEA /* PermissionGuidePanel.swift */; };
+		AC1D691BBB0D54DEA3D71251 /* TerminalJobsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FFE0B2257A52C54B7F257D8 /* TerminalJobsPageView.swift */; };
+		AC7B0895AC93C77ABA1A3B32 /* QuickPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3184FA7CCA10909266F6728 /* QuickPanel.swift */; };
+		B5E66B8DAF3787980A588658 /* ApprovalSound.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7781BA7F576AD97F981A5E31 /* ApprovalSound.swift */; };
+		BFE4080DBC12E91E81D03C28 /* SettingsCollapsibleCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A13002A0BF9351E8BC8C147 /* SettingsCollapsibleCard.swift */; };
+		C0FFBE0E81E9C7124055CC4A /* CommandJobModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0209863FCD8E9B554E21541 /* CommandJobModels.swift */; };
+		C2B1F943CCDBABA72BF32661 /* ActivityPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4303862A504D6B755A0720 /* ActivityPageView.swift */; };
+		C47C604C813131975401521B /* BridgeModel+Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 074974C562F230CC62710F89 /* BridgeModel+Config.swift */; };
+		C6B6945B3F970815995F1B73 /* ApprovalArrivalNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B64825844B5227059987BE6 /* ApprovalArrivalNotification.swift */; };
+		C94FB612983A59EF639CB39C /* SettingsButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD620B4A3907C4DB20516D13 /* SettingsButton.swift */; };
+		CAC144368BE6D1B3FDF2C59A /* InstanceLease.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A141544AB9DFABBB18D053 /* InstanceLease.swift */; };
+		CE7CD965B1A669000A30F54A /* SettingsToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 139BB1F09BF5193F847A5FDD /* SettingsToggle.swift */; };
+		D12705F9869D63CEA6A8E576 /* BridgeModel+ProcessControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 696C2E390D56A4200CCC662D /* BridgeModel+ProcessControl.swift */; };
+		DA2031F59D8084379EA893B3 /* NgrokTunnelMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA5E94A049DF259A6CE6DB7E /* NgrokTunnelMonitorTests.swift */; };
+		DCBDA4DE0585D229663DF181 /* TerminalOutputConsole.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7EA2B5E615FBC04E8BC4254 /* TerminalOutputConsole.swift */; };
+		E0E1369ACE82B43D84C43E6C /* ApprovalCenterModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5035C5D233584D80945951A4 /* ApprovalCenterModels.swift */; };
+		E40AEBC40B50EF1A64E8B874 /* SecurityPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8F22BF45B761B618C70CC1 /* SecurityPageView.swift */; };
+		E7036D84F04C4324B951656D /* BridgeModel+Permissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29739FD30F89DEF8044CA268 /* BridgeModel+Permissions.swift */; };
+		E7E3AE99D2E5CD6B44891B8C /* MCPHealthMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DFE6A41A2CDF9C522333953 /* MCPHealthMonitorTests.swift */; };
+		F04D5EF531F6ADCD8BDF60F2 /* ApprovalCenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAC1EB8FF3BFA0F0F26D8D8C /* ApprovalCenterTests.swift */; };
+		F13E83639D9B1CADBAAB3FE7 /* CustomWindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBB57FD15B058094ADD00968 /* CustomWindowAccessor.swift */; };
+		FAFAE54B7AA70FB47C2B635E /* TerminalJobRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224FB2B0DF1453B35D63B411 /* TerminalJobRow.swift */; };
+		FCDF01F8EFB50197571E9377 /* ConnectionsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703325659C195B82C5568E16 /* ConnectionsPageView.swift */; };
+		FDCFAB97EEEF00AE1DBDC584 /* SingleInstanceCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0606A340C321E3C38BC40B9C /* SingleInstanceCoordinator.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2CBCAA51A133A1D6A01D92C8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F1CAEB2DB19AB5F518638D47 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4FEE4C369898E123DF2E6889;
+			remoteInfo = RelayOS;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		010C81D41E2B4A8F38171CA5 /* BridgeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeModel.swift; sourceTree = "<group>"; };
+		0606A340C321E3C38BC40B9C /* SingleInstanceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleInstanceCoordinator.swift; sourceTree = "<group>"; };
+		074974C562F230CC62710F89 /* BridgeModel+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+Config.swift"; sourceTree = "<group>"; };
+		0A75ABC2EF649483FACCE8E5 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NgrokTunnelMonitor.swift; sourceTree = "<group>"; };
+		0F698E7F3F856A246A4878AB /* SystemPermissionsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPermissionsPageView.swift; sourceTree = "<group>"; };
+		117EEB3A4505CFA882C6F27F /* CustomTrafficLights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTrafficLights.swift; sourceTree = "<group>"; };
+		12E83C60B57771FC2D31462E /* ApprovalsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalsPageView.swift; sourceTree = "<group>"; };
+		139BB1F09BF5193F847A5FDD /* SettingsToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsToggle.swift; sourceTree = "<group>"; };
+		1431B1972A552A6BD4503531 /* SettingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsCard.swift; sourceTree = "<group>"; };
+		160DA6357E98CDFF64BFC295 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
+		17FC7ACC1B8500D99CFA01C5 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
+		1CA8380B6A50B5CF1C4DD810 /* DiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffView.swift; sourceTree = "<group>"; };
+		1E8F22BF45B761B618C70CC1 /* SecurityPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityPageView.swift; sourceTree = "<group>"; };
+		221A20318397E308D076DE7F /* CommandPermissionsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPermissionsPageView.swift; sourceTree = "<group>"; };
+		224FB2B0DF1453B35D63B411 /* TerminalJobRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalJobRow.swift; sourceTree = "<group>"; };
+		27E636568FE028676BD8DC4F /* CommandGrantItemRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandGrantItemRow.swift; sourceTree = "<group>"; };
+		2889B5D65542EA4A43A37FEC /* FreshSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreshSetupView.swift; sourceTree = "<group>"; };
+		28C4A0F8F501A733194DE25E /* CustomSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomSidebarView.swift; sourceTree = "<group>"; };
+		29739FD30F89DEF8044CA268 /* BridgeModel+Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+Permissions.swift"; sourceTree = "<group>"; };
+		2C5CAC742DE9F4E13B3FFD16 /* MCPHealthMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPHealthMonitor.swift; sourceTree = "<group>"; };
+		2F8523F43A4AAE041F302654 /* CommandJobModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandJobModelsTests.swift; sourceTree = "<group>"; };
+		40017314B96D04DB9DF7025F /* BridgeModel+Approvals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+Approvals.swift"; sourceTree = "<group>"; };
+		45B18B25B4B4D6AD68891289 /* LaptopBridgeAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaptopBridgeAppTests.swift; sourceTree = "<group>"; };
+		48AEEC9127B56E4240E8C5BE /* ApprovalSoundTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalSoundTests.swift; sourceTree = "<group>"; };
+		4D0A37E94818963512C7A078 /* relayos-white.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "relayos-white.png"; sourceTree = "<group>"; };
+		4FA09765A5DC85740382BB61 /* SavedCommandGrantTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedCommandGrantTests.swift; sourceTree = "<group>"; };
+		5035C5D233584D80945951A4 /* ApprovalCenterModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalCenterModels.swift; sourceTree = "<group>"; };
+		56DC7029AA0FED98ED2DD114 /* XcodePreviewShowcaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcodePreviewShowcaseView.swift; sourceTree = "<group>"; };
+		5AAF3F10B93F830BC33B27E4 /* InstanceLeaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstanceLeaseTests.swift; sourceTree = "<group>"; };
+		61EEC49F3DCA38C9750BC9DF /* RelayOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RelayOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		696C2E390D56A4200CCC662D /* BridgeModel+ProcessControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+ProcessControl.swift"; sourceTree = "<group>"; };
+		69F5F0E0D7B976FF390AEDEA /* PermissionGuidePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionGuidePanel.swift; sourceTree = "<group>"; };
+		6A41ED5BBC85B05E57B15CF7 /* SidebarItemModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarItemModel.swift; sourceTree = "<group>"; };
+		6CCB44FBECF23FB23825AD9F /* VisualEffectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectView.swift; sourceTree = "<group>"; };
+		703325659C195B82C5568E16 /* ConnectionsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionsPageView.swift; sourceTree = "<group>"; };
+		722D2821D95B5CA5B25F7ACF /* SystemPermissionAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPermissionAccess.swift; sourceTree = "<group>"; };
+		73BCA19D4162B0993AAB68B9 /* ApprovalArrivalTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalArrivalTracker.swift; sourceTree = "<group>"; };
+		7781BA7F576AD97F981A5E31 /* ApprovalSound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalSound.swift; sourceTree = "<group>"; };
+		7A13002A0BF9351E8BC8C147 /* SettingsCollapsibleCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsCollapsibleCard.swift; sourceTree = "<group>"; };
+		7DFE6A41A2CDF9C522333953 /* MCPHealthMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPHealthMonitorTests.swift; sourceTree = "<group>"; };
+		7FFE0B2257A52C54B7F257D8 /* TerminalJobsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalJobsPageView.swift; sourceTree = "<group>"; };
+		8B4C7CB4A4D712541902C002 /* SettingsCardRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsCardRow.swift; sourceTree = "<group>"; };
+		8CF620AE5C056396CFD9F836 /* DesktopWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopWindowView.swift; sourceTree = "<group>"; };
+		8DCD2DF7385FBDF3D206AAFC /* SavedCommandGrant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedCommandGrant.swift; sourceTree = "<group>"; };
+		9B64825844B5227059987BE6 /* ApprovalArrivalNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalArrivalNotification.swift; sourceTree = "<group>"; };
+		A3184FA7CCA10909266F6728 /* QuickPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPanel.swift; sourceTree = "<group>"; };
+		A8D5FF69919504CE19785BDA /* ServiceSupervisor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceSupervisor.swift; sourceTree = "<group>"; };
+		ABDF00FAD2BE8C34B9A9EA20 /* RelayOSTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSTheme.swift; sourceTree = "<group>"; };
+		ACEF0A696201F2FEA64C8F63 /* WindowPreviewFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPreviewFixtures.swift; sourceTree = "<group>"; };
+		ADEF7F916CC9B40C2956BFB0 /* NgrokPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NgrokPageView.swift; sourceTree = "<group>"; };
+		AF7EC9B8A1074531E5EC43E8 /* ManagedProcessSlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedProcessSlot.swift; sourceTree = "<group>"; };
+		BD620B4A3907C4DB20516D13 /* SettingsButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsButton.swift; sourceTree = "<group>"; };
+		C0209863FCD8E9B554E21541 /* CommandJobModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandJobModels.swift; sourceTree = "<group>"; };
+		C0EBA458D20DA0AA757B7A81 /* ActivitySummaryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySummaryRow.swift; sourceTree = "<group>"; };
+		C1A141544AB9DFABBB18D053 /* InstanceLease.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstanceLease.swift; sourceTree = "<group>"; };
+		C90047B7CAEB4939575F3864 /* DevelopmentRuntimeLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentRuntimeLocator.swift; sourceTree = "<group>"; };
+		D79D365EF6A27D13BCE24C92 /* SidebarItemRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarItemRow.swift; sourceTree = "<group>"; };
+		D9609898F83304B547C9DA7F /* RelayOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RelayOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DBFC8DFBEF74BE9B3F0F8183 /* CommandGrantGroupCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandGrantGroupCard.swift; sourceTree = "<group>"; };
+		E0FC6EA3AE6683E2FD19EB01 /* GeneralPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralPageView.swift; sourceTree = "<group>"; };
+		E3C19994A787B50E533DE7DE /* relayos-black.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "relayos-black.png"; sourceTree = "<group>"; };
+		E6ECBB7F0469449A1B4C1679 /* AppearancePageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearancePageView.swift; sourceTree = "<group>"; };
+		EA1547CE08DBD57A9DFA1396 /* BridgeModel+CommandJobs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+CommandJobs.swift"; sourceTree = "<group>"; };
+		EAC1EB8FF3BFA0F0F26D8D8C /* ApprovalCenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalCenterTests.swift; sourceTree = "<group>"; };
+		EBB57FD15B058094ADD00968 /* CustomWindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomWindowAccessor.swift; sourceTree = "<group>"; };
+		ECF57EB1E8A94922036D54B4 /* SettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTab.swift; sourceTree = "<group>"; };
+		ED4303862A504D6B755A0720 /* ActivityPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityPageView.swift; sourceTree = "<group>"; };
+		F3748BFE19E365DC80B44E55 /* ToolsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolsPageView.swift; sourceTree = "<group>"; };
+		F5910DC8365E4FB254B2A822 /* ConnectionRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionRow.swift; sourceTree = "<group>"; };
+		F7EA2B5E615FBC04E8BC4254 /* TerminalOutputConsole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalOutputConsole.swift; sourceTree = "<group>"; };
+		FA5E94A049DF259A6CE6DB7E /* NgrokTunnelMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NgrokTunnelMonitorTests.swift; sourceTree = "<group>"; };
+		FE28214DB3F8EEB280FF8542 /* RelayOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSApp.swift; sourceTree = "<group>"; };
+		FF6B093555EF31A324DD474A /* ServiceSupervisorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceSupervisorTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		174BC8B58A93F05499EA06DC /* LaptopBridgeApp */ = {
+			isa = PBXGroup;
+			children = (
+				25FBBBB48B284046CB04A781 /* App */,
+				34B9DB7D31DA02FF0E14105E /* Assets */,
+				F4BF63D62BD4358128E8BD90 /* Components */,
+				5A2279407AEAC8EB5097B981 /* Models */,
+				DC68270A338DF314A24C899B /* Navigation */,
+				32F6D875C00BC503955C09C5 /* Services */,
+				95B1DA5F0964B4F4D9996644 /* Views */,
+			);
+			path = LaptopBridgeApp;
+			sourceTree = "<group>";
+		};
+		25FBBBB48B284046CB04A781 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				FE28214DB3F8EEB280FF8542 /* RelayOSApp.swift */,
+				0606A340C321E3C38BC40B9C /* SingleInstanceCoordinator.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		32F6D875C00BC503955C09C5 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				010C81D41E2B4A8F38171CA5 /* BridgeModel.swift */,
+				40017314B96D04DB9DF7025F /* BridgeModel+Approvals.swift */,
+				EA1547CE08DBD57A9DFA1396 /* BridgeModel+CommandJobs.swift */,
+				074974C562F230CC62710F89 /* BridgeModel+Config.swift */,
+				29739FD30F89DEF8044CA268 /* BridgeModel+Permissions.swift */,
+				696C2E390D56A4200CCC662D /* BridgeModel+ProcessControl.swift */,
+				C90047B7CAEB4939575F3864 /* DevelopmentRuntimeLocator.swift */,
+				160DA6357E98CDFF64BFC295 /* Keychain.swift */,
+				2C5CAC742DE9F4E13B3FFD16 /* MCPHealthMonitor.swift */,
+				0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */,
+				A8D5FF69919504CE19785BDA /* ServiceSupervisor.swift */,
+				722D2821D95B5CA5B25F7ACF /* SystemPermissionAccess.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		34B9DB7D31DA02FF0E14105E /* Assets */ = {
+			isa = PBXGroup;
+			children = (
+				E3C19994A787B50E533DE7DE /* relayos-black.png */,
+				4D0A37E94818963512C7A078 /* relayos-white.png */,
+			);
+			path = Assets;
+			sourceTree = "<group>";
+		};
+		39AB5AE2C4FEC0100E93F9AF /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				174BC8B58A93F05499EA06DC /* LaptopBridgeApp */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		5A2279407AEAC8EB5097B981 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				9B64825844B5227059987BE6 /* ApprovalArrivalNotification.swift */,
+				73BCA19D4162B0993AAB68B9 /* ApprovalArrivalTracker.swift */,
+				5035C5D233584D80945951A4 /* ApprovalCenterModels.swift */,
+				7781BA7F576AD97F981A5E31 /* ApprovalSound.swift */,
+				C0209863FCD8E9B554E21541 /* CommandJobModels.swift */,
+				C1A141544AB9DFABBB18D053 /* InstanceLease.swift */,
+				AF7EC9B8A1074531E5EC43E8 /* ManagedProcessSlot.swift */,
+				ABDF00FAD2BE8C34B9A9EA20 /* RelayOSTheme.swift */,
+				8DCD2DF7385FBDF3D206AAFC /* SavedCommandGrant.swift */,
+				ECF57EB1E8A94922036D54B4 /* SettingsTab.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		5CB3942B4275CA4BA7FCC447 /* Setup */ = {
+			isa = PBXGroup;
+			children = (
+				2889B5D65542EA4A43A37FEC /* FreshSetupView.swift */,
+			);
+			path = Setup;
+			sourceTree = "<group>";
+		};
+		7D489980B4FBDD65100D6869 /* LaptopBridgeAppTests */ = {
+			isa = PBXGroup;
+			children = (
+				EAC1EB8FF3BFA0F0F26D8D8C /* ApprovalCenterTests.swift */,
+				48AEEC9127B56E4240E8C5BE /* ApprovalSoundTests.swift */,
+				2F8523F43A4AAE041F302654 /* CommandJobModelsTests.swift */,
+				5AAF3F10B93F830BC33B27E4 /* InstanceLeaseTests.swift */,
+				45B18B25B4B4D6AD68891289 /* LaptopBridgeAppTests.swift */,
+				7DFE6A41A2CDF9C522333953 /* MCPHealthMonitorTests.swift */,
+				FA5E94A049DF259A6CE6DB7E /* NgrokTunnelMonitorTests.swift */,
+				4FA09765A5DC85740382BB61 /* SavedCommandGrantTests.swift */,
+				FF6B093555EF31A324DD474A /* ServiceSupervisorTests.swift */,
+			);
+			path = LaptopBridgeAppTests;
+			sourceTree = "<group>";
+		};
+		803ADB52074DAC4899B47ABE = {
+			isa = PBXGroup;
+			children = (
+				39AB5AE2C4FEC0100E93F9AF /* Sources */,
+				F416F709B526804608AFD612 /* Tests */,
+				B73B3AA61539D822EFCD6D97 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		95B1DA5F0964B4F4D9996644 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				8CF620AE5C056396CFD9F836 /* DesktopWindowView.swift */,
+				0A75ABC2EF649483FACCE8E5 /* SettingsView.swift */,
+				ACEF0A696201F2FEA64C8F63 /* WindowPreviewFixtures.swift */,
+				56DC7029AA0FED98ED2DD114 /* XcodePreviewShowcaseView.swift */,
+				ECA9926118C9D66803AAD20E /* Pages */,
+				BF06DB6F457A775297D024B7 /* QuickPanel */,
+				5CB3942B4275CA4BA7FCC447 /* Setup */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		B73B3AA61539D822EFCD6D97 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				61EEC49F3DCA38C9750BC9DF /* RelayOS.app */,
+				D9609898F83304B547C9DA7F /* RelayOSTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BF06DB6F457A775297D024B7 /* QuickPanel */ = {
+			isa = PBXGroup;
+			children = (
+				F5910DC8365E4FB254B2A822 /* ConnectionRow.swift */,
+				A3184FA7CCA10909266F6728 /* QuickPanel.swift */,
+			);
+			path = QuickPanel;
+			sourceTree = "<group>";
+		};
+		DC68270A338DF314A24C899B /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				28C4A0F8F501A733194DE25E /* CustomSidebarView.swift */,
+				6A41ED5BBC85B05E57B15CF7 /* SidebarItemModel.swift */,
+				D79D365EF6A27D13BCE24C92 /* SidebarItemRow.swift */,
+			);
+			path = Navigation;
+			sourceTree = "<group>";
+		};
+		ECA9926118C9D66803AAD20E /* Pages */ = {
+			isa = PBXGroup;
+			children = (
+				ED4303862A504D6B755A0720 /* ActivityPageView.swift */,
+				C0EBA458D20DA0AA757B7A81 /* ActivitySummaryRow.swift */,
+				E6ECBB7F0469449A1B4C1679 /* AppearancePageView.swift */,
+				12E83C60B57771FC2D31462E /* ApprovalsPageView.swift */,
+				DBFC8DFBEF74BE9B3F0F8183 /* CommandGrantGroupCard.swift */,
+				27E636568FE028676BD8DC4F /* CommandGrantItemRow.swift */,
+				221A20318397E308D076DE7F /* CommandPermissionsPageView.swift */,
+				703325659C195B82C5568E16 /* ConnectionsPageView.swift */,
+				1CA8380B6A50B5CF1C4DD810 /* DiffView.swift */,
+				E0FC6EA3AE6683E2FD19EB01 /* GeneralPageView.swift */,
+				ADEF7F916CC9B40C2956BFB0 /* NgrokPageView.swift */,
+				69F5F0E0D7B976FF390AEDEA /* PermissionGuidePanel.swift */,
+				1E8F22BF45B761B618C70CC1 /* SecurityPageView.swift */,
+				0F698E7F3F856A246A4878AB /* SystemPermissionsPageView.swift */,
+				224FB2B0DF1453B35D63B411 /* TerminalJobRow.swift */,
+				7FFE0B2257A52C54B7F257D8 /* TerminalJobsPageView.swift */,
+				F7EA2B5E615FBC04E8BC4254 /* TerminalOutputConsole.swift */,
+				F3748BFE19E365DC80B44E55 /* ToolsPageView.swift */,
+			);
+			path = Pages;
+			sourceTree = "<group>";
+		};
+		F416F709B526804608AFD612 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				7D489980B4FBDD65100D6869 /* LaptopBridgeAppTests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		F4BF63D62BD4358128E8BD90 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				117EEB3A4505CFA882C6F27F /* CustomTrafficLights.swift */,
+				EBB57FD15B058094ADD00968 /* CustomWindowAccessor.swift */,
+				BD620B4A3907C4DB20516D13 /* SettingsButton.swift */,
+				1431B1972A552A6BD4503531 /* SettingsCard.swift */,
+				8B4C7CB4A4D712541902C002 /* SettingsCardRow.swift */,
+				7A13002A0BF9351E8BC8C147 /* SettingsCollapsibleCard.swift */,
+				139BB1F09BF5193F847A5FDD /* SettingsToggle.swift */,
+				17FC7ACC1B8500D99CFA01C5 /* StatusBadge.swift */,
+				6CCB44FBECF23FB23825AD9F /* VisualEffectView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4FEE4C369898E123DF2E6889 /* RelayOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 91BD5560FE521B4C85B31CEB /* Build configuration list for PBXNativeTarget "RelayOS" */;
+			buildPhases = (
+				06DBA6688911DE05E7A366E8 /* Sources */,
+				C1F5199D1B6E104DEF65D6B9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RelayOS;
+			packageProductDependencies = (
+			);
+			productName = RelayOS;
+			productReference = 61EEC49F3DCA38C9750BC9DF /* RelayOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		DFF9306EA64C79C99BA93412 /* RelayOSTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 707DA577F91EE7D7CB9CF34F /* Build configuration list for PBXNativeTarget "RelayOSTests" */;
+			buildPhases = (
+				4201CF0B7270F9D1C1AF7641 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E96F6F65D085AD2F4AC142A6 /* PBXTargetDependency */,
+			);
+			name = RelayOSTests;
+			packageProductDependencies = (
+			);
+			productName = RelayOSTests;
+			productReference = D9609898F83304B547C9DA7F /* RelayOSTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F1CAEB2DB19AB5F518638D47 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					4FEE4C369898E123DF2E6889 = {
+						ProvisioningStyle = Automatic;
+					};
+					DFF9306EA64C79C99BA93412 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 99990316CDC804569939FEED /* Build configuration list for PBXProject "RelayOS" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 803ADB52074DAC4899B47ABE;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B73B3AA61539D822EFCD6D97 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4FEE4C369898E123DF2E6889 /* RelayOS */,
+				DFF9306EA64C79C99BA93412 /* RelayOSTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C1F5199D1B6E104DEF65D6B9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9F6EE71DA784D1B6020E9E1B /* relayos-black.png in Resources */,
+				18A5EE9DDF88CE710907B224 /* relayos-white.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		06DBA6688911DE05E7A366E8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C2B1F943CCDBABA72BF32661 /* ActivityPageView.swift in Sources */,
+				467C1609E856C0D65DC5BB27 /* ActivitySummaryRow.swift in Sources */,
+				8425F9972DE8C40423D42313 /* AppearancePageView.swift in Sources */,
+				C6B6945B3F970815995F1B73 /* ApprovalArrivalNotification.swift in Sources */,
+				60D82807200B9A20652B43E2 /* ApprovalArrivalTracker.swift in Sources */,
+				E0E1369ACE82B43D84C43E6C /* ApprovalCenterModels.swift in Sources */,
+				B5E66B8DAF3787980A588658 /* ApprovalSound.swift in Sources */,
+				7BD027BDD7E1E2EA0C0D490E /* ApprovalsPageView.swift in Sources */,
+				8C7FAC30CC29619981EE8163 /* BridgeModel+Approvals.swift in Sources */,
+				5F69A09CB5D0CEA499D69E6D /* BridgeModel+CommandJobs.swift in Sources */,
+				C47C604C813131975401521B /* BridgeModel+Config.swift in Sources */,
+				E7036D84F04C4324B951656D /* BridgeModel+Permissions.swift in Sources */,
+				D12705F9869D63CEA6A8E576 /* BridgeModel+ProcessControl.swift in Sources */,
+				66ED3830CC3709D053488B80 /* BridgeModel.swift in Sources */,
+				82DCB56CEFBCA0B18B79B17E /* CommandGrantGroupCard.swift in Sources */,
+				9E0C04877E8C049602380544 /* CommandGrantItemRow.swift in Sources */,
+				C0FFBE0E81E9C7124055CC4A /* CommandJobModels.swift in Sources */,
+				1082C54EAC0015720F7AD15F /* CommandPermissionsPageView.swift in Sources */,
+				8AA273FB86F6D44259DF5CCF /* ConnectionRow.swift in Sources */,
+				FCDF01F8EFB50197571E9377 /* ConnectionsPageView.swift in Sources */,
+				9607D773D0C2DEB2F23CF1EC /* CustomSidebarView.swift in Sources */,
+				4057EB6DC2594F9AA0377C0E /* CustomTrafficLights.swift in Sources */,
+				F13E83639D9B1CADBAAB3FE7 /* CustomWindowAccessor.swift in Sources */,
+				6C10999D6B074EC5FB429C7D /* DesktopWindowView.swift in Sources */,
+				5BE88EB67B976D012C4575BE /* DevelopmentRuntimeLocator.swift in Sources */,
+				2E07F8C23284AD4A004C90FD /* DiffView.swift in Sources */,
+				6AAF4AC47A074EEF9C6760F3 /* FreshSetupView.swift in Sources */,
+				33B6DE14D950D7F0C2E02183 /* GeneralPageView.swift in Sources */,
+				CAC144368BE6D1B3FDF2C59A /* InstanceLease.swift in Sources */,
+				9684BDA65EB9E5877050B290 /* Keychain.swift in Sources */,
+				6989D8918649AE634984E2C9 /* MCPHealthMonitor.swift in Sources */,
+				82DE14E72189298BF2FD6410 /* ManagedProcessSlot.swift in Sources */,
+				9B9794F608EB97B1E819425C /* NgrokPageView.swift in Sources */,
+				0C6F487398FDD7AB91D7A548 /* NgrokTunnelMonitor.swift in Sources */,
+				ABFFDF73F9860D8409937064 /* PermissionGuidePanel.swift in Sources */,
+				AC7B0895AC93C77ABA1A3B32 /* QuickPanel.swift in Sources */,
+				61A9F7371A3D7905FB4C6988 /* RelayOSApp.swift in Sources */,
+				921010956D0573613A2CE1D0 /* RelayOSTheme.swift in Sources */,
+				10C20CCAA3DBA57333534A8D /* SavedCommandGrant.swift in Sources */,
+				E40AEBC40B50EF1A64E8B874 /* SecurityPageView.swift in Sources */,
+				3FDFF94F9A02A21C15ED1B7B /* ServiceSupervisor.swift in Sources */,
+				C94FB612983A59EF639CB39C /* SettingsButton.swift in Sources */,
+				6B99344E704AD82C202228A8 /* SettingsCard.swift in Sources */,
+				2508024A777268584D880B1D /* SettingsCardRow.swift in Sources */,
+				BFE4080DBC12E91E81D03C28 /* SettingsCollapsibleCard.swift in Sources */,
+				5FBF89074C57D79FB72B3FB5 /* SettingsTab.swift in Sources */,
+				CE7CD965B1A669000A30F54A /* SettingsToggle.swift in Sources */,
+				8D543F62066B8D94DC11FE28 /* SettingsView.swift in Sources */,
+				209F367D5A545995122990B6 /* SidebarItemModel.swift in Sources */,
+				29BE237E49B747B5E15B2358 /* SidebarItemRow.swift in Sources */,
+				FDCFAB97EEEF00AE1DBDC584 /* SingleInstanceCoordinator.swift in Sources */,
+				426F1A673AE1B4B874689E03 /* StatusBadge.swift in Sources */,
+				5682B24C3ACBA814EB2A9115 /* SystemPermissionAccess.swift in Sources */,
+				74913A9BA4C1178043F221CF /* SystemPermissionsPageView.swift in Sources */,
+				FAFAE54B7AA70FB47C2B635E /* TerminalJobRow.swift in Sources */,
+				AC1D691BBB0D54DEA3D71251 /* TerminalJobsPageView.swift in Sources */,
+				DCBDA4DE0585D229663DF181 /* TerminalOutputConsole.swift in Sources */,
+				485444AD71723A6C144A4DDB /* ToolsPageView.swift in Sources */,
+				682D99ABA596F6FB38FC5309 /* VisualEffectView.swift in Sources */,
+				206496E93863EB0166776E27 /* WindowPreviewFixtures.swift in Sources */,
+				172F38A8DED5F1667BCF3ED0 /* XcodePreviewShowcaseView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4201CF0B7270F9D1C1AF7641 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F04D5EF531F6ADCD8BDF60F2 /* ApprovalCenterTests.swift in Sources */,
+				7B5F236A4C6B6EFEABADCC3A /* ApprovalSoundTests.swift in Sources */,
+				8CD692DE3F2EF728E41BB660 /* CommandJobModelsTests.swift in Sources */,
+				9832DFC5790A3DB05C6A4CFD /* InstanceLeaseTests.swift in Sources */,
+				ABE652B39D6EDE743980F073 /* LaptopBridgeAppTests.swift in Sources */,
+				E7E3AE99D2E5CD6B44891B8C /* MCPHealthMonitorTests.swift in Sources */,
+				DA2031F59D8084379EA893B3 /* NgrokTunnelMonitorTests.swift in Sources */,
+				2ABB0556B126CE0EB68FF233 /* SavedCommandGrantTests.swift in Sources */,
+				9E4D8D3F612F8FFE5A46A568 /* ServiceSupervisorTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E96F6F65D085AD2F4AC142A6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4FEE4C369898E123DF2E6889 /* RelayOS */;
+			targetProxy = 2CBCAA51A133A1D6A01D92C8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1056BC860AC79657F8B60C38 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = rw.shangazi.relayos.tests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RelayOS.app/Contents/MacOS/RelayOS";
+			};
+			name = Debug;
+		};
+		4C8530AA7B65EA4193FD1DCA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Xcode/RelayOS-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = rw.shangazi.relayos.dev;
+				PRODUCT_MODULE_NAME = LaptopBridgeApp;
+				PRODUCT_NAME = RelayOS;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+		6208C28C30806D49ACB5448A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		67C9CBC6CF9EDB25BB60FB40 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = rw.shangazi.relayos.tests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RelayOS.app/Contents/MacOS/RelayOS";
+			};
+			name = Release;
+		};
+		828F2FC7D85294EF51522337 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		D4ABDE75AB0BBCDEFF405E96 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Xcode/RelayOS-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = rw.shangazi.relayos;
+				PRODUCT_MODULE_NAME = LaptopBridgeApp;
+				PRODUCT_NAME = RelayOS;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		707DA577F91EE7D7CB9CF34F /* Build configuration list for PBXNativeTarget "RelayOSTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1056BC860AC79657F8B60C38 /* Debug */,
+				67C9CBC6CF9EDB25BB60FB40 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		91BD5560FE521B4C85B31CEB /* Build configuration list for PBXNativeTarget "RelayOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4C8530AA7B65EA4193FD1DCA /* Debug */,
+				D4ABDE75AB0BBCDEFF405E96 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		99990316CDC804569939FEED /* Build configuration list for PBXProject "RelayOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				828F2FC7D85294EF51522337 /* Debug */,
+				6208C28C30806D49ACB5448A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = F1CAEB2DB19AB5F518638D47 /* Project object */;
+}

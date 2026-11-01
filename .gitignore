@@ -31,3 +31,8 @@ build/
 # Native Windows build output
 Native/**/bin/
 Native/**/obj/
+
+# Xcode user-specific state (not project configuration)
+Native/LaptopBridgeApp/.swiftpm/
+**/xcuserdata/
+*.xcuserstate

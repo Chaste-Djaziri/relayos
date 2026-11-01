@@ -3,10 +3,17 @@ import SwiftUI
 import AppKit
 
 final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
+    // Xcode's dedicated .dev bundle is safe to launch beside installed RelayOS.
+    // A UI-only development run never acquires the production process lease.
+    static var isXcodeUIPreview: Bool {
+        ProcessInfo.processInfo.environment["RELAYOS_XCODE_UI_PREVIEW"] == "1"
+            || Bundle.main.bundleIdentifier == "rw.shangazi.relayos.dev"
+    }
     // The settings window is not the agent's lifetime. Explicit Quit terminates
     // RelayOS; simply closing Settings leaves its approved MCP services alive.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationDidFinishLaunching(_ notification: Notification) {
+        guard !Self.isXcodeUIPreview else { return }
         guard SingleInstanceCoordinator.shared.claimOrReplaceExistingInstance() else {
             NSApplication.shared.terminate(nil)
             return
@@ -15,6 +22,7 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        guard !Self.isXcodeUIPreview else { return }
         BridgeModel.shared.shutdownServices()
         SingleInstanceCoordinator.shared.release()
     }
@@ -39,7 +47,13 @@ struct RelayOSApp: App {
 
     var body: some Scene {
         Window("RelayOS", id: "main") {
-            DesktopWindowView(model: model)
+            Group {
+                if RelayOSApplicationDelegate.isXcodeUIPreview {
+                    XcodePreviewShowcaseView()
+                } else {
+                    DesktopWindowView(model: model)
+                }
+            }
                 .preferredColorScheme(RelayOSTheme.scheme(appearance))
                 .tint(RelayOSTheme.accent(accent))
                 .environment(\.font, .system(size: uiFontSize))

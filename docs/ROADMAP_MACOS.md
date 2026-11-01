@@ -238,3 +238,13 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [ ] Validate exact ngrok handover/health fallback live, signed bundle and regression tests without killing the current connector.
 - [ ] Finish W06 staged release validation, rollback backup, controlled install and single-owner health checks.
 - [ ] Independently supervised process reaping after native app SIGKILL remains a future hardening item.
+
+## Xcode ownership and Swift migration — 2026-11-01
+- [x] Add native macOS XcodeGen project specification under `Native/LaptopBridgeApp/project.yml`.
+- [x] Generate `RelayOS.xcodeproj` with Release app identity `rw.shangazi.relayos` and isolated Debug identity `rw.shangazi.relayos.dev`.
+- [x] Add safe Debug-only UI showcase and retain existing `#Preview` fixtures without starting the production MCP service.
+- [x] Keep SwiftPM regression tests passing and document signing workflows.
+- [ ] Validate native `xcodebuild` Debug target and test scheme end to end.
+- [ ] Configure a real Apple Development team/certificate in Xcode and verify signature stability between builds.
+- [ ] Port Python server, OAuth and approval state to tested Swift modules before removing bundled Python runtime.
+- [ ] Integrate final Swift helper packaging, Developer ID signing, notarization and staged installation.

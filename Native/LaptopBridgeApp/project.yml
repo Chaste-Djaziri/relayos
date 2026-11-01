@@ -1,0 +1,78 @@
+# Path: Native/LaptopBridgeApp/project.yml
+# Regenerate with: cd Native/LaptopBridgeApp && xcodegen generate
+# The Xcode Debug app is deliberately isolated from the installed MCP agent.
+name: RelayOS
+options:
+  xcodeVersion: "16.0"
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_HARDENED_RUNTIME: YES
+targets:
+  RelayOS:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/LaptopBridgeApp
+    info:
+      path: Xcode/RelayOS-Info.plist
+      properties:
+        CFBundleDisplayName: RelayOS
+        CFBundleName: RelayOS
+        CFBundleExecutable: RelayOS
+        CFBundlePackageType: APPL
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        LSUIElement: true
+        NSHighResolutionCapable: true
+        NSAppleEventsUsageDescription: "RelayOS controls other apps only after explicit local approval."
+        NSScreenCaptureUsageDescription: "RelayOS captures the display only after you approve a screen action."
+    settings:
+      base:
+        PRODUCT_NAME: RelayOS
+        PRODUCT_MODULE_NAME: LaptopBridgeApp
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_EMIT_LOC_STRINGS: YES
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: rw.shangazi.relayos.dev
+          ENABLE_PREVIEWS: YES
+        Release:
+          PRODUCT_BUNDLE_IDENTIFIER: rw.shangazi.relayos
+    scheme: {}
+  RelayOSTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/LaptopBridgeAppTests
+    dependencies:
+      - target: RelayOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: rw.shangazi.relayos.tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/RelayOS.app/Contents/MacOS/RelayOS"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  RelayOS UI Preview:
+    build:
+      targets:
+        RelayOS: all
+    run:
+      config: Debug
+      environmentVariables:
+        RELAYOS_XCODE_UI_PREVIEW: "1"
+    test:
+      config: Debug
+      targets:
+        - RelayOSTests
+      environmentVariables:
+        RELAYOS_XCODE_UI_PREVIEW: "1"
+    archive:
+      config: Release

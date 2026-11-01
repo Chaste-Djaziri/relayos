@@ -5,6 +5,8 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Added an Xcode-managed macOS app project with a dedicated safe Debug UI preview scheme, distinct .dev bundle identity, automatic code-signing controls, shared existing SwiftUI sources, and native test target; the production Python MCP deployment remains unchanged.
+- Documented Xcode signing and distribution workflows plus a staged, authorization-preserving migration roadmap for replacing Python with native Swift services.
 - Window-first W01: keep RelayOS running when the Settings window closes; move managed-process termination waits and emergency-stop confirmation off the UI thread; avoid terminating unowned ngrok processes. Added constrained configured-endpoint HTTP 401 verification when ngrok's local inspector is unavailable, with regression tests.
 - Window-first W02: replace heuristic macOS privilege badges with honest permission observations and a separate floating permission guide with an optional draggable signed-app icon, Finder fallback, privacy-pane navigation, and refresh after returning to the app.
 - Window-first W03: confirm folder-permission revocations, run them off the UI thread, keep the ngrok tunnel alive when saving tool settings, identify stored OAuth grants as authorizations, and extend sidebar keyword search and motion/accessibility behavior.
