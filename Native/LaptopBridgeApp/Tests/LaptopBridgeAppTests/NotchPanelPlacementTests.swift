@@ -42,6 +42,12 @@ final class NotchPanelPlacementTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(NotchPanelCoordinator.hoverCollapseDelayMilliseconds, 600)
     }
 
+    func testApprovalIsAFirstClassNotchDestination() {
+        XCTAssertEqual(NotchSubpage.approvals.title, "Approve")
+        XCTAssertEqual(NotchSubpage.approvals.icon, "checkmark.shield.fill")
+        XCTAssertGreaterThanOrEqual(NotchPanelPhase.expanded.trayHeight, 170)
+    }
+
     func testLiveActivityCollapsedRevealsLeftAndRightStatusWings() {
         let idle = notch(.collapsed, hasLiveActivity: false)
         let active = notch(.collapsed, hasLiveActivity: true)
