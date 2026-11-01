@@ -241,7 +241,7 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 
 ## Xcode ownership and Swift migration — 2026-11-01
 - [x] Add native macOS XcodeGen project specification under `Native/LaptopBridgeApp/project.yml`.
-- [x] Generate `RelayOS.xcodeproj` with Release app identity `rw.shangazi.relayos` and isolated Debug identity `rw.shangazi.relayos.dev`.
+- [x] Generate `RelayOS.xcodeproj` with Release app identity `rw.shangazi.relayos` and isolated Debug identity `pro.micorp.relayos`.
 - [x] Add safe Debug-only UI showcase and retain existing `#Preview` fixtures without starting the production MCP service.
 - [x] Keep SwiftPM regression tests passing and document signing workflows.
 - [ ] Validate native `xcodebuild` Debug target and test scheme end to end.

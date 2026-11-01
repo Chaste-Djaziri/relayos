@@ -583,7 +583,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = rw.shangazi.relayos.dev;
+				PRODUCT_BUNDLE_IDENTIFIER = pro.micorp.relayos;
 				PRODUCT_MODULE_NAME = LaptopBridgeApp;
 				PRODUCT_NAME = RelayOS;
 				SDKROOT = macosx;

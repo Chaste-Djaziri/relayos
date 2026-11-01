@@ -17,7 +17,7 @@ The project uses the existing app implementation, not a copied set of files. Do 
 
 ## Signing and system permissions
 
-- The Xcode Debug bundle uses `rw.shangazi.relayos.dev` and shows an **inert demo window**. It neither takes the production instance lock nor starts the MCP server or ngrok.
+- The Xcode Debug bundle uses `pro.micorp.relayos` and shows an **inert demo window**. It neither takes the production instance lock nor starts the MCP server or ngrok.
 - The Release bundle identifier matches the existing installed production app: `rw.shangazi.relayos`. **Do not run or install an Xcode Release build over the real app yet**: it does not bundle the Python runtime helpers.
 - Keep a consistent signing team and certificate on successive builds. Ad-hoc signing may cause macOS screen-recording and accessibility permissions to be reported as missing after replacement.
 - **Do not grant Full Disk Access to the Debug UI preview** just to experiment with appearance settings.

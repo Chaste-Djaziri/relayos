@@ -42,7 +42,7 @@ targets:
         SWIFT_EMIT_LOC_STRINGS: YES
       configs:
         Debug:
-          PRODUCT_BUNDLE_IDENTIFIER: rw.shangazi.relayos.dev
+          PRODUCT_BUNDLE_IDENTIFIER: pro.micorp.relayos
           ENABLE_PREVIEWS: YES
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: rw.shangazi.relayos
