@@ -440,14 +440,12 @@ struct SettingsToggle: View {
 
     var body: some View {
         Button {
-            withAnimation(.spring(response: 0.24, dampingFraction: 0.72)) {
-                isOn.toggle()
-            }
+            isOn.toggle()
         } label: {
             ZStack {
                 Capsule()
                     .fill(isOn ? tintColor : offColor)
-                    .frame(width: 40, height: 23)
+                    .frame(width: 42, height: 24)
                     .overlay(
                         Capsule()
                             .stroke(isOn ? tintColor.opacity(0.85) : Color(white: 0.32), lineWidth: 0.8)
@@ -455,12 +453,13 @@ struct SettingsToggle: View {
 
                 Circle()
                     .fill(Color.white)
-                    .frame(width: 17, height: 17)
-                    .shadow(color: Color.black.opacity(0.35), radius: 1.5, x: 0, y: 1)
-                    .frame(maxWidth: 40, alignment: isOn ? .trailing : .leading)
-                    .padding(.horizontal, 3)
+                    .frame(width: 18, height: 18)
+                    .shadow(color: Color.black.opacity(0.25), radius: 2, x: 0, y: 1)
+                    .offset(x: isOn ? 9 : -9)
             }
-            .frame(width: 40, height: 23)
+            .frame(width: 42, height: 24)
+            .contentShape(Capsule())
+            .animation(.spring(response: 0.22, dampingFraction: 0.82), value: isOn)
         }
         .buttonStyle(.plain)
     }
@@ -475,14 +474,12 @@ struct SleekSwitchToggleStyle: ToggleStyle {
             configuration.label
             Spacer()
             Button {
-                withAnimation(.spring(response: 0.24, dampingFraction: 0.72)) {
-                    configuration.isOn.toggle()
-                }
+                configuration.isOn.toggle()
             } label: {
                 ZStack {
                     Capsule()
                         .fill(configuration.isOn ? tint : offColor)
-                        .frame(width: 40, height: 23)
+                        .frame(width: 42, height: 24)
                         .overlay(
                             Capsule()
                                 .stroke(configuration.isOn ? tint.opacity(0.85) : Color(white: 0.32), lineWidth: 0.8)
@@ -490,12 +487,13 @@ struct SleekSwitchToggleStyle: ToggleStyle {
 
                     Circle()
                         .fill(Color.white)
-                        .frame(width: 17, height: 17)
-                        .shadow(color: Color.black.opacity(0.35), radius: 1.5, x: 0, y: 1)
-                        .frame(maxWidth: 40, alignment: configuration.isOn ? .trailing : .leading)
-                        .padding(.horizontal, 3)
+                        .frame(width: 18, height: 18)
+                        .shadow(color: Color.black.opacity(0.25), radius: 2, x: 0, y: 1)
+                        .offset(x: configuration.isOn ? 9 : -9)
                 }
-                .frame(width: 40, height: 23)
+                .frame(width: 42, height: 24)
+                .contentShape(Capsule())
+                .animation(.spring(response: 0.22, dampingFraction: 0.82), value: configuration.isOn)
             }
             .buttonStyle(.plain)
         }
