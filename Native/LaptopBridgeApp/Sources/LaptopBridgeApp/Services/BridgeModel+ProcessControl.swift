@@ -10,9 +10,10 @@ extension BridgeModel {
         process.arguments = ["-axo", "pid=,command="]
         process.standardOutput = output
         guard (try? process.run()) != nil else { return }
+        // Read pipe data before waitUntilExit to avoid filling the 64KB pipe buffer and deadlocking
+        let data = (try? output.fileHandleForReading.readToEnd()) ?? Data()
         process.waitUntilExit()
-        guard let data = try? output.fileHandleForReading.readToEnd(),
-              let listing = String(data: data, encoding: .utf8) else { return }
+        guard let listing = String(data: data, encoding: .utf8) else { return }
         for line in listing.split(separator: "\n") {
             let parts = line.split(maxSplits: 1, whereSeparator: { $0 == " " || $0 == "\t" })
             guard parts.count == 2, let pid = Int32(parts[0]) else { continue }
