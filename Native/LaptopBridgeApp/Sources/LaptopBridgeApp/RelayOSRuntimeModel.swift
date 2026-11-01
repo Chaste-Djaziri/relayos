@@ -320,6 +320,15 @@ final class BridgeModel: ObservableObject {
         return domain
     }
 
+    private func ngrokIsConfigured() -> Bool {
+        guard let data = try? Data(contentsOf: configURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              json["active_transport"] as? String == "ngrok",
+              let ngrok = json["ngrok"] as? [String: Any]
+        else { return false }
+        return ngrok["enabled"] as? Bool ?? false
+    }
+
     private func adoptNgrokEndpoint(_ origin: String) {
         let clean = origin.trimmingCharacters(in: CharacterSet(charactersIn: "\r\n"))
         guard clean.hasPrefix("https://") else { return }
@@ -733,7 +742,11 @@ final class BridgeModel: ObservableObject {
                 self.recoverServicesIfNeeded()
             }
         }
-        if tunnel != nil, mcpHealth == .healthy, supervisor.beginTunnelProbe() {
+        // A verified tunnel can predate this app instance (for example after
+        // an app upgrade). Keep monitoring it rather than showing a healthy
+        // public endpoint as stopped solely because this process did not
+        // launch the still-valid ngrok child.
+        if mcpHealth == .healthy, ngrokIsConfigured(), supervisor.beginTunnelProbe() {
             let observedTunnel = tunnel
             let generation = supervisor.tunnelGeneration
             Task { @MainActor [weak self] in
