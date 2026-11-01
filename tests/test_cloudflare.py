@@ -20,7 +20,7 @@ def test_provision_builds_tunnel_and_dns_requests(monkeypatch):
         if path.startswith("/zones?"):
             return [{"id": "zone-1", "account": {"id": "acct-1"}}]
         if path == "/accounts/acct-1/cfd_tunnels":
-            return {"id": "tun-1", "name": "Laptop Bridge"}
+            return {"id": "tun-1", "name": "RelayOS"}
         if path.endswith("/token"):
             return "tunnel-token"
         if "/dns_records" in path:
