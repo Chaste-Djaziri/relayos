@@ -74,7 +74,8 @@ def _db():
                 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS action_history (
                     id INTEGER PRIMARY KEY, recorded_at REAL NOT NULL, kind TEXT NOT NULL,
-                    target TEXT NOT NULL, decision TEXT NOT NULL, exit_code INTEGER, duration_ms INTEGER
+                    target TEXT NOT NULL, decision TEXT NOT NULL, exit_code INTEGER, duration_ms INTEGER,
+                    detail_json TEXT
                 );
                 CREATE TABLE IF NOT EXISTS project_sessions (
                     token TEXT PRIMARY KEY, root TEXT NOT NULL, created_at REAL NOT NULL,
@@ -161,6 +162,9 @@ def _db():
                 connection.execute("ALTER TABLE requests ADD COLUMN context_json TEXT NOT NULL DEFAULT '{}'")
             if "approved_duration" not in columns:
                 connection.execute("ALTER TABLE requests ADD COLUMN approved_duration TEXT")
+            action_columns = {row["name"] for row in connection.execute("PRAGMA table_info(action_history)")}
+            if "detail_json" not in action_columns:
+                connection.execute("ALTER TABLE action_history ADD COLUMN detail_json TEXT")
             # Family grants intentionally store NULL argv_digest. Only recognized
             # families are valid; do not treat them as legacy executable-wide
             # grants during initialization in a separate approval-helper process.
@@ -229,9 +233,18 @@ def _expire(connection, now):
     connection.execute("DELETE FROM desktop_jobs WHERE created_at < ?", (now - JOB_TTL,))
 
 
-def _record(connection, kind, target, decision, exit_code=None, duration_ms=None):
+def _record(connection, kind, target, decision, exit_code=None, duration_ms=None, detail=None):
     now = time.time()
-    connection.execute("INSERT INTO action_history (recorded_at, kind, target, decision, exit_code, duration_ms) VALUES (?, ?, ?, ?, ?, ?)", (now, kind, target, decision, exit_code, duration_ms))
+    detail_json = None
+    if detail is not None:
+        if isinstance(detail, (dict, list)):
+            detail_json = json.dumps(detail)
+        else:
+            detail_json = str(detail)
+    connection.execute(
+        "INSERT INTO action_history (recorded_at, kind, target, decision, exit_code, duration_ms, detail_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (now, kind, target, decision, exit_code, duration_ms, detail_json),
+    )
     connection.execute("DELETE FROM action_history WHERE recorded_at < ?", (now - HISTORY_RETENTION,))
 
 
@@ -307,7 +320,7 @@ def _decide(token, status, duration="once"):
         connection.execute("BEGIN IMMEDIATE")
         now = time.time()
         _expire(connection, now)
-        row = connection.execute("SELECT kind, target, status FROM requests WHERE token = ?", (token,)).fetchone()
+        row = connection.execute("SELECT kind, target, status, argv_json, context_json FROM requests WHERE token = ?", (token,)).fetchone()
         if row is not None and status == "approved" and row["status"] == "approved":
             connection.commit()
             return
@@ -342,9 +355,9 @@ def consume(token):
     return {"kind": row["kind"], "details": {"target": row["target"], "argv": json.loads(row["argv_json"]), "context": json.loads(row["context_json"] or "{}")}, "approved_duration": row["approved_duration"] or "once"}
 
 
-def record_result(kind, target, exit_code=None, duration_ms=None):
+def record_result(kind, target, exit_code=None, duration_ms=None, detail=None):
     with _db() as connection:
-        _record(connection, kind, target, "executed", exit_code, duration_ms)
+        _record(connection, kind, target, "executed", exit_code, duration_ms, detail=detail)
 
 
 def pending_requests():
@@ -407,16 +420,16 @@ def decide_inbox_request(request_id, decision):
 
 
 def approval_activity(limit=100, search=""):
-    """Persisted, metadata-only audit entries, bounded and searchable."""
+    """Persisted, detailed audit entries, bounded and searchable."""
     limit = max(1, min(int(limit), 300))
     with _db() as connection:
         clauses = ""
         values = []
         if search:
-            clauses = " WHERE (instr(lower(kind), lower(?)) > 0 OR instr(lower(target), lower(?)) > 0 OR instr(lower(decision), lower(?)) > 0)"
-            values = [search[:120]] * 3
+            clauses = " WHERE (instr(lower(kind), lower(?)) > 0 OR instr(lower(target), lower(?)) > 0 OR instr(lower(decision), lower(?)) > 0 OR instr(lower(coalesce(detail_json, '')), lower(?)) > 0)"
+            values = [search[:120]] * 4
         rows = connection.execute(
-            """SELECT id, recorded_at, kind, target, decision, exit_code, duration_ms
+            """SELECT id, recorded_at, kind, target, decision, exit_code, duration_ms, detail_json
                FROM action_history""" + clauses +
             " ORDER BY recorded_at DESC, id DESC LIMIT ?",
             (*values, limit),
@@ -424,8 +437,7 @@ def approval_activity(limit=100, search=""):
     return [dict(row) for row in rows]
 
 
-def create_command_job(session_id, project_root, cwd, executable_name):
-    """Persist metadata only; never persist argv, tokens or command output."""
+def create_command_job(session_id, project_root, cwd, executable_name, argv=None):
     job_id = secrets.token_urlsafe(18)
     with _db() as connection:
         connection.execute("BEGIN IMMEDIATE")
@@ -438,7 +450,16 @@ def create_command_job(session_id, project_root, cwd, executable_name):
                VALUES (?, ?, ?, ?, ?, 'queued', ?)""",
             (job_id, session_id, project_root, cwd, executable_name, now),
         )
-        _record(connection, "command_job", project_root, "queued")
+        cmd_str = " ".join(argv) if argv else executable_name
+        target = f"{project_root}:{cmd_str}"
+        detail = {
+            "argv": argv or [executable_name],
+            "command": cmd_str,
+            "working_directory": cwd,
+            "executable": executable_name,
+            "job_id": job_id,
+        }
+        _record(connection, "command_job", target, "queued", detail=detail)
         connection.commit()
     return job_id
 
@@ -538,7 +559,7 @@ def interrupt_orphan_command_jobs():
 
 def recent_history(limit=100):
     with _db() as connection:
-        rows = connection.execute("SELECT recorded_at, kind, target, decision, exit_code, duration_ms FROM action_history ORDER BY recorded_at DESC LIMIT ?", (limit,)).fetchall()
+        rows = connection.execute("SELECT recorded_at, kind, target, decision, exit_code, duration_ms, detail_json FROM action_history ORDER BY recorded_at DESC LIMIT ?", (limit,)).fetchall()
     return [dict(row) for row in rows]
 
 
