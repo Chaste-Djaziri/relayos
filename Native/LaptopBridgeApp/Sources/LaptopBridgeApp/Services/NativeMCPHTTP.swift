@@ -1,6 +1,7 @@
 // Path: Native/LaptopBridgeApp/Sources/LaptopBridgeApp/Services/NativeMCPHTTP.swift
 import Foundation
 import Network
+import MCP
 
 /// Experimental, read-only in-process MCP transport.
 /// It is NOT production-compatible until OAuth registration, authorization and
@@ -67,7 +68,7 @@ struct NativeMCPHTTP {
         switch name {
         case "initialize":
             return response(id, [
-                "protocolVersion": "2025-11-25",
+                "protocolVersion": Version.latest,
                 "capabilities": ["tools": [:]],
                 "serverInfo": ["name": "RelayOS Native (experimental)",
                                "version": "0.1.0"]
