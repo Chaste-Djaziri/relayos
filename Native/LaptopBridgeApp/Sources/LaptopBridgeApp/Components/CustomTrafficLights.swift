@@ -21,6 +21,7 @@ struct CustomTrafficLights: View {
                     )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Close settings window")
 
             Button {
                 NSApp.keyWindow?.miniaturize(nil) ?? NSApp.windows.first(where: { $0.title == "RelayOS" })?.miniaturize(nil)
@@ -37,6 +38,7 @@ struct CustomTrafficLights: View {
                     )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Minimize window")
 
             Button {
                 NSApp.keyWindow?.zoom(nil) ?? NSApp.windows.first(where: { $0.title == "RelayOS" })?.zoom(nil)
@@ -53,6 +55,7 @@ struct CustomTrafficLights: View {
                     )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Zoom window")
         }
         .onHover { isHovering = $0 }
     }

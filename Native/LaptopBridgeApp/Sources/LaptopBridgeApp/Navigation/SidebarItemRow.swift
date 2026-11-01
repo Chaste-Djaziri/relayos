@@ -8,6 +8,7 @@ struct SidebarItemRow: View {
     let action: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @AppStorage(RelayOSTheme.accentKey) private var accent = "blue"
     @AppStorage(RelayOSTheme.fontSizeKey) private var userFontSize = 14.0
     @AppStorage(RelayOSTheme.reduceMotionKey) private var reduceMotion = false
@@ -54,8 +55,10 @@ struct SidebarItemRow: View {
             .background(backgroundShape)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
         .onHover { isHovered = $0 }
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.12), value: isSelected)
+        .animation((reduceMotion || systemReduceMotion) ? nil : .easeInOut(duration: 0.12), value: isSelected)
     }
 
     private var iconColor: Color {

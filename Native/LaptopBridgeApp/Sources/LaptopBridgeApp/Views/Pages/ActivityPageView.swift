@@ -4,6 +4,7 @@ import AppKit
 struct ActivityHistoryView: View {
     @ObservedObject var model: BridgeModel
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @AppStorage(RelayOSTheme.reduceMotionKey) private var reduceMotion = false
     @State private var search = ""
     @State private var selectedActivity: ApprovalActivityEntry? = nil
@@ -85,7 +86,7 @@ struct ActivityHistoryView: View {
                 SettingsCard(title: "Activity Log (\(filteredActivity.count))") {
                     ForEach(Array(filteredActivity.enumerated()), id: \.element.id) { index, event in
                         Button {
-                            if reduceMotion {
+                            if reduceMotion || systemReduceMotion {
                                 selectedActivity = event
                             } else {
                                 withAnimation(.easeInOut(duration: 0.16)) {

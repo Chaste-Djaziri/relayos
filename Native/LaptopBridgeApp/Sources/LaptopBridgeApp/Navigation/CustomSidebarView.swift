@@ -79,7 +79,7 @@ struct CustomSidebarView: View {
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
-                    let filteredGeneral = generalItems.filter { matchesSearch($0.title) }
+                    let filteredGeneral = generalItems.filter { matchesSearch($0) }
                     if !filteredGeneral.isEmpty {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("General")
@@ -100,7 +100,7 @@ struct CustomSidebarView: View {
                         }
                     }
 
-                    let filteredAccess = accessItems.filter { matchesSearch($0.title) }
+                    let filteredAccess = accessItems.filter { matchesSearch($0) }
                     if !filteredAccess.isEmpty {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Integrations & Approvals")
@@ -122,7 +122,7 @@ struct CustomSidebarView: View {
                         }
                     }
 
-                    let filteredTools = toolItems.filter { matchesSearch($0.title) }
+                    let filteredTools = toolItems.filter { matchesSearch($0) }
                     if !filteredTools.isEmpty {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Execution & Tools")
@@ -157,7 +157,24 @@ struct CustomSidebarView: View {
         }
     }
 
-    private func matchesSearch(_ text: String) -> Bool {
-        searchText.isEmpty || text.localizedCaseInsensitiveContains(searchText)
+    private func matchesSearch(_ item: SidebarItemModel) -> Bool {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return true }
+        let keywords: String
+        switch item.tab {
+        case .general: keywords = "endpoint connection public mcp local restart notifications sound"
+        case .appearance: keywords = "theme light dark color typography font size reduce motion translucent"
+        case .security: keywords = "emergency stop revocation safety"
+        case .systemPermissions: keywords = "screen recording full disk access accessibility apple events files privacy"
+        case .approvals: keywords = "once session always deny pending"
+        case .activity: keywords = "audit history executed errors logs"
+        case .connections: keywords = "oauth client authorized mcp endpoint"
+        case .ngrok: keywords = "transport tunnel public connecting stopped"
+        case .tools: keywords = "capabilities project tools folder grants"
+        case .commandPermissions: keywords = "git grant executable command scope"
+        case .terminalJobs: keywords = "stdout stderr progress cancel background jobs"
+        }
+        return item.title.localizedCaseInsensitiveContains(query) ||
+            keywords.localizedCaseInsensitiveContains(query)
     }
 }

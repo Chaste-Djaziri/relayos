@@ -6,6 +6,7 @@ struct SettingsToggle: View {
     var offColor: Color? = nil
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @AppStorage(RelayOSTheme.accentKey) private var accent = "blue"
     @AppStorage(RelayOSTheme.reduceMotionKey) private var reduceMotion = false
 
@@ -45,11 +46,14 @@ struct SettingsToggle: View {
             .frame(width: 42, height: 24)
             .contentShape(Capsule())
             .animation(
-                reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.82),
+                (reduceMotion || systemReduceMotion) ? nil : .spring(response: 0.22, dampingFraction: 0.82),
                 value: isOn
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Setting")
+        .accessibilityValue(isOn ? "On" : "Off")
+        .accessibilityAddTraits(.isButton)
     }
 }
 

@@ -8,6 +8,7 @@ struct SettingsCollapsibleCard<Content: View>: View {
     let content: Content
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @AppStorage(RelayOSTheme.fontSizeKey) private var userFontSize = 14.0
     @AppStorage(RelayOSTheme.reduceMotionKey) private var reduceMotion = false
 
@@ -34,7 +35,7 @@ struct SettingsCollapsibleCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
-                if reduceMotion {
+                if reduceMotion || systemReduceMotion {
                     isExpanded.toggle()
                 } else {
                     withAnimation(.spring(response: 0.25, dampingFraction: 0.82)) {
