@@ -341,3 +341,12 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Xcode Debug build and Swift tests pass.
 - [ ] Manually validate real player Automation permissions, Spotify artwork and seek on a signed development bundle.
 - [ ] Additional apps and browser playback require a separate supported adapter; system-wide metadata is not exposed by Apple's public player APIs.
+
+## macOS Control Center media and AirPlay compatibility — 2026-11-01
+- [x] Separate Apple Music and Spotify automation dictionary terms and show actionable failure diagnostics.
+- [x] Add user-approved global media-key fallback (play/pause, previous, next) via macOS Accessibility; no permission is auto-requested.
+- [x] Add native AVRoutePickerView (app media routes) and system-wide output-device Settings shortcut.
+- [x] Preserve previous Music metadata/progress controls and all Python-backed MCP functionality.
+- [ ] Verify Automation and Accessibility consent manually in a signed development bundle.
+- [ ] Verify real AirPlay outputs and system media-key delivery with a supported receiver/player.
+- [ ] Do not mark universal Control Center metadata as supported; the system MediaRemote reader is private and Apple-restricted on modern macOS.

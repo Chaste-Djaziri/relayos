@@ -135,3 +135,45 @@ Automated tests cover metadata parsing, unit conversion, missing timing,
 position interpolation, pause behavior and duration clamping. Real-player
 Automation consent and transport behavior require testing in a signed local
 build, not just Xcode compilation.
+
+## System playback and audio routing refinement — 2026-11-01
+
+The macOS Control Center obtains **system-wide** Now Playing metadata from an
+Apple-managed service. macOS 15.4+ restricts third-party processes from
+accessing the private MediaRemote client; the public Now Playing APIs publish
+**your own app's playback**, not another app's metadata. RelayOS does not inject
+code into macOS daemons, borrow privileged Apple process entitlements, disable
+SIP, or claim universal Control Center metadata access.
+
+Music/Spotify are read through their supported AppleScript dictionaries.
+The adapters no longer compile Spotify-specific artwork terminology into a
+Music script; they report Automation failures and distinguish stopped players
+from an unsupported browser playback source. Grant the signed RelayOS app
+Automation permissions in **System Settings → Privacy & Security → Automation**
+when prompted. Permissions are specific to the signing identity and app.
+
+The music tray additionally has:
+
+- **Previous, play/pause, next:** target the discovered supported player; when
+  no supported player is detected, use user-approved macOS Accessibility
+  **media-key events** targeting the current system media session. Enable this
+  only by clicking **Enable media keys** in the notch and granting RelayOS
+  Accessibility permissions in System Settings. A media-key event may work
+  for browser playback even when title/artist cannot be read.
+- **AirPlay icon:** an Apple `AVRoutePickerView` system-provided destination
+  picker, meant for app-associated media routes. It is not a guaranteed
+  global output switch for other applications.
+- **System output:** opens the macOS Sound Settings pane so the person can
+  select the Mac's actual output device, including available AirPlay targets.
+- **Metadata diagnostics:** clear reasons when no supported player is
+  running, AppleScript reads fail, or macOS Automation access is denied.
+
+### Remaining compatibility gaps
+
+Real browser/system-wide media metadata, album art and scrub position are
+**not available to ordinary third-party apps through an Apple-supported
+system-wide reader**. RelayOS shows an honest empty state rather than fabricated
+Control Center data. Capturing Control Center's visible UI with Accessibility
+would be unreliable and require explicit consent and interaction; it is not
+silently scraped. Playback and AirPlay need real signed-app/manual QA with
+system and supported third-party apps.
