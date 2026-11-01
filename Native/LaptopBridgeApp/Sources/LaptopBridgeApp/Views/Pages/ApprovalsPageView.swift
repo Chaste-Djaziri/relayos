@@ -65,7 +65,7 @@ struct ApprovalCenterView: View {
                     Text("No pending approvals")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(theme.textPrimary)
-                    Text("New local command and MCP connection requests from AI clients will appear here for your review.")
+                    Text("New command, connection, and screen sharing requests from AI clients will appear here for your review.")
                         .font(.system(size: 12))
                         .foregroundStyle(theme.textSecondary)
                         .multilineTextAlignment(.center)
@@ -90,7 +90,7 @@ struct ApprovalCenterView: View {
                         }
 
                         SettingsCardRow(
-                            title: "Target & Working Directory",
+                            title: item.isScreenCapture ? "Exact screen sharing target" : "Target & Working Directory",
                             subtitle: item.context.cwd != nil ? "Dir: \(item.context.cwd!)" : item.target
                         ) {
                             Text(item.target)

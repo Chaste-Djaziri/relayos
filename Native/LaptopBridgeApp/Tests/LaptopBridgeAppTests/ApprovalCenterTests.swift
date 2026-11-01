@@ -17,6 +17,20 @@ final class ApprovalCenterTests: XCTestCase {
         XCTAssertFalse(item.isOAuth)
     }
 
+    func testScreenCaptureApprovalIsExplicitAndTargeted() throws {
+        let json = """
+        {"request_id":"capture-1","kind":"screen_capture","target":"app:com.apple.Safari",
+         "argv":[],"context":{"capture_scope":"app","capture_target":"com.apple.Safari"},
+         "created_at":100,"expires_at":400}
+        """
+        let item = try JSONDecoder().decode(ApprovalInboxItem.self, from: Data(json.utf8))
+        XCTAssertTrue(item.isScreenCapture)
+        XCTAssertFalse(item.isOAuth)
+        XCTAssertEqual(item.title, "Share screenshot: app:com.apple.Safari")
+        XCTAssertTrue(item.scopeDescription.contains("Approve Once or Deny"))
+        XCTAssertTrue(item.scopeDescription.contains("no continuous sharing"))
+    }
+
     @MainActor
     func testArrivalTrackerSuppressesRepeatedPollNotifications() throws {
         let request = """

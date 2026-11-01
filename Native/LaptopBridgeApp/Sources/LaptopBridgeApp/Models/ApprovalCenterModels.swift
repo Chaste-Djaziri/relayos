@@ -35,6 +35,7 @@ struct ApprovalInboxItem: Decodable, Identifiable, Equatable {
 
     var title: String {
         if isOAuth { return "Connect \(target)" }
+        if isScreenCapture { return "Share screenshot: \(target)" }
         if let scope = context.scopePrefix, !scope.isEmpty { return scope.joined(separator: " ") }
         if context.commandFamily == "git:add" { return "git add" }
         if let first = argv.first { return URL(fileURLWithPath: first).lastPathComponent }

@@ -385,3 +385,9 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Add Python security tests and compile-time Swift tests for the native target.
 - [ ] Manually verify the signed helper's Screen Recording consent attribution, actual window/app/display content and image rendering in ChatGPT.
 - [ ] Streaming, repeated refresh, app management, and computer control are separate opt-in milestones.
+
+## On-demand screenshot sharing UI refinement — 2026-11-01
+- [x] Make the existing ScreenCaptureKit sharing feature discoverable under Tools & permissions, with a per-image Once approval explanation and Save tool settings action.
+- [x] Clarify the exact image target in the local Approval Inbox and provide Swift decoding regression coverage.
+- [x] Swift test, focused Python authorization tests and git diff checks pass.
+- [ ] Build a stable-signed production bundle and verify screen capture on the actual Mac after local macOS consent; reconnect the ChatGPT connector to refresh MCP tools.

@@ -17,8 +17,15 @@ struct ToolsPageView: View {
                 }
 
                 SettingsCardRow(
+                    title: "On-demand screen sharing",
+                    subtitle: "Allow AI clients to request one screenshot of an app, window or display. Each image requires a local Once approval; no streaming."
+                ) {
+                    SettingsToggle(isOn: $model.screenGuidance)
+                }
+
+                SettingsCardRow(
                     title: "Persist configuration",
-                    subtitle: "Save tool preferences to disk",
+                    subtitle: "Save preferences and reload MCP without restarting ngrok. Reconnect ChatGPT to discover enabled tools.",
                     showDivider: false
                 ) {
                     SettingsButton(title: "Save tool settings", style: .secondary) {

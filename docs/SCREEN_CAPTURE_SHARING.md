@@ -15,9 +15,11 @@ or continuous video streaming. ChatGPT can request one capture of:
 
 ## Authorization and delivery
 
-1. Enable **Screen Guidance** under RelayOS capabilities and restart its MCP
-   service so the newly enabled tools are advertised. Existing permissions to
-   run project commands or connect the MCP client **never grant screen access**.
+1. In RelayOS, open **Tools & permissions** and enable **On-demand screen sharing**.
+   Click **Save tool settings**. RelayOS reloads the MCP service while keeping
+   the configured ngrok tunnel. Reconnect the ChatGPT RelayOS connector to
+   discover the two new tools. Existing project or connection permissions
+   **never grant screen access**.
 2. ChatGPT calls `request_screen_capture(scope, target)`. RelayOS queues a
    local `screen_capture` request with the exact scope and target. At this step
    no image is captured.
