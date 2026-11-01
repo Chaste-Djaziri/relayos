@@ -257,7 +257,7 @@ extension BridgeModel {
                 let result = await self.tunnelMonitor.probe()
                 guard self.shouldMaintainServices,
                       SingleInstanceCoordinator.shared.ownsLock,
-                      self.tunnel === observedTunnel,
+                      (observedTunnel == nil || self.tunnel === observedTunnel),
                       self.supervisor.finishTunnelProbe(result.status, generation: generation)
                 else { return }
                 self.tunnelHealth = result.status
