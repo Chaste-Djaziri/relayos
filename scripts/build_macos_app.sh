@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-APP_NAME="Laptop Bridge"
+APP_NAME="RelayOS"
 DIST_DIR="${DIST_DIR:-dist}"
 SIGNING_IDENTITY="${LAPTOP_BRIDGE_SIGNING_IDENTITY:-}"
 NOTARY_PROFILE="${LAPTOP_BRIDGE_NOTARY_PROFILE:-}"
@@ -29,8 +29,8 @@ rm -rf "build/${APP_NAME}" "${DIST_DIR}/${APP_NAME}.app"
   packaging/desktop_entry.py
 
 APP_PATH="${DIST_DIR}/${APP_NAME}.app"
-/usr/libexec/PlistBuddy -c "Add :NSScreenCaptureUsageDescription string Laptop Bridge captures the active display only when you explicitly request screen guidance." "${APP_PATH}/Contents/Info.plist" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c "Add :NSAccessibilityUsageDescription string Laptop Bridge uses Accessibility only for its click-through overlay and pointer observation; it never injects input." "${APP_PATH}/Contents/Info.plist" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add :NSScreenCaptureUsageDescription string RelayOS captures the active display only when you explicitly request screen guidance." "${APP_PATH}/Contents/Info.plist" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add :NSAccessibilityUsageDescription string RelayOS uses Accessibility only for its click-through overlay and pointer observation; it never injects input." "${APP_PATH}/Contents/Info.plist" 2>/dev/null || true
 if [ -n "${SIGNING_IDENTITY}" ]; then
   codesign --deep --force --options runtime --timestamp \
     --entitlements packaging/macos.entitlements \
