@@ -38,7 +38,7 @@ struct RelayOSApp: App {
     var body: some Scene {
         Window("RelayOS", id: "main") {
             DesktopWindowView(model: model)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(RelayOSTheme.scheme(appearance))
                 .tint(RelayOSTheme.accent(accent))
                 .environment(\.font, .system(size: uiFontSize))
                 .frame(minWidth: 920, minHeight: 620)
