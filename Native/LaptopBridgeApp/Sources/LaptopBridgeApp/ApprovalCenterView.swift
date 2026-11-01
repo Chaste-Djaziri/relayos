@@ -269,6 +269,140 @@ struct ActivityHistoryView: View {
                 )
             }
 
+            if let details = event.details, let diff = details.diff, !diff.isEmpty {
+                SettingsCard(title: "Code Changes & Diff") {
+                    SettingsCardRow(
+                        title: details.path ?? "File Diff",
+                        subtitle: "\(details.linesAdded ?? 0) lines added, \(details.linesRemoved ?? 0) lines removed"
+                    ) {
+                        HStack(spacing: 8) {
+                            if let added = details.linesAdded, added > 0 {
+                                Text("+\(added)")
+                                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(Color(red: 0.40, green: 0.88, blue: 0.50))
+                            }
+                            if let removed = details.linesRemoved, removed > 0 {
+                                Text("-\(removed)")
+                                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(Color(red: 0.95, green: 0.45, blue: 0.45))
+                            }
+                            SettingsButton(title: "Copy Diff", icon: "doc.on.doc", style: .secondary) {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(diff, forType: .string)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        DiffView(diff: diff)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 14)
+                }
+            }
+
+            if let details = event.details, (details.command != nil || details.argv != nil) {
+                let cmd = details.command ?? details.argv?.joined(separator: " ") ?? ""
+                SettingsCard(title: "Exact Command Execution") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("Command")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color(white: 0.7))
+                            Spacer()
+                            SettingsButton(title: "Copy Command", icon: "doc.on.doc", style: .secondary) {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(cmd, forType: .string)
+                            }
+                        }
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            Text(cmd)
+                                .font(.system(size: 11.5, design: .monospaced))
+                                .foregroundStyle(Color(red: 0.45, green: 0.80, blue: 1.0))
+                                .padding(10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .background(Color(white: 0.12), in: RoundedRectangle(cornerRadius: 6))
+                        .textSelection(.enabled)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                    .padding(.bottom, 12)
+
+                    if let dir = details.workingDirectory ?? event.parsedProjectDirectory {
+                        SettingsCardRow(
+                            title: "Working Directory",
+                            subtitle: dir,
+                            showDivider: false
+                        ) {
+                            SettingsButton(title: "Copy Path", icon: "doc.on.doc", style: .secondary) {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(dir, forType: .string)
+                            }
+                        }
+                    }
+                }
+            }
+
+            if let details = event.details, let stdout = details.stdout, !stdout.isEmpty {
+                SettingsCard(title: "Standard Output") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Output Preview")
+                                .font(.system(size: 11.5))
+                                .foregroundStyle(Color(white: 0.6))
+                            Spacer()
+                            SettingsButton(title: "Copy Output", icon: "doc.on.doc", style: .secondary) {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(stdout, forType: .string)
+                            }
+                        }
+
+                        ScrollView(.vertical, showsIndicators: true) {
+                            Text(stdout)
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(Color(white: 0.85))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(10)
+                        }
+                        .frame(maxHeight: 180)
+                        .background(Color(white: 0.12), in: RoundedRectangle(cornerRadius: 6))
+                        .textSelection(.enabled)
+                    }
+                    .padding(14)
+                }
+            }
+
+            if let details = event.details, let stderr = details.stderr, !stderr.isEmpty {
+                SettingsCard(title: "Standard Error") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Error Output")
+                                .font(.system(size: 11.5))
+                                .foregroundStyle(Color.red.opacity(0.8))
+                            Spacer()
+                            SettingsButton(title: "Copy Error", icon: "doc.on.doc", style: .secondary) {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(stderr, forType: .string)
+                            }
+                        }
+
+                        ScrollView(.vertical, showsIndicators: true) {
+                            Text(stderr)
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(Color(red: 1.0, green: 0.5, blue: 0.5))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(10)
+                        }
+                        .frame(maxHeight: 180)
+                        .background(Color(red: 0.25, green: 0.08, blue: 0.08).opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+                        .textSelection(.enabled)
+                    }
+                    .padding(14)
+                }
+            }
+
             SettingsCard(title: "Activity Summary") {
                 SettingsCardRow(
                     title: "Event",
@@ -393,6 +527,81 @@ struct ActivityHistoryView: View {
     }
 }
 
+struct DiffView: View {
+    let diff: String
+
+    private struct DiffLine: Identifiable {
+        let id: Int
+        let text: String
+        let type: LineType
+
+        enum LineType {
+            case fileHeader, hunkHeader, addition, deletion, context
+        }
+
+        var foregroundColor: Color {
+            switch type {
+            case .fileHeader: return Color(white: 0.70)
+            case .hunkHeader: return Color(red: 0.55, green: 0.75, blue: 0.95)
+            case .addition: return Color(red: 0.40, green: 0.88, blue: 0.50)
+            case .deletion: return Color(red: 0.95, green: 0.45, blue: 0.45)
+            case .context: return Color(white: 0.80)
+            }
+        }
+
+        var backgroundColor: Color {
+            switch type {
+            case .fileHeader: return Color(white: 0.16)
+            case .hunkHeader: return Color(red: 0.15, green: 0.25, blue: 0.35).opacity(0.4)
+            case .addition: return Color(red: 0.15, green: 0.45, blue: 0.20).opacity(0.25)
+            case .deletion: return Color(red: 0.50, green: 0.15, blue: 0.15).opacity(0.25)
+            case .context: return Color.clear
+            }
+        }
+    }
+
+    private var parsedLines: [DiffLine] {
+        diff.components(separatedBy: "\n").enumerated().map { index, line in
+            let type: DiffLine.LineType
+            if line.hasPrefix("+++") || line.hasPrefix("---") {
+                type = .fileHeader
+            } else if line.hasPrefix("@@") {
+                type = .hunkHeader
+            } else if line.hasPrefix("+") {
+                type = .addition
+            } else if line.hasPrefix("-") {
+                type = .deletion
+            } else {
+                type = .context
+            }
+            return DiffLine(id: index, text: line, type: type)
+        }
+    }
+
+    var body: some View {
+        ScrollView([.horizontal, .vertical], showsIndicators: true) {
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(parsedLines) { line in
+                    HStack(spacing: 0) {
+                        Text(line.text.isEmpty ? " " : line.text)
+                            .font(.system(size: 11.5, weight: .regular, design: .monospaced))
+                            .foregroundStyle(line.foregroundColor)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 1.5)
+                    .background(line.backgroundColor)
+                    .cornerRadius(2)
+                }
+            }
+            .padding(.vertical, 6)
+        }
+        .frame(maxHeight: 280)
+        .background(Color(white: 0.10), in: RoundedRectangle(cornerRadius: 6))
+        .textSelection(.enabled)
+    }
+}
+
 private struct ActivitySummaryRow: View {
     let event: ApprovalActivityEntry
     let showDivider: Bool
@@ -416,13 +625,31 @@ private struct ActivitySummaryRow: View {
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.white)
 
+                        if let details = event.details, (details.linesAdded != nil || details.linesRemoved != nil) {
+                            HStack(spacing: 4) {
+                                if let added = details.linesAdded, added > 0 {
+                                    Text("+\(added)")
+                                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                        .foregroundStyle(Color(red: 0.40, green: 0.88, blue: 0.50))
+                                }
+                                if let removed = details.linesRemoved, removed > 0 {
+                                    Text("-\(removed)")
+                                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                        .foregroundStyle(Color(red: 0.95, green: 0.45, blue: 0.45))
+                                }
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color(white: 0.15), in: RoundedRectangle(cornerRadius: 4))
+                        }
+
                         Text(Date(timeIntervalSince1970: event.recordedAt).formatted(date: .abbreviated, time: .shortened))
                             .font(.system(size: 11))
                             .foregroundStyle(Color(white: 0.45))
                     }
 
                     Text(event.summarySubtitle)
-                        .font(.system(size: 11.5))
+                        .font(.system(size: 11.5, design: event.details?.command != nil ? .monospaced : .default))
                         .foregroundStyle(Color(white: 0.55))
                         .lineLimit(1)
                 }
