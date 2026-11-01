@@ -74,7 +74,6 @@ extension BridgeModel {
 
     func startServices() {
         guard SingleInstanceCoordinator.shared.ownsLock else { return }
-        stopStaleRelayOSNgrokAgents()
         shouldMaintainServices = true
         if approvalTimer == nil {
             let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
