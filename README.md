@@ -1,4 +1,4 @@
-# Laptop Bridge — Desktop Companion
+# RelayOS — Desktop Companion
 
 **Status: macOS and Windows 10/11 companion.** Python 3.11+. On first launch, the companion walks you through ngrok setup, capability choices, and client connections. Each installation gets its own HTTPS endpoint and secrets stay in the platform credential store; no project credentials are shipped.
 
@@ -60,7 +60,7 @@ The installer is written to `dist\installer\RelayOS-Setup-<version>.exe` and is 
 
 ## First-run setup and client connections
 
-Open **Setup / Reconfigure** in the companion dashboard. Enter an ngrok authtoken and a reserved ngrok domain such as `bridge.ngrok.app`. Laptop Bridge starts the ngrok agent and forwards the stable HTTPS endpoint to the loopback MCP server. The authtoken is stored only in Windows Credential Manager on Windows or macOS Keychain on macOS; non-secret configuration is kept in the per-user `.laptop-bridge/config.json` directory.
+Open **Setup / Reconfigure** in the companion dashboard. Enter an ngrok authtoken and a reserved ngrok domain such as `bridge.ngrok.app`. RelayOS starts the ngrok agent and forwards the stable HTTPS endpoint to the loopback MCP server. The authtoken is stored only in Windows Credential Manager on Windows or macOS Keychain on macOS; non-secret configuration is kept in the per-user `.laptop-bridge/config.json` directory.
 
 The wizard starts with system status only. Screen guidance and project tools are opt-in because they require additional platform permissions and explicit approval. On Windows, the app silently starts winget installation for missing ngrok and Git when winget is available; otherwise install them from their official download pages.
 
@@ -68,11 +68,11 @@ ChatGPT, Gemini, and other MCP clients use the public OAuth endpoint shown in th
 
 ### MCP client connection
 
-MCP clients require a public HTTPS Streamable HTTP endpoint. Laptop Bridge keeps its server loopback-only and uses an ngrok agent to expose it through a reserved domain.
+MCP clients require a public HTTPS Streamable HTTP endpoint. RelayOS keeps its server loopback-only and uses an ngrok agent to expose it through a reserved domain.
 
 1. Reserve a stable domain in the ngrok dashboard and create an authtoken.
-2. Enter both values in the Laptop Bridge setup wizard. The companion starts ngrok with the token supplied through the process environment.
-3. In the MCP client, enter `https://<your-domain>/mcp`. Dynamic Client Registration supplies the credentials automatically. Approve the connection in the visible Laptop Bridge companion dialog.
+2. Enter both values in the RelayOS setup wizard. The companion starts ngrok with the token supplied through the process environment.
+3. In the MCP client, enter `https://<your-domain>/mcp`. Dynamic Client Registration supplies the credentials automatically. Approve the connection in the visible RelayOS companion dialog.
 
 The public endpoint accepts only bearer tokens issued after local approval. Authorization requests require an HTTPS callback, enforce PKCE and the single `mcp` scope, issue one-hour access tokens, rotate refresh tokens, and expire the connection after 30 days. Use **Disconnect** in the companion's Connected MCP Clients section, or Emergency Stop, to revoke it immediately.
 
@@ -80,7 +80,7 @@ The public endpoint accepts only bearer tokens issued after local approval. Auth
 
 The JSON configuration and SQLite state can be imported explicitly with `scripts/migrate_windows_state.ps1 -Source <copied-macOS-state-folder>`. This never copies Keychain data, never imports an ngrok token, and always requires Windows onboarding to enter the token into Windows Credential Manager.
 
-To create a Finder-launchable app, run `./scripts/build_macos_app.sh` and open `dist/Laptop Bridge.app`.
+To create a Finder-launchable app, run `./scripts/build_macos_app.sh` and open `dist/RelayOS.app`.
 
 ## Native macOS companion (preview)
 
@@ -96,11 +96,11 @@ The native target currently supervises the existing Python MCP/OAuth listener on
 
 ## macOS Screen Recording Permissions
 
-Screen capture requires the user to grant macOS Screen Recording permission to Laptop Bridge (or your terminal / Python environment during development):
+Screen capture requires the user to grant macOS Screen Recording permission to RelayOS (or your terminal / Python environment during development):
 
 1. On first `screen_snapshot` request, macOS may display a permission prompt.
-2. If needed, grant permission in **System Settings > Privacy & Security > Screen Recording** and ensure Laptop Bridge is toggled on.
-3. Grant **System Settings > Privacy & Security > Accessibility** access to Laptop Bridge for cross-app overlay behavior and pointer observation. No clicks or keystrokes are injected.
+2. If needed, grant permission in **System Settings > Privacy & Security > Screen Recording** and ensure RelayOS is toggled on.
+3. Grant **System Settings > Privacy & Security > Accessibility** access to RelayOS for cross-app overlay behavior and pointer observation. No clicks or keystrokes are injected.
 4. `screen_snapshot` captures only the display containing the focused app (falling back to the display containing the pointer).
 5. Captures occur **only after an explicit MCP tool invocation**; there is no background, continuous, or unprompted recording.
 6. Screenshot image bytes are transient, returned directly to the MCP caller, immediately deleted from local state, and never saved in SQLite history.
@@ -113,9 +113,9 @@ During an active session, `show_guidance` can place the click-through triangle a
 
 ## Visual Guidance Overlay
 
-Laptop Bridge provides an always-on-top, click-through PySide6 instructional overlay:
+RelayOS provides an always-on-top, click-through PySide6 instructional overlay:
 
-- **Agent Guide Cursor**: A distinct electric cyan and slate pointer labeled "Laptop Bridge" moves smoothly from the user's current cursor position to an agent-selected target location.
+- **Agent Guide Cursor**: A distinct electric cyan and slate pointer labeled "RelayOS" moves smoothly from the user's current cursor position to an agent-selected target location.
 - **Pulsing Target Ring**: An animated concentric target ring with crosshair ticks marks the exact element or coordinate of interest.
 - **Instructional Bubble**: An optional dark glassmorphism card displays the action title and explanation.
 - **Trailing Mode**: After arriving at the target and pausing, the guide cursor automatically enters trailing mode, following behind the user's real mouse cursor to assist without controlling or blocking input.
@@ -148,7 +148,7 @@ For coding tasks, users can grant scoped, time-limited access to specific projec
   - All paths and working directories are validated against the resolved project root. Path traversal (`..`) and symlink escapes pointing outside the root are strictly rejected with `PermissionError`.
   - Privilege escalation (`sudo`, `su`, `doas`) is blocked.
   - A one-use command grant matches the resolved executable, exact argv, and exact working directory. An "always" grant matches a resolved executable within one project, with any arguments, until revoked (for example, it permits `npm run build` and other npm arguments).
-  - Commands run as the logged-in macOS user and are not OS-sandboxed. Even with a project-scoped grant, an executable or npm script may access any files/macOS resources available to Laptop Bridge; inspect the executable and project before choosing "always".
+  - Commands run as the logged-in macOS user and are not OS-sandboxed. Even with a project-scoped grant, an executable or npm script may access any files/macOS resources available to RelayOS; inspect the executable and project before choosing "always".
   - Activating Emergency Stop immediately terminates active project sessions and cancels all pending/running operations.
 
 ## MCP Tools Reference
@@ -196,7 +196,7 @@ Build and test an unsigned local macOS app bundle:
 
 ```sh
 ./scripts/build_macos_app.sh
-open "dist/Laptop Bridge.app"
+open "dist/RelayOS.app"
 ```
 
 For a Developer ID build, set `LAPTOP_BRIDGE_SIGNING_IDENTITY`. To notarize, also set `LAPTOP_BRIDGE_NOTARY_PROFILE` to an `xcrun notarytool` keychain profile. The script verifies signed bundles and staples notarization when configured.
