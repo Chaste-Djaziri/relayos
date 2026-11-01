@@ -488,7 +488,7 @@ def apply_project_patch(session_id: str, patch: str) -> dict:
             check=False,
         )
     except FileNotFoundError:
-        patch_detail["error"] = "Git was not found on PATH. Install Git for Windows and restart Laptop Bridge."
+        patch_detail["error"] = "Git was not found on PATH. Install Git for Windows and restart RelayOS."
         record_result("apply_project_patch", session["root"], duration_ms=int((time.monotonic() - started) * 1000), detail=patch_detail)
         return {"applied": False, "error": patch_detail["error"]}
     except subprocess.TimeoutExpired:
