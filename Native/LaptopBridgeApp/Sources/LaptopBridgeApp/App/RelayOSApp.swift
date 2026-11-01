@@ -48,6 +48,9 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
                 BridgeModel.shared.startDevelopmentObservation()
                 BridgeModel.shared.startCommandJobMonitoring()
             }
+            Task { @MainActor in
+                NotchPanelCoordinator.shared.ensurePresentedOnLaunch(model: BridgeModel.shared)
+            }
             return
         }
         guard SingleInstanceCoordinator.shared.claimOrReplaceExistingInstance() else {
@@ -56,6 +59,9 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
         }
         BridgeModel.shared.startServices()
         BridgeModel.shared.startCommandJobMonitoring()
+        Task { @MainActor in
+            NotchPanelCoordinator.shared.ensurePresentedOnLaunch(model: BridgeModel.shared)
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -106,6 +112,11 @@ struct RelayOSApp: App {
                 .environment(\.font, .system(size: uiFontSize))
                 .frame(minWidth: 920, minHeight: 620)
                 .onAppear {
+                    NotchPanelCoordinator.shared.registerOpenMainWindow {
+                        openWindow(id: "main")
+                        NSApp.activate(ignoringOtherApps: true)
+                    }
+                    NotchPanelCoordinator.shared.ensurePresentedOnLaunch(model: model)
                     NSApp.setActivationPolicy(.regular)
                     NSApp.activate(ignoringOtherApps: true)
                     DispatchQueue.main.async {
