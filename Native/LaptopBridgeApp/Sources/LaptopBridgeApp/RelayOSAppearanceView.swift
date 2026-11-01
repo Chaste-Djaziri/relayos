@@ -29,56 +29,73 @@ struct RelayOSAppearanceView: View {
     @AppStorage(RelayOSTheme.fontSizeKey) private var fontSize = 14.0
     @AppStorage(RelayOSTheme.reduceMotionKey) private var reduceMotion = false
     @AppStorage(RelayOSTheme.sidebarTransparencyKey) private var sidebarTransparency = true
-    @State private var showAdvanced = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            Text("Visual style").font(.headline)
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Mode").font(.subheadline.weight(.medium))
-                HStack(spacing: 14) {
-                    preview("system", title: "System", icon: "circle.lefthalf.filled")
-                    preview("light", title: "Light", icon: "sun.max")
-                    preview("dark", title: "Dark", icon: "moon.stars")
+        VStack(alignment: .leading, spacing: 20) {
+            SettingsCard(title: "Interface Theme") {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(spacing: 14) {
+                        preview("system", title: "System", icon: "circle.lefthalf.filled")
+                        preview("light", title: "Light", icon: "sun.max")
+                        preview("dark", title: "Dark", icon: "moon.stars")
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
             }
-            .padding(18)
-            .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 14))
-            VStack(alignment: .leading, spacing: 15) {
-                HStack {
-                    Text("Accent color")
-                    Spacer()
+
+            SettingsCard(title: "Color & Typography") {
+                SettingsCardRow(
+                    title: "Accent color",
+                    subtitle: "Accent tone used for active highlights and controls"
+                ) {
                     Picker("Accent color", selection: $accent) {
                         ForEach(["blue", "green", "purple", "orange", "pink"], id: \.self) { color in
                             Text(color.capitalized).tag(color)
                         }
-                    }.labelsHidden().frame(width: 140)
+                    }
+                    .labelsHidden()
+                    .frame(width: 130)
                 }
-                Divider()
-                HStack {
-                    Text("Interface text size")
-                    Spacer()
-                    Slider(value: $fontSize, in: 12...18, step: 1).frame(width: 170)
-                    Text("\(Int(fontSize)) pt").monospacedDigit().frame(width: 48, alignment: .trailing)
+
+                SettingsCardRow(
+                    title: "Interface text size",
+                    subtitle: "Scale font sizing across RelayOS windows",
+                    showDivider: false
+                ) {
+                    HStack(spacing: 10) {
+                        Slider(value: $fontSize, in: 12...18, step: 1)
+                            .frame(width: 140)
+                        Text("\(Int(fontSize)) pt")
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(Color(white: 0.8))
+                            .frame(width: 44, alignment: .trailing)
+                    }
                 }
-                Text("Changes apply immediately and are saved on this Mac.")
-                    .font(.caption).foregroundStyle(.secondary)
             }
-            .padding(18)
-            .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 14))
-            DisclosureGroup("Advanced", isExpanded: $showAdvanced) {
-                VStack(alignment: .leading, spacing: 14) {
-                    Toggle("Reduce motion", isOn: $reduceMotion)
-                        .toggleStyle(.sleekSwitch)
-                    Toggle("Use translucent sidebar", isOn: $sidebarTransparency)
-                        .toggleStyle(.sleekSwitch)
-                    Text("Reduce motion minimizes optional UI animation. macOS accessibility preferences still take priority.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }.padding(.top, 12)
-            }.padding(18)
-                .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 14))
-        }.frame(maxWidth: .infinity, alignment: .leading)
+
+            SettingsCollapsibleCard(
+                title: "Advanced",
+                subtitle: "Accessibility preferences and window vibrancy options",
+                initiallyExpanded: false
+            ) {
+                SettingsCardRow(
+                    title: "Reduce motion",
+                    subtitle: "Minimizes optional UI animations. macOS accessibility preferences take priority."
+                ) {
+                    SettingsToggle(isOn: $reduceMotion)
+                }
+
+                SettingsCardRow(
+                    title: "Translucent sidebar",
+                    subtitle: "Enable macOS vibrancy on the navigation sidebar.",
+                    showDivider: false
+                ) {
+                    SettingsToggle(isOn: $sidebarTransparency)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func preview(_ value: String, title: String, icon: String) -> some View {
@@ -99,10 +116,17 @@ struct RelayOSAppearanceView: View {
                     }.padding(8)
                 }
                 .frame(height: 66)
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(mode == value ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: mode == value ? 2 : 1))
-                Label(title, systemImage: icon).font(.caption)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(mode == value ? Color.blue : Color(white: 0.25), lineWidth: mode == value ? 2 : 1)
+                )
+                Label(title, systemImage: icon)
+                    .font(.caption)
+                    .foregroundStyle(mode == value ? .white : Color(white: 0.7))
             }
-        }.buttonStyle(.plain).frame(maxWidth: 115)
-            .accessibilityAddTraits(mode == value ? .isSelected : [])
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: 115)
+        .accessibilityAddTraits(mode == value ? .isSelected : [])
     }
 }
