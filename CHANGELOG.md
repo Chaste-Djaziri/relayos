@@ -5,6 +5,10 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 ## Unreleased
 
 ### Changed
+- Window-first W01: keep RelayOS running when the Settings window closes; move managed-process termination waits and emergency-stop confirmation off the UI thread; avoid terminating unowned ngrok processes. Added constrained configured-endpoint HTTP 401 verification when ngrok's local inspector is unavailable, with regression tests.
+- Window-first W02: replace heuristic macOS privilege badges with honest permission observations and a separate floating permission guide with an optional draggable signed-app icon, Finder fallback, privacy-pane navigation, and refresh after returning to the app.
+- Window-first W03: confirm folder-permission revocations, run them off the UI thread, keep the ngrok tunnel alive when saving tool settings, identify stored OAuth grants as authorizations, and extend sidebar keyword search and motion/accessibility behavior.
+- Window-first W04/W05: native four-step onboarding with inert product previews and optional-permission setup; added safe light/dark component preview fixtures and window lifecycle/permission tests.
 - Dedicated Appearance page with System/Light/Dark visual mode previews, saved accent selection, UI font-size control, and advanced motion/sidebar preferences; window and menu bar share theme selection.
 - UI modernization: reorganized native settings navigation into Workspace, Connections & tools, and Privacy, added a dedicated RelayOS sidebar identity and wider settings canvas, and introduced persisted System/Light/Dark appearance selection. Native Swift tests pass. This work remains unreleased.
 - Sprint 04 macOS: added native Terminal Jobs view with live metadata polling, bounded incremental stdout/stderr display, cancellation controls, and search by executable/project/status. All native output fetches use the authenticated loopback control token; new model-decoding tests verify job state and offsets.

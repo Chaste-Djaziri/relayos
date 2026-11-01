@@ -219,3 +219,22 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Swift compilation and native regression suite pass.
 - [ ] Wire advanced reduce-motion and sidebar translucency preferences to every relevant native UI animation/material; currently stored only.
 - [ ] Stage signed bundle, verify and deploy with rollback; visually inspect light/dark and control contrast.
+
+## Window-first desktop completion — 2026-11-01
+- [x] W01: closing Settings no longer quits RelayOS; explicit Quit retains control.
+- [x] W01: managed child-process waits no longer block the UI during restarts, including emergency-stop acknowledgement.
+- [x] W01: trust only a known configured HTTPS /mcp endpoint for fallback public HTTP 401 verification when ngrok inspector is unavailable; do not kill unowned tunnel processes.
+- [x] W02: build a separate floating native permission guide with drag-enabled signed application icon, Reveal in Finder, and privacy settings links.
+- [x] W02: remove unreliable Full Disk Access inference; refresh checkable screen recording, accessibility and notification statuses when returning from System Settings.
+- [x] W03: confirm individual and bulk folder revocations and do their helper calls off the UI thread; do not restart ngrok when saving tool capabilities.
+- [x] W03: correct OAuth grant labels, add sidebar keyword search and respect system/user reduced-motion preferences in shared components.
+- [x] W04: modern four-step first-run setup with product previews, optional permission setup, ngrok token input and resume step persistence.
+- [x] W05: add inert light/dark component previews that do not initialize or manipulate the live MCP runtime.
+- [x] Native Swift test/build checks pass before release staging.
+- [ ] Verify real permission guide drag/drop acceptance on the installed macOS version; Finder Add remains the supported fallback.
+- [ ] Validate light/dark, reduced-motion, window-size clipping, hover, keyboard navigation and VoiceOver interactively.
+- [ ] Add fully inert mock data model and previews for every data-driven page, including pending approval and terminal output cases.
+- [ ] Test complete onboarding on a fresh profile without changing existing OAuth tokens.
+- [ ] Validate exact ngrok handover/health fallback live, signed bundle and regression tests without killing the current connector.
+- [ ] Finish W06 staged release validation, rollback backup, controlled install and single-owner health checks.
+- [ ] Independently supervised process reaping after native app SIGKILL remains a future hardening item.
