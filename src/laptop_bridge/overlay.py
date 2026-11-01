@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QWidget
 
 
 class GuidanceOverlay(QWidget):
-    """Transparent click-through overlay showing a distinct Laptop Bridge guide cursor,
+    """Transparent click-through overlay showing a distinct RelayOS guide cursor,
     an animated target ring, and an optional instructional text bubble."""
 
     STATE_IDLE = 0
@@ -39,7 +39,7 @@ class GuidanceOverlay(QWidget):
         self.start_pt = QPointF(0, 0)
         self.current_cursor_pt = QPointF(0, 0)
 
-        self.label = "Laptop Bridge"
+        self.label = "RelayOS"
         self.message = ""
         self.target_display_id = 0
 
@@ -69,7 +69,7 @@ class GuidanceOverlay(QWidget):
         display_id: int = 0,
         x: float = 200,
         y: float = 200,
-        label: str = "Laptop Bridge",
+        label: str = "RelayOS",
         message: str = "",
         timeout_seconds: int | None = 15,
     ):
@@ -103,7 +103,7 @@ class GuidanceOverlay(QWidget):
         self.start_pt = QPointF(cur.x() - geo.x(), cur.y() - geo.y())
         self.current_cursor_pt = QPointF(self.start_pt)
 
-        self.label = label or "Laptop Bridge"
+        self.label = label or "RelayOS"
         self.message = message or ""
         self.is_active = True
         self.state = self.STATE_MOVING
