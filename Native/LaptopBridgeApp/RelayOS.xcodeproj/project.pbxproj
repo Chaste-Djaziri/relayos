@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B7E7C0A00000000000000002 /* RelayOSCursorCompanion.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E7C0A00000000000000001 /* RelayOSCursorCompanion.swift */; };
 		F22222222222222222222222 /* CommandJobCompletionNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11111111111111111111111 /* CommandJobCompletionNotification.swift */; };
 		0C6F487398FDD7AB91D7A548 /* NgrokTunnelMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */; };
 		1082C54EAC0015720F7AD15F /* CommandPermissionsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A20318397E308D076DE7F /* CommandPermissionsPageView.swift */; };
@@ -108,6 +109,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B7E7C0A00000000000000001 /* RelayOSCursorCompanion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSCursorCompanion.swift; sourceTree = "<group>"; };
 		F11111111111111111111111 /* CommandJobCompletionNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandJobCompletionNotification.swift; sourceTree = "<group>"; };
 		010C81D41E2B4A8F38171CA5 /* BridgeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeModel.swift; sourceTree = "<group>"; };
 		0606A340C321E3C38BC40B9C /* SingleInstanceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleInstanceCoordinator.swift; sourceTree = "<group>"; };
@@ -229,6 +231,7 @@
 			isa = PBXGroup;
 			children = (
 				FE28214DB3F8EEB280FF8542 /* RelayOSApp.swift */,
+				B7E7C0A00000000000000001 /* RelayOSCursorCompanion.swift */,
 				0606A340C321E3C38BC40B9C /* SingleInstanceCoordinator.swift */,
 			);
 			path = App;
@@ -574,6 +577,7 @@
 				AC7B0895AC93C77ABA1A3B32 /* QuickPanel.swift in Sources */,
 				F80808080808080808080808 /* NotchPanel.swift in Sources */,
 				61A9F7371A3D7905FB4C6988 /* RelayOSApp.swift in Sources */,
+				B7E7C0A00000000000000002 /* RelayOSCursorCompanion.swift in Sources */,
 				921010956D0573613A2CE1D0 /* RelayOSTheme.swift in Sources */,
 				10C20CCAA3DBA57333534A8D /* SavedCommandGrant.swift in Sources */,
 				E40AEBC40B50EF1A64E8B874 /* SecurityPageView.swift in Sources */,

@@ -288,4 +288,55 @@ final class NotchPanelPlacementTests: XCTestCase {
         // Do not post a global CGEvent from unit tests.
     }
 
+
+    func testRelayOSCursorFollowsPointerAtBottomRight() {
+        let screen = CGRect(x: 0, y: 0, width: 1512, height: 982)
+        let pointer = CGPoint(x: 480, y: 580)
+        guard let frame = RelayOSCursorPlacement.frame(for: pointer, on: [screen]) else {
+            return XCTFail("Expected an overlay frame")
+        }
+        XCTAssertEqual(frame.origin.x, pointer.x + RelayOSCursorPlacement.offset.x)
+        XCTAssertEqual(frame.maxY, pointer.y + RelayOSCursorPlacement.offset.y)
+        XCTAssertEqual(frame.size, RelayOSCursorPlacement.size)
+    }
+
+    func testRelayOSCursorClampsAtDisplayEdges() {
+        let screen = CGRect(x: 0, y: 0, width: 500, height: 350)
+        for pointer in [
+            CGPoint(x: 0, y: 0),
+            CGPoint(x: 499, y: 0),
+            CGPoint(x: 499, y: 349),
+            CGPoint(x: 0, y: 349)
+        ] {
+            guard let frame = RelayOSCursorPlacement.frame(for: pointer, on: [screen]) else {
+                return XCTFail("Expected a frame for \(pointer)")
+            }
+            XCTAssertGreaterThanOrEqual(frame.minX, screen.minX)
+            XCTAssertGreaterThanOrEqual(frame.minY, screen.minY)
+            XCTAssertLessThanOrEqual(frame.maxX, screen.maxX)
+            XCTAssertLessThanOrEqual(frame.maxY, screen.maxY)
+        }
+    }
+
+    func testRelayOSCursorTracksTheCorrectDisplayWithNegativeCoordinates() {
+        let laptop = CGRect(x: 0, y: 0, width: 1512, height: 982)
+        let external = CGRect(x: -1920, y: -90, width: 1920, height: 1080)
+        let pointer = CGPoint(x: -800, y: 450)
+        let frame = RelayOSCursorPlacement.frame(for: pointer, on: [laptop, external])
+        XCTAssertNotNil(frame)
+        XCTAssertEqual(frame?.origin.x, pointer.x + RelayOSCursorPlacement.offset.x)
+        XCTAssertEqual(frame?.maxY, pointer.y + RelayOSCursorPlacement.offset.y)
+        XCTAssertTrue(external.contains(frame!.origin))
+    }
+
+    func testRelayOSCursorDoesNotDrawWhenMouseIsOutsideKnownScreens() {
+        let screen = CGRect(x: 0, y: 0, width: 1512, height: 982)
+        XCTAssertNil(RelayOSCursorPlacement.frame(
+            for: CGPoint(x: 1800, y: 1100), on: [screen]
+        ))
+        XCTAssertNil(RelayOSCursorPlacement.frame(
+            for: CGPoint(x: 100, y: 100), on: []
+        ))
+    }
+
 }
