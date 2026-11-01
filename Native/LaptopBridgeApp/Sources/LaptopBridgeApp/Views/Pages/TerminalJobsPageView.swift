@@ -1,87 +1,231 @@
-// Path: Native/LaptopBridgeApp/Sources/LaptopBridgeApp/CommandJobsView.swift
 import SwiftUI
 import Combine
 
 struct CommandJobsView: View {
     @ObservedObject var model: BridgeModel
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(RelayOSTheme.fontSizeKey) private var userFontSize = 14.0
+    @AppStorage(RelayOSTheme.accentKey) private var accentName = "blue"
+
     @State private var filter = ""
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
+    private var theme: ThemeColors {
+        RelayOSTheme.colors(colorScheme)
+    }
+
+    private var accentColor: Color {
+        RelayOSTheme.accent(accentName)
+    }
+
+    private var scale: CGFloat {
+        RelayOSTheme.scale(userFontSize)
+    }
+
     private var matches: [CommandJobEntry] {
-        filter.isEmpty ? model.commandJobs : model.commandJobs.filter {
-            [$0.executableName, $0.projectRoot, $0.status]
-                .contains { $0.localizedCaseInsensitiveContains(filter) }
+        let text = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return model.commandJobs }
+        return model.commandJobs.filter {
+            [$0.executableName, $0.projectRoot, $0.workingDirectory, $0.status, $0.sessionID]
+                .contains { $0.localizedCaseInsensitiveContains(text) }
         }
     }
 
+    private var activeCount: Int {
+        model.commandJobs.filter { $0.active }.count
+    }
+
+    private var selectedJob: CommandJobEntry? {
+        guard let id = model.selectedCommandJobID else { return nil }
+        return model.commandJobs.first { $0.id == id }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Terminal Jobs").font(.title2.bold())
-                    Text("Approved background commands · output remains in the MCP server process.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+        VStack(alignment: .leading, spacing: 20) {
+            // Header description and actions
+            HStack(alignment: .center, spacing: 12) {
+                Text("Approved background commands · output streams locally via the MCP server process.")
+                    .font(.system(size: 13 * scale))
+                    .foregroundStyle(theme.textSecondary)
+
                 Spacer()
-                Button {
+
+                SettingsButton(
+                    title: "Refresh",
+                    icon: "arrow.clockwise",
+                    style: .secondary
+                ) {
                     model.refreshCommandJobs()
-                    model.refreshCommandJobOutput()
-                } label: { Label("Refresh", systemImage: "arrow.clockwise") }
+                    if model.selectedCommandJobID != nil {
+                        model.refreshCommandJobOutput()
+                    }
+                }
             }
-            TextField("Filter by command, project or status", text: $filter)
-                .textFieldStyle(.roundedBorder)
+
+            // Search bar
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 12 * scale))
+                    .foregroundStyle(theme.textSecondary)
+
+                TextField("Filter by executable, project, status, or session ID", text: $filter)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12 * scale))
+                    .foregroundStyle(theme.textPrimary)
+
+                if !filter.isEmpty {
+                    Button {
+                        filter = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 11 * scale))
+                            .foregroundStyle(theme.textSecondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 10)
+            .frame(height: max(32, 32 * scale))
+            .background(theme.sidebarSearchBackground, in: RoundedRectangle(cornerRadius: 8))
+
+            // Error notice
             if let error = model.commandJobError {
-                Label(error, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(.red).font(.caption)
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Color.red)
+                    Text(error)
+                        .font(.system(size: 12 * scale))
+                        .foregroundStyle(Color.red)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
             }
-            if matches.isEmpty {
-                ContentUnavailableView("No terminal jobs", systemImage: "terminal",
-                    description: Text("An approved background command will appear here."))
-            }
-            ForEach(matches) { job in
-                HStack {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(job.executableName).font(.headline)
-                        Text(job.projectRoot).font(.caption)
-                            .foregroundStyle(.secondary).lineLimit(1)
-                        Text("\(job.status.capitalized) · \(Date(timeIntervalSince1970: job.createdAt).formatted())")
-                            .font(.caption).foregroundStyle(.secondary)
+
+            // Summary stats pill row
+            if !model.commandJobs.isEmpty {
+                HStack(spacing: 16) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 11 * scale))
+                            .foregroundStyle(activeCount > 0 ? Color.green : theme.textSecondary)
+                        Text("\(activeCount) active \(activeCount == 1 ? "job" : "jobs")")
+                            .font(.system(size: 12 * scale, weight: .medium))
+                            .foregroundStyle(theme.textPrimary)
                     }
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "terminal.fill")
+                            .font(.system(size: 11 * scale))
+                            .foregroundStyle(theme.textSecondary)
+                        Text("\(model.commandJobs.count) total recorded")
+                            .font(.system(size: 12 * scale))
+                            .foregroundStyle(theme.textSecondary)
+                    }
+
                     Spacer()
-                    Button("Output") { model.selectCommandJob(job.id) }
-                    if job.active {
-                        Button("Cancel", role: .destructive) { model.cancelCommandJob(job.id) }
-                            .disabled(job.cancelRequested != 0)
-                    }
+
+                    StatusBadge(
+                        text: activeCount > 0 ? "Streaming live" : "Idle",
+                        status: activeCount > 0 ? .healthy : .offline
+                    )
                 }
-                Divider()
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(theme.cardBackground, in: RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(theme.cardBorder, lineWidth: 1))
             }
-            if let selectedID = model.selectedCommandJobID {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Incremental output").font(.headline)
-                        Spacer()
-                        Text(String(selectedID.prefix(10))).font(.caption).foregroundStyle(.secondary)
-                    }
-                    ScrollView {
-                        Text(model.commandJobOutput.isEmpty ? "No output yet." : model.commandJobOutput)
-                            .font(.system(.caption, design: .monospaced))
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(minHeight: 130, maxHeight: 230)
-                    .padding(8)
-                    .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
+
+            // Selected job console
+            if let job = selectedJob {
+                TerminalOutputConsole(
+                    job: job,
+                    output: model.commandJobOutput
+                ) {
+                    model.selectedCommandJobID = nil
                 }
             }
-            Text("No shell is invoked. Jobs must be authorized through the same local approvals as ordinary commands. Output is available only while the owning MCP server retains it; metadata survives restarts.")
-                .font(.caption).foregroundStyle(.secondary)
+
+            // Jobs list or empty state
+            if matches.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "terminal")
+                        .font(.system(size: 38))
+                        .foregroundStyle(theme.textSecondary)
+                    Text(filter.isEmpty ? "No terminal jobs" : "No matching jobs found")
+                        .font(.system(size: 15 * scale, weight: .semibold))
+                        .foregroundStyle(theme.textPrimary)
+                    Text(filter.isEmpty
+                        ? "Long-running commands executed by paired AI clients (such as dev servers or test runners) run in the background and stream their output here."
+                        : "No jobs match \"\(filter)\". Try searching by executable name, directory path, or session ID.")
+                        .font(.system(size: 12 * scale))
+                        .foregroundStyle(theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 420)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 48)
+                .background(theme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 11))
+                .overlay(RoundedRectangle(cornerRadius: 11).stroke(theme.cardBorder, lineWidth: 1))
+            } else {
+                SettingsCard(title: "Background Terminal Jobs (\(matches.count))") {
+                    ForEach(Array(matches.enumerated()), id: \.element.id) { index, job in
+                        TerminalJobRow(
+                            job: job,
+                            isSelected: model.selectedCommandJobID == job.id,
+                            onToggleOutput: {
+                                if model.selectedCommandJobID == job.id {
+                                    model.selectedCommandJobID = nil
+                                } else {
+                                    model.selectCommandJob(job.id)
+                                }
+                            },
+                            onCancel: {
+                                model.cancelCommandJob(job.id)
+                            }
+                        )
+
+                        if index < matches.count - 1 {
+                            Rectangle()
+                                .fill(theme.cardDivider)
+                                .frame(height: 1)
+                                .padding(.leading, 16)
+                        }
+                    }
+                }
+            }
+
+            // Process isolation explanation card
+            SettingsCard(title: "Process Isolation & Security") {
+                SettingsCardRow(
+                    title: "Direct Process Execution",
+                    subtitle: "No shell environment is spawned. Jobs are invoked directly with strict arguments and isolated file descriptors."
+                ) {
+                    StatusBadge(text: "Sandboxed", status: .healthy)
+                }
+
+                SettingsCardRow(
+                    title: "Stream Retention",
+                    subtitle: "Process output streams locally in memory through the MCP server. Metadata survives restarts while ephemeral buffers clear safely.",
+                    showDivider: false
+                ) {
+                    StatusBadge(text: "Ephemeral memory", status: .healthy)
+                }
+            }
         }
-        .padding()
-        .onAppear { model.refreshCommandJobs() }
+        .onAppear {
+            model.refreshCommandJobs()
+            if model.selectedCommandJobID != nil {
+                model.refreshCommandJobOutput()
+            }
+        }
         .onReceive(ticker) { _ in
             model.refreshCommandJobs()
-            if model.selectedCommandJobID != nil { model.refreshCommandJobOutput() }
+            if model.selectedCommandJobID != nil {
+                model.refreshCommandJobOutput()
+            }
         }
     }
 }
