@@ -1,8 +1,10 @@
 <!-- Path: docs/SCREEN_CAPTURE_SHARING.md -->
 # RelayOS on-demand screen sharing with ChatGPT
 
-**Status:** Implemented in the development branch; not installed or visually
-validated on the user's signed macOS production app.
+**Status:** Signed hybrid app installed at `/Applications/RelayOS.app` on
+2026-11-01 after isolated MCP smoke checks and a rollback-backed handover.
+The screen-sharing capability remains off until enabled locally, and an
+actual consented screenshot has **not** yet been visually validated in ChatGPT.
 
 This is **single-frame sharing**, not remote desktop control, hidden recording,
 or continuous video streaming. ChatGPT can request one capture of:

@@ -390,4 +390,5 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Make the existing ScreenCaptureKit sharing feature discoverable under Tools & permissions, with a per-image Once approval explanation and Save tool settings action.
 - [x] Clarify the exact image target in the local Approval Inbox and provide Swift decoding regression coverage.
 - [x] Swift test, focused Python authorization tests and git diff checks pass.
-- [ ] Build a stable-signed production bundle and verify screen capture on the actual Mac after local macOS consent; reconnect the ChatGPT connector to refresh MCP tools.
+- [x] Build and install the Apple Development-signed hybrid bundle using isolated MCP smoke checks, a rollback backup and verified authenticated service recovery.
+- [ ] Enable on-demand screen sharing locally, refresh the ChatGPT connector and visually validate one approved app/window/display capture; macOS Screen Recording consent may require restarting the app.
