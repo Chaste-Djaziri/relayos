@@ -1,5 +1,6 @@
 import base64
 import asyncio
+import difflib
 import json
 import os
 import platform
@@ -432,11 +433,42 @@ def write_project_file(session_id: str, path: str, content: str) -> dict:
     session, file = _session_path(session_id, path, must_exist=False)
     if file.exists() and file.is_dir():
         raise ValueError("Cannot replace a directory")
+
+    old_content = ""
+    is_new = not file.exists()
+    if not is_new and file.is_file():
+        try:
+            old_content = file.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            old_content = ""
+
     file.parent.mkdir(parents=True, exist_ok=True)
     _session_path(session_id, str(file.parent))
     file.write_text(content, encoding="utf-8")
-    record_result("write_project_file", session["root"], duration_ms=0)
-    return {"path": str(file.relative_to(Path(session["root"]))), "bytes_written": len(content.encode("utf-8"))}
+    rel_path = str(file.relative_to(Path(session["root"])))
+
+    old_lines = old_content.splitlines(keepends=True)
+    new_lines = content.splitlines(keepends=True)
+    diff = list(difflib.unified_diff(
+        old_lines,
+        new_lines,
+        fromfile=f"a/{rel_path}" if not is_new else "/dev/null",
+        tofile=f"b/{rel_path}",
+    ))
+    diff_text = "".join(diff)
+    lines_added = sum(1 for line in diff if line.startswith("+") and not line.startswith("+++"))
+    lines_removed = sum(1 for line in diff if line.startswith("-") and not line.startswith("---"))
+
+    detail = {
+        "path": rel_path,
+        "is_new": is_new,
+        "diff": diff_text[:32768],
+        "lines_added": lines_added,
+        "lines_removed": lines_removed,
+        "bytes_written": len(content.encode("utf-8")),
+    }
+    record_result("write_project_file", f"{session['root']}:{rel_path}", duration_ms=0, detail=detail)
+    return {"path": rel_path, "bytes_written": len(content.encode("utf-8"))}
 
 
 @mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False))
@@ -444,6 +476,10 @@ def apply_project_patch(session_id: str, patch: str) -> dict:
     """Apply a unified diff to the active project with git apply; ChatGPT should confirm this change."""
     session, root = _session_path(session_id, ".")
     started = time.monotonic()
+    patch_detail = {
+        "patch": patch[:32768],
+        "diff": patch[:32768],
+    }
     try:
         git = _resolve_executable("git", root)
         result = subprocess.run(
@@ -452,12 +488,16 @@ def apply_project_patch(session_id: str, patch: str) -> dict:
             check=False,
         )
     except FileNotFoundError:
-        record_result("apply_project_patch", session["root"], duration_ms=int((time.monotonic() - started) * 1000))
-        return {"applied": False, "error": "Git was not found on PATH. Install Git for Windows and restart Laptop Bridge."}
+        patch_detail["error"] = "Git was not found on PATH. Install Git for Windows and restart Laptop Bridge."
+        record_result("apply_project_patch", session["root"], duration_ms=int((time.monotonic() - started) * 1000), detail=patch_detail)
+        return {"applied": False, "error": patch_detail["error"]}
     except subprocess.TimeoutExpired:
-        record_result("apply_project_patch", session["root"], duration_ms=int((time.monotonic() - started) * 1000))
-        return {"applied": False, "error": "Patch timed out"}
-    record_result("apply_project_patch", session["root"], result.returncode, int((time.monotonic() - started) * 1000))
+        patch_detail["error"] = "Patch timed out"
+        record_result("apply_project_patch", session["root"], duration_ms=int((time.monotonic() - started) * 1000), detail=patch_detail)
+        return {"applied": False, "error": patch_detail["error"]}
+    patch_detail["applied"] = result.returncode == 0
+    patch_detail["stderr"] = result.stderr[:4096]
+    record_result("apply_project_patch", session["root"], result.returncode, int((time.monotonic() - started) * 1000), detail=patch_detail)
     return {"applied": result.returncode == 0, "exit_code": result.returncode, "stderr": result.stderr[:8192]}
 
 
@@ -694,7 +734,17 @@ def run_project_command(
             if process is not None and process.poll() is None:
                 _terminate_command_tree(process)
     elapsed = int((time.monotonic() - started) * 1000)
-    record_result("run_project_command", session["root"], process.returncode, elapsed)
+    cmd_str = " ".join(argv)
+    cmd_detail = {
+        "argv": argv,
+        "command": cmd_str,
+        "executable": executable,
+        "working_directory": str(directory),
+        "stdout": output[:4096] if output else None,
+        "stderr": errors[:4096] if errors else None,
+        "reason": reason,
+    }
+    record_result("run_project_command", f"{session['root']}:{cmd_str}", process.returncode, elapsed, detail=cmd_detail)
     if reason == "emergency_stop":
         return {"executed": False, "cancelled": True, "reason": reason, "stdout": output, "stderr": errors}
     if reason == "timeout":
@@ -748,7 +798,7 @@ def start_project_command_job(
     if emergency_stop():
         raise PermissionError("Emergency stop is enabled")
     job_id = state.create_command_job(
-        session_id, session["root"], str(directory), Path(executable).name,
+        session_id, session["root"], str(directory), Path(executable).name, argv=argv,
     )
     environment = os.environ.copy()
     environment["PATH"] = _coding_command_path()

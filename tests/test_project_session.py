@@ -1,4 +1,6 @@
+import json
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -739,4 +741,56 @@ def test_approve_project_session_without_local_approval_fails(project_dir):
     proposal = server.propose_project_session(str(project_dir))
     with pytest.raises(PermissionError, match="Project session has not been approved locally"):
         server.approve_project_session(proposal["request_id"])
+
+
+def test_activity_details_recorded_for_file_write_and_command_execution(project_dir):
+    state.grant_folder(str(project_dir))
+    proposal = server.propose_project_session(str(project_dir))
+    session_id = proposal["session_id"]
+
+    # 1. First file write (new file)
+    server.write_project_file(session_id, "hello.py", "print('hello')\n")
+    # 2. Second file write (modification)
+    server.write_project_file(session_id, "hello.py", "print('hello world')\n")
+
+    # 3. Command execution
+    argv = [sys.executable, "-c", "print('stdout test'); import sys; sys.stderr.write('stderr test\\n')"]
+    auth_req = server.authorize_project_command(session_id, argv)
+    state.approve(auth_req["request_id"])
+    granted = server.authorize_project_command(session_id, argv)
+    server.run_project_command(session_id, argv, authorization_token=granted["authorization_token"])
+
+    # Query activity history
+    activity = state.approval_activity(limit=20)
+
+    # Check file write activity entries
+    write_entries = [a for a in activity if a["kind"] == "write_project_file"]
+    assert len(write_entries) >= 2
+
+    # Latest write entry (modification)
+    latest_write = write_entries[0]
+    write_detail = json.loads(latest_write["detail_json"])
+    assert write_detail["path"] == "hello.py"
+    assert write_detail["is_new"] is False
+    assert "-print('hello')" in write_detail["diff"]
+    assert "+print('hello world')" in write_detail["diff"]
+    assert write_detail["lines_added"] == 1
+    assert write_detail["lines_removed"] == 1
+
+    # First write entry (new file)
+    first_write = write_entries[1]
+    first_detail = json.loads(first_write["detail_json"])
+    assert first_detail["path"] == "hello.py"
+    assert first_detail["is_new"] is True
+    assert "+print('hello')" in first_detail["diff"]
+
+    # Check command execution entry
+    cmd_entries = [a for a in activity if a["kind"] == "run_project_command"]
+    assert len(cmd_entries) >= 1
+    cmd_detail = json.loads(cmd_entries[0]["detail_json"])
+    assert cmd_detail["argv"] == argv
+    assert "stdout test" in cmd_detail["stdout"]
+    assert "stderr test" in cmd_detail["stderr"]
+    assert cmd_entries[0]["exit_code"] == 0
+
 
