@@ -287,3 +287,13 @@ Never pass a phase with an open critical vulnerability, unverified emergency-sto
 - [x] Four read-only native tools with scope/resource verification; tests cover revoked sessions and invalid tokens over real HTTP.
 - [ ] Full OAuth/PKCE and native local approval/write/command/job/screen parity are **not completed**.
 - [ ] Production helper removal and handover remain blocked on protocol, security and packaging parity checks.
+
+## Native Swift capability implementation checkpoint — 2026-11-01
+- [x] Isolated local OAuth registration, local approval, PKCE authorization-code exchange, refresh rotation, token revocation and metadata endpoints.
+- [x] Native exact-operation approval queue, in-app Once/Deny decisions and replay/mismatch protection.
+- [x] Native write/patch operations and asynchronously managed command jobs with bounded output and cancellation.
+- [x] macOS Screen Recording permission-gated capture, guidance overlays, limited guidance sessions and local Clear control.
+- [x] Swift unit and HTTP-boundary tests for OAuth, replay, denied actions and approved writes.
+- [ ] Real Streamable HTTP/SSE, multi-client official MCP Swift SDK transport and production OAuth interoperability.
+- [ ] Fully persisted job history, full screen event observation, source compatibility for remaining tools, full UI parity and release-hardening.
+- [ ] No production replacement until signed staged acceptance and rollback exercise.

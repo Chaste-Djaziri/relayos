@@ -5,7 +5,7 @@
 
 The installed production application remains at `/Applications/RelayOS.app` and continues to use its existing Python-backed MCP service on port `8765`. The Xcode Debug app (`pro.micorp.relayos.dev`) is a **separate identity** and may run **Swift-only** on loopback port `18765`. It never installs over, restarts or claims the installed agent's process lock. The native development store is `~/.relayos-swift-dev`, not `~/.laptop-bridge`.
 
-Only read-only native MCP tools are presently supported: `system_status`, `list_processes`, `list_project_files`, `read_project_file`. OAuth onboarding, pending command decisions, write/patch, commands, jobs, screenshot/guidance, desktop actions and other features are **not yet implemented in Swift**. They are disabled in this run mode; they must not silently fall back to Python.
+The native development build supports local OAuth registration/authorization/PKCE/token rotation and revocation, system and process reads, project reads, local approval requests, file writing and exact patching, command jobs (read/cancel), and macOS screen capture plus guidance overlays. Sensitive actions must be approved in the **Native approval inbox** before execution. Public HTTPS and full MCP Streamable HTTP/SSE, production keychain/signing integration and several legacy desktop extras are still not release-ready. There is no Python fallback.
 
 ## Test without launching or installing anything
 

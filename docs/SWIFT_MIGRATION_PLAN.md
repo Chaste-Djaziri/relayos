@@ -78,3 +78,11 @@ Smoke test: the native listener was started on a randomly selected loopback port
 - [ ] Native Once/Session/Always approval inbox and atomic authorization for all permission-expanding commands and file writes.
 - [ ] Full protocol fidelity via official MCP Swift SDK and Streamable HTTP transport; this pilot is not client-compatible for all MCP clients.
 - [ ] Remaining tools, background jobs, screenshots, overlays and no-Python production packaging.
+
+### Native-only implementation checkpoint (2026-11-01)
+
+The development target now includes local OAuth PKCE + token rotation/revocation, an SQLite-backed local approval inbox, exact-request-bound writes/patches, asynchronous terminal jobs and bounded job output, permission-gated screen snapshots, non-intercepting overlays and time-limited guidance sessions. Python files are retained but the Swift-only Debug runtime invokes none of them.
+
+**Important release blockers:** The custom native HTTP transport does not yet provide production-grade Streamable HTTP/SSE, resumable sessions, or verified interoperability with all ChatGPT/MCP clients. The local-only OAuth authorization endpoints have not been subjected to public internet review. Approval UI currently exposes Once/Deny; Session/Always persistence is deliberately not advertised as supported. Background job metadata is in-memory and is not resilient to native process crashes. The visual guidance feature does not yet collect reliable click events, and the screen capture path must be tested manually with macOS TCC after signing. Public deployment, Python-free Release packaging and migration of existing client tokens remain separate, blocked work.
+
+For isolated testing see `docs/SWIFT_ONLY_LOCAL_TEST.md` and `sh scripts/test_swift_only.sh`.
