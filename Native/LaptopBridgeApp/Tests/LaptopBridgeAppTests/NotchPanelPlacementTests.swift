@@ -37,6 +37,10 @@ final class NotchPanelPlacementTests: XCTestCase {
         )
     }
 
+    func testHoverExitGracePeriodAvoidsAccidentalCollapse() {
+        XCTAssertGreaterThanOrEqual(NotchPanelCoordinator.hoverCollapseDelayMilliseconds, 600)
+    }
+
     func testLiveActivityCollapsedRevealsLeftAndRightStatusWings() {
         let idle = notch(.collapsed, hasLiveActivity: false)
         let active = notch(.collapsed, hasLiveActivity: true)
