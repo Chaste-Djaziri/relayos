@@ -3,10 +3,9 @@ import SwiftUI
 import AppKit
 
 final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
-    // Closing the only RelayOS window is an explicit stop request. This lets
-    // applicationWillTerminate shut down the owned MCP and ngrok children so
-    // the next launch always starts a fresh, single service set.
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    // The settings window is not the agent's lifetime. Explicit Quit terminates
+    // RelayOS; simply closing Settings leaves its approved MCP services alive.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard SingleInstanceCoordinator.shared.claimOrReplaceExistingInstance() else {
             NSApplication.shared.terminate(nil)

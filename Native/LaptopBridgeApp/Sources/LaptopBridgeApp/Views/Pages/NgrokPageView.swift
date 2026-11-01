@@ -9,11 +9,11 @@ struct NgrokPageView: View {
             SettingsCard(title: "ngrok transport") {
                 SettingsCardRow(
                     title: "Tunnel process",
-                    subtitle: "Local ngrok daemon process status"
+                    subtitle: "Only processes started by this RelayOS instance are marked managed"
                 ) {
                     StatusBadge(
-                        text: model.tunnelRunning ? "Running" : "Stopped",
-                        status: model.tunnelRunning ? .healthy : .offline
+                        text: model.tunnelRunning ? "Managed" : (model.tunnelHealth == .healthy ? "Remote route verified" : "Not managed"),
+                        status: model.tunnelRunning ? .healthy : (model.tunnelHealth == .healthy ? .neutral : .warning)
                     )
                 }
 

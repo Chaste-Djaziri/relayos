@@ -40,6 +40,49 @@ final class NgrokTunnelMonitorTests: XCTestCase {
         XCTAssertEqual(missingResult.status, .remoteUnavailable)
     }
 
+
+    func testUnrelatedInspectorDoesNotOverrideVerifiedConfiguredRoute() async {
+        let unrelated = Data(#"{"tunnels":[{"public_url":"https://unrelated.ngrok-free.dev","config":{"addr":"localhost:3000"}}]}"#.utf8)
+        let monitor = NgrokTunnelMonitor { request in
+            if request.url?.host == "127.0.0.1" { return (200, unrelated) }
+            XCTAssertEqual(request.url?.host, "example.ngrok-free.dev")
+            return (401, Data())
+        }
+        let result = await monitor.probe(configuredEndpoint: URL(string: "https://example.ngrok-free.dev/mcp"))
+        XCTAssertEqual(result.status, .healthy)
+        XCTAssertEqual(result.publicURL?.host, "example.ngrok-free.dev")
+    }
+
+    func testConfiguredEndpointRemainsVerifiedWithoutInspector() async {
+        let monitor = NgrokTunnelMonitor { request in
+            if request.url?.host == "127.0.0.1" { throw URLError(.cannotConnectToHost) }
+            XCTAssertEqual(request.url?.absoluteString, "https://example.ngrok-free.dev/mcp")
+            return (401, Data())
+        }
+        let result = await monitor.probe(
+            configuredEndpoint: URL(string: "https://example.ngrok-free.dev/mcp")
+        )
+        XCTAssertEqual(result.status, .healthy)
+        XCTAssertEqual(result.publicURL?.absoluteString, "https://example.ngrok-free.dev")
+    }
+
+    func testInspectorFallbackRejectsNonExactConfiguredEndpoints() async {
+        let monitor = NgrokTunnelMonitor { request in
+            XCTAssertEqual(request.url?.host, "127.0.0.1")
+            throw URLError(.cannotConnectToHost)
+        }
+        for input in [
+            "http://example.ngrok-free.dev/mcp",
+            "https://example.ngrok-free.dev/other",
+            "https://user:pass@example.ngrok-free.dev/mcp",
+            "https://example.ngrok-free.dev/mcp?token=secret"
+        ] {
+            let result = await monitor.probe(configuredEndpoint: URL(string: input))
+            XCTAssertEqual(result.status, .inspectorUnavailable)
+            XCTAssertNil(result.publicURL)
+        }
+    }
+
     func testMissingInspectorDoesNotAdoptEndpoint() async {
         let missing = NgrokTunnelMonitor { _ in (404, Data()) }
         let result = await missing.probe()

@@ -6,7 +6,7 @@ struct ConnectionsPageView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            SettingsCard(title: "Connected AI clients") {
+            SettingsCard(title: "Authorized AI clients") {
                 if model.connectedClients.isEmpty {
                     SettingsCardRow(
                         title: "No connected AI clients",
@@ -18,9 +18,9 @@ struct ConnectionsPageView: View {
                     ForEach(Array(model.connectedClients.enumerated()), id: \.offset) { _, name in
                         SettingsCardRow(
                             title: name,
-                            subtitle: "Authenticated MCP client session"
+                            subtitle: "Saved OAuth authorization; an active client session is not verified"
                         ) {
-                            StatusBadge(text: "Connected", status: .healthy)
+                            StatusBadge(text: "Authorized", status: .neutral)
                         }
                     }
                 }

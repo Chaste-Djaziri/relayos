@@ -36,7 +36,6 @@ extension BridgeModel {
         approvalTimer = nil
         if !preserveTunnelOnTermination {
             stopOwnedProcess(tunnel)
-            Self.stopStaleRelayOSNgrokAgents()
         }
         stopOwnedProcess(server)
         tunnel = nil
@@ -48,17 +47,17 @@ extension BridgeModel {
         supervisor.resetForManualRestart()
     }
 
+    // Never wait for child processes on the UI actor. Shutdown is signalled
+    // immediately and a bounded escalator runs away from the main thread.
+    // ManagedProcessSlot ensures a late exit cannot clear a replacement child.
     func stopOwnedProcess(_ process: Process?) {
         guard let process, process.isRunning else { return }
         process.terminate()
-        let deadline = Date().addingTimeInterval(3)
-        while process.isRunning && Date() < deadline {
-            Thread.sleep(forTimeInterval: 0.05)
+        let pid = process.processIdentifier
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 3) {
+            if process.isRunning { kill(pid, SIGKILL) }
+            process.waitUntilExit()
         }
-        if process.isRunning {
-            kill(process.processIdentifier, SIGKILL)
-        }
-        process.waitUntilExit()
     }
 
     func localServerIsListening() -> Bool {
@@ -142,7 +141,7 @@ extension BridgeModel {
         let ownsServer = server != nil
         stopOwnedProcess(tunnel)
         stopOwnedProcess(server)
-        Self.stopStaleRelayOSNgrokAgents()
+        // Do not terminate unowned ngrok processes during a manual restart.
         server = nil
         tunnel = nil
         running = false
@@ -267,17 +266,22 @@ extension BridgeModel {
         let generation = supervisor.tunnelGeneration
         Task { @MainActor [weak self] in
             guard let self else { return }
-            let result = await self.tunnelMonitor.probe()
+            let configuredEndpoint = URL(string: self.endpoint)
+            let result = await self.tunnelMonitor.probe(configuredEndpoint: configuredEndpoint)
             guard self.shouldMaintainServices,
                   SingleInstanceCoordinator.shared.ownsLock,
                   self.tunnel === observedTunnel
             else { return }
-            let effectiveStatus: TunnelHealthStatus = (result.status == .inspectorUnavailable && self.tunnel == nil)
-                ? .stopped
-                : result.status
+            // An unavailable inspector does not prove the public route stopped.
+            // Only a missing configured route and no owned child justify launch.
+            let effectiveStatus: TunnelHealthStatus = (result.status == .inspectorUnavailable
+                && self.tunnel == nil
+                && configuredEndpoint == nil)
+                ? .stopped : result.status
             guard self.supervisor.finishTunnelProbe(effectiveStatus, generation: generation) else { return }
             self.tunnelHealth = effectiveStatus
-            self.tunnelRunning = effectiveStatus == .healthy || result.publicURL != nil || (self.tunnel?.isRunning == true)
+            // A reachable remote route is not proof we own the ngrok process.
+            self.tunnelRunning = self.tunnel?.isRunning == true
             if let publicURL = result.publicURL {
                 self.adoptNgrokEndpoint(publicURL.absoluteString)
             }
@@ -295,13 +299,9 @@ extension BridgeModel {
             mcpHealth = .unreachable
             supervisor.serverDidExit()
         }
-        if supervisor.shouldRecycleOwnedTunnel {
-            serviceNotice = "ngrok tunnel has not been reachable; reconnecting."
-            if let ownedTunnel = tunnel {
-                stopOwnedProcess(ownedTunnel)
-            } else {
-                Self.stopStaleRelayOSNgrokAgents()
-            }
+        if supervisor.shouldRecycleOwnedTunnel, let ownedTunnel = tunnel {
+            serviceNotice = "Managed ngrok tunnel is unreachable; reconnecting."
+            stopOwnedProcess(ownedTunnel)
             tunnel = nil
             tunnelRunning = false
             tunnelHealth = .stopped

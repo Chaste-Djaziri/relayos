@@ -3,31 +3,42 @@ import AppKit
 
 extension BridgeModel {
     func setEmergencyStop(_ value: Bool) {
-        guard emergencyStop != value else { return }
-        guard let python = approvalExecutable() else {
+        guard !emergencyStopInFlight, emergencyStop != value else { return }
+        guard let helper = approvalExecutable() else {
             showSecurityError("RelayOS authorization helper is unavailable.")
             return
         }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: python)
-        process.arguments = ["-m", "laptop_bridge.approvals", "set-emergency-stop", value ? "true" : "false"]
-        setApprovalWorkingDirectory(process, executable: python)
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        do {
-            try process.run()
-            let data = try pipe.fileHandleForReading.readToEnd() ?? Data()
-            process.waitUntilExit()
-            guard process.terminationStatus == 0,
-                  let payload = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let confirmed = payload["emergency_stop"] as? Bool,
-                  confirmed == value else {
-                showSecurityError("The agent did not confirm the requested emergency-stop state.")
-                return
+        emergencyStopInFlight = true
+        // Fail closed: keep the last backend-confirmed state until the helper
+        // independently acknowledges the requested change.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: helper)
+            process.arguments = ["-m", "laptop_bridge.approvals", "set-emergency-stop", value ? "true" : "false"]
+            self?.setApprovalWorkingDirectory(process, executable: helper)
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            var confirmed: Bool?
+            do {
+                try process.run()
+                let data = try pipe.fileHandleForReading.readToEnd() ?? Data()
+                process.waitUntilExit()
+                if process.terminationStatus == 0,
+                   let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    confirmed = json["emergency_stop"] as? Bool
+                }
+            } catch {
+                // The UI must not claim a successful revocation without proof.
             }
-            emergencyStop = confirmed
-        } catch {
-            showSecurityError("Could not update emergency stop: \(error.localizedDescription)")
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.emergencyStopInFlight = false
+                if confirmed == value {
+                    self.emergencyStop = value
+                } else {
+                    self.showSecurityError("The agent did not confirm the requested emergency-stop state.")
+                }
+            }
         }
     }
 
@@ -103,14 +114,27 @@ extension BridgeModel {
     }
 
     func revokePermission(_ id: String) {
-        guard let python = approvalExecutable() else { return }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: python)
-        process.arguments = ["-m", "laptop_bridge.approvals", "revoke-permission", id]
-        setApprovalWorkingDirectory(process, executable: python)
-        try? process.run()
-        process.waitUntilExit()
-        refreshPermissionGrants()
+        revokePermissions([id])
+    }
+
+    func revokePermissions(_ ids: [String]) {
+        guard let helper = approvalExecutable(), !ids.isEmpty else { return }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            for id in ids {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: helper)
+                process.arguments = ["-m", "laptop_bridge.approvals", "revoke-permission", id]
+                self?.setApprovalWorkingDirectory(process, executable: helper)
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    if process.terminationStatus != 0 { break }
+                } catch { break }
+            }
+            Task { @MainActor [weak self] in
+                self?.refreshPermissionGrants()
+            }
+        }
     }
 
     func refreshCommandGrants() {

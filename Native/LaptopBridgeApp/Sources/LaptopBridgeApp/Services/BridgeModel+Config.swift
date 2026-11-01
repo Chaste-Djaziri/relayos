@@ -27,7 +27,9 @@ extension BridgeModel {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             try? output.write(to: configURL, options: .atomic)
         }
-        restartServices()
+        // Capability changes only require the managed MCP helper to reload.
+        // Keep the public tunnel and its configured hostname stable.
+        restartPythonServer()
     }
 
     func ngrokDomain() -> String? {

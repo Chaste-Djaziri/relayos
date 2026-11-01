@@ -6,6 +6,22 @@ final class LaptopBridgeAppTests: XCTestCase {
         XCTAssertTrue(true)
     }
 
+    @MainActor
+    func testClosingSettingsDoesNotTerminatePersistentAgent() {
+        let delegate = RelayOSApplicationDelegate()
+        XCTAssertFalse(delegate.applicationShouldTerminateAfterLastWindowClosed(NSApplication.shared))
+    }
+
+    func testPermissionGuideOnlyOffersDragForAppLists() {
+        XCTAssertTrue(SystemPermissionKind.screenRecording.supportsAppDrag)
+        XCTAssertTrue(SystemPermissionKind.fullDiskAccess.supportsAppDrag)
+        XCTAssertTrue(SystemPermissionKind.accessibility.supportsAppDrag)
+        XCTAssertFalse(SystemPermissionKind.notifications.supportsAppDrag)
+        XCTAssertFalse(SystemPermissionKind.automation.supportsAppDrag)
+        XCTAssertEqual(SystemPermissionKind.fullDiskAccess.settingsAnchor, "Privacy_AllFiles")
+        XCTAssertEqual(PermissionObservation.manual.label, "Check in Settings")
+    }
+
     func testDevelopmentRootIsDiscoveredFromNestedBuildDirectory() throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory.appendingPathComponent("RelayOS-test-\(UUID().uuidString)")

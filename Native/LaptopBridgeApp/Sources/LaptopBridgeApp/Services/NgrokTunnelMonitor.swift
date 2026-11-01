@@ -37,7 +37,7 @@ struct NgrokTunnelMonitor {
         self.transport = transport
     }
 
-    func probe() async -> NgrokTunnelProbe {
+    func probe(configuredEndpoint: URL? = nil) async -> NgrokTunnelProbe {
         let url = URL(string: "http://127.0.0.1:4040/api/tunnels")!
         var inspector = URLRequest(url: url)
         inspector.timeoutInterval = 2
@@ -45,23 +45,51 @@ struct NgrokTunnelMonitor {
         let body: Data
         do {
             let (status, data) = try await transport(inspector)
-            guard status == 200 else { return .init(status: .inspectorUnavailable, publicURL: nil) }
+            guard status == 200 else {
+                return await probeConfiguredEndpoint(configuredEndpoint)
+            }
             body = data
         } catch {
-            return .init(status: .inspectorUnavailable, publicURL: nil)
+            return await probeConfiguredEndpoint(configuredEndpoint)
         }
         guard let publicURL = Self.ownedEndpoint(from: body) else {
-            return .init(status: .unexpectedEndpoint, publicURL: nil)
+            // Another application may own the inspector on port 4040. We
+            // cannot adopt that tunnel, but we may still verify our own
+            // previously stored exact HTTPS endpoint independently.
+            let known = await probeConfiguredEndpoint(configuredEndpoint)
+            return known.status == .healthy
+                ? known : .init(status: .unexpectedEndpoint, publicURL: nil)
         }
-        var publicRequest = URLRequest(url: publicURL.appendingPathComponent("mcp"))
-        publicRequest.httpMethod = "GET"
-        publicRequest.timeoutInterval = 4
-        publicRequest.cachePolicy = .reloadIgnoringLocalCacheData
+        return await verifyPublicEndpoint(publicURL)
+    }
+
+    // The configured HTTPS endpoint can remain accessible after a process
+    // handover even when ngrok's optional localhost inspector is unavailable.
+    // Only a previously configured exact /mcp URL may be used as this fallback;
+    // a caller cannot supply an arbitrary URL or trigger unapproved adoption.
+    private func probeConfiguredEndpoint(_ endpoint: URL?) async -> NgrokTunnelProbe {
+        guard let endpoint, endpoint.scheme == "https",
+              endpoint.user == nil, endpoint.password == nil,
+              endpoint.port == nil, endpoint.path == "/mcp",
+              endpoint.query == nil, endpoint.fragment == nil,
+              let host = endpoint.host, !host.isEmpty,
+              let origin = URL(string: "https://\(host)") else {
+            return .init(status: .inspectorUnavailable, publicURL: nil)
+        }
+        return await verifyPublicEndpoint(origin)
+    }
+
+    private func verifyPublicEndpoint(_ origin: URL) async -> NgrokTunnelProbe {
+        var request = URLRequest(url: origin.appendingPathComponent("mcp"))
+        request.httpMethod = "GET"
+        request.timeoutInterval = 4
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         do {
-            let (status, _) = try await transport(publicRequest)
-            return .init(status: status == 401 ? .healthy : .remoteUnavailable, publicURL: publicURL)
+            let (status, _) = try await transport(request)
+            return .init(status: status == 401 ? .healthy : .remoteUnavailable,
+                         publicURL: status == 401 ? origin : nil)
         } catch {
-            return .init(status: .remoteUnavailable, publicURL: publicURL)
+            return .init(status: .remoteUnavailable, publicURL: nil)
         }
     }
 

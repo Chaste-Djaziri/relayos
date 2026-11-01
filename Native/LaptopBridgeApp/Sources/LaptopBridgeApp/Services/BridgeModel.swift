@@ -13,6 +13,7 @@ final class BridgeModel: ObservableObject {
     @Published var tunnelHealth: TunnelHealthStatus = .stopped
     @Published var serviceNotice = ""
     @Published var emergencyStop = false
+    @Published var emergencyStopInFlight = false
     @Published var endpoint = "Not configured"
     @Published var geminiConnected = false
     @Published var chatGPTConnected = false
