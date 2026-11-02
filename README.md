@@ -1,6 +1,8 @@
 # RelayOS — Desktop Companion
 
-**Status: macOS and Windows 10/11 companion.** Python 3.11+. On first launch, the companion walks you through ngrok setup, capability choices, and client connections. Each installation gets its own HTTPS endpoint and secrets stay in the platform credential store; no project credentials are shipped.
+**Status: macOS Apple Silicon download available; Windows coming soon.** Python 3.11+ for development builds.
+
+**Public download:** [RelayOS for macOS (Apple Silicon, macOS 14+)](https://github.com/Chaste-Djaziri/relayos/releases/download/nightly/RelayOS.dmg). The CI workflow builds and verifies a fresh `RelayOS.dmg` and publishes a matching SHA-256 checksum to GitHub Releases after the Swift, Python, and download-site checks pass. The current rolling nightly is a development distribution and may not be notarized; macOS Gatekeeper may require you to explicitly open the app. Windows implementation remains experimental and **is not published for download**. On first launch, the companion walks you through ngrok setup, capability choices, and client connections. Each installation gets its own HTTPS endpoint and secrets stay in the platform credential store; no project credentials are shipped.
 
 No mouse/keyboard injection or unrestricted computer control is configured or permitted. It is not safe to expose the HTTP port publicly without a production authentication layer.
 
@@ -36,7 +38,9 @@ policy. Run the virtual-environment executables directly instead:
 
 The desktop companion starts the Streamable HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`. Its controls expose server and overlay status, active coding sessions, a folder picker, guidance controls, local history/settings, server restart, and an emergency stop. macOS also offers these controls from its menu-bar companion.
 
-## Windows 10/11
+## Windows 10/11 — Coming Soon
+
+The Windows companion is experimental and is not yet an available public release. The following information is for development and testing only, not end-user installation.
 
 The Windows companion is a standard main-window application: every control lives in its dashboard and closing the window stops the local MCP server and ngrok tunnel. It does not run hidden in the notification area.
 

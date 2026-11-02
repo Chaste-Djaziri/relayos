@@ -12,6 +12,7 @@ struct QuickPanel: View {
     @Environment(\.colorScheme) private var colorScheme
 
     @AppStorage(RelayOSTheme.accentKey) private var accent = "blue"
+    @AppStorage(RelayOSCursorVisibility.key) private var virtualCursorVisible = true
     @State private var confirmEmergencyStop = false
     @State private var confirmRestart = false
 
@@ -107,6 +108,28 @@ struct QuickPanel: View {
                 .foregroundStyle(accentColor)
             }
             .padding(14)
+            .background(palette.cardBackground, in: RoundedRectangle(cornerRadius: 13))
+            .overlay(RoundedRectangle(cornerRadius: 13)
+                .strokeBorder(palette.cardBorder, lineWidth: 1))
+            .padding(.bottom, 12)
+
+            HStack(spacing: 12) {
+                Image(systemName: "cursorarrow.rays")
+                    .foregroundStyle(accentColor)
+                    .frame(width: 20)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Virtual cursor")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Hide the triangle; keep guidance and highlights.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Toggle("Show virtual cursor", isOn: $virtualCursorVisible)
+                    .labelsHidden()
+                    .accessibilityLabel("Show virtual cursor")
+            }
+            .padding(12)
             .background(palette.cardBackground, in: RoundedRectangle(cornerRadius: 13))
             .overlay(RoundedRectangle(cornerRadius: 13)
                 .strokeBorder(palette.cardBorder, lineWidth: 1))

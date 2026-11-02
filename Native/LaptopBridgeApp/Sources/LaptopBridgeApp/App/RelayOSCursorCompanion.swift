@@ -3,6 +3,22 @@ import AppKit
 import CoreGraphics
 import SwiftUI
 
+/// User-facing preference: hide the optional triangle without disabling
+/// screen highlights, typewritten tips, or the native guidance observer.
+enum RelayOSCursorVisibility {
+    static let key = "relayos.virtualCursor.visible"
+
+    static func shouldDisplay(
+        preferredVisible: Bool, targetAllowsCursor: Bool = true
+    ) -> Bool {
+        preferredVisible && targetAllowsCursor
+    }
+
+    static var isEnabled: Bool {
+        (UserDefaults.standard.object(forKey: key) as? Bool) ?? true
+    }
+}
+
 /// Pure placement logic for the passive cursor companion. NSScreen and
 /// NSEvent.mouseLocation use the same global bottom-left coordinate space.
 enum RelayOSCursorPlacement {
@@ -543,8 +559,17 @@ final class RelayOSCursorCompanion {
             window.setFrame(frame, display: true)
             lastFrame = frame
         }
-        if !window.isVisible {
-            window.orderFrontRegardless()
+        // Respect the global Show virtual cursor setting on every frame.
+        // Do not disable the helper, target completion, text tips or highlights:
+        // those remain useful when the triangle is intentionally hidden.
+        let visible = RelayOSCursorVisibility.shouldDisplay(
+            preferredVisible: RelayOSCursorVisibility.isEnabled,
+            targetAllowsCursor: guidance?.showCursor != false
+        )
+        if visible {
+            if !window.isVisible { window.orderFrontRegardless() }
+        } else if window.isVisible {
+            window.orderOut(nil)
         }
         if let tip, tip.isValid(at: Date()) {
             tipCompanion.show(tip, near: frame, on: screen)

@@ -17,6 +17,14 @@ Scope: /Users/chastedjaziri/Documents/GitHub/laptop-bridge
 - [x] Run Python regression suite (137 passed, 19 subtests; one pre-existing Pydantic warning), confirm HTTP route registration/metadata contract, and pass git diff --check.
 - [ ] Deploy the signed bundle with a rollback backup, then verify a real consented full-screen JPEG is retrievable and inspectable from ChatGPT over the public tunnel.
 
+## macOS release downloads and cursor visibility
+- [x] Add a native Show virtual cursor toggle in General settings and the menu-bar panel, on by default and saved across app restarts.
+- [x] Leave screen highlights, cursor-attached tips, timeout/arrival, and screen sharing operational when the triangle is hidden.
+- [x] Switch public download site to Apple Silicon macOS DMG and Windows Coming Soon.
+- [x] Rework release CI for macOS 26 Apple Silicon runner, static website build, Swift/Python tests, signed/verified bundle and DMG, SHA-256 manifest, then GitHub release assets.
+- [ ] Push source to GitHub, confirm CI success and verify current DMG/checksum are actually published.
+- [ ] Confirm production Vercel deployment through configured integration or deployment credentials.
+
 ## Autonomous native follow-along guidance
 - [x] Add explicit recipe-based `start_guided_walkthrough` / `guided_walkthrough_status` / `stop_guided_walkthrough` MCP actions; initial flow: System Settings → General.
 - [x] Native 1.2-second background observer verifies the foreground app, and bounded macOS Accessibility state/geometry verifies the selected General control. No screenshots, clicks, keyboard input or ChatGPT messages are produced by this observer.

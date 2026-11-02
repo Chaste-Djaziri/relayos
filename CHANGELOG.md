@@ -4,6 +4,13 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 
 ## Unreleased
 
+### Virtual cursor visibility and macOS-only public downloads
+- Add a persistent, on-by-default **Show virtual cursor** switch in RelayOS Settings → General and the menu-bar control panel. Hiding it immediately suppresses only the colored pointer triangle while preserving cursor tips, visual region highlights, guidance-step completion and screen sharing.
+- Update the RelayOS website to offer a direct macOS Apple Silicon DMG download from GitHub Releases; show Windows as **Coming Soon**, with no active Windows download button.
+- Update GitHub Actions to build the static website and Apple Silicon DMG, run Python/Swift tests, verify the signature, Mach-O architecture, packaged helpers and mounted DMG, and publish the DMG with SHA-256 checksum. The old Windows release job and outdated Windows download asset are retired.
+- Make the macOS DMG installation layout include an Applications symlink. Document the development/notarization status accurately.
+
+
 ### Automatic follow-along walkthrough engine (macOS)
 - Add opt-in MCP actions `start_guided_walkthrough`, `guided_walkthrough_status` and `stop_guided_walkthrough` for a bounded, recipe-locked `system_settings_general` walkthrough.
 - The signed native RelayOS companion polls the authenticated local endpoint every 1.2 seconds, checks the actual foreground bundle ID, then reads only the `General` control's Accessibility metadata (selection and bounded rectangle) to verify progress. Screenshots, arbitrary UI text, click/keyboard injection and automatic permission requests are not needed.

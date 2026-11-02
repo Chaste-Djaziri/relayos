@@ -11,3 +11,8 @@
 .download-actions{position:static;display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
 .download small{grid-column:1/-1}
 @media(max-width:700px){.download{grid-template-columns:1fr}.download-actions{align-items:flex-start;justify-content:flex-start;margin-top:35px}}
+.button.unavailable{border:1px dashed #555a50;color:#9c9c98;cursor:default;background:#191b18;gap:14px}
+.button.unavailable:hover{transform:none}
+.coming-soon{font:500 10px 'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--green);padding:6px 8px;border:1px solid #3b4730;border-radius:99px}
+.download small a{color:var(--green);text-decoration:underline;text-underline-offset:3px}
+@media(max-width:700px){.download .button{width:100%;justify-content:space-between}}

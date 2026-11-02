@@ -62,6 +62,15 @@ final class RelayOSCursorGuidanceTests: XCTestCase {
         XCTAssertTrue(gate.update(pointer: CGPoint(x: 550, y: 500), target: target))
     }
 
+    func testVirtualCursorPreferenceDefaultsVisibleAndCannotOverrideTargetHide() {
+        XCTAssertTrue(RelayOSCursorVisibility.shouldDisplay(preferredVisible: true))
+        XCTAssertFalse(RelayOSCursorVisibility.shouldDisplay(preferredVisible: false))
+        XCTAssertFalse(RelayOSCursorVisibility.shouldDisplay(
+            preferredVisible: true, targetAllowsCursor: false))
+        XCTAssertFalse(RelayOSCursorVisibility.shouldDisplay(
+            preferredVisible: false, targetAllowsCursor: false))
+    }
+
     func testGuidedTravelIsNoticeablySlowerWithoutSlowingNormalFollow() {
         XCTAssertGreaterThan(
             RelayOSCursorMotion.followingFrequency,

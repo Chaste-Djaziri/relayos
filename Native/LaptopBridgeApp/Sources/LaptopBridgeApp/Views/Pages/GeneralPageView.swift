@@ -5,6 +5,7 @@ struct GeneralPageView: View {
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage(ApprovalSound.preferenceKey) private var approvalSoundsEnabled = true
     @AppStorage(ApprovalArrivalNotification.enabledKey) private var approvalNotificationsEnabled = false
+    @AppStorage(RelayOSCursorVisibility.key) private var virtualCursorVisible = true
     @State private var copiedEndpoint = false
 
     private var theme: ThemeColors {
@@ -96,6 +97,16 @@ struct GeneralPageView: View {
                         ),
                         tintColor: Color(red: 0.92, green: 0.26, blue: 0.26)
                     )
+                }
+            }
+
+            SettingsCard(title: "On-screen guidance") {
+                SettingsCardRow(
+                    title: "Show virtual cursor",
+                    subtitle: "Show the colored RelayOS triangle next to your pointer. Turn off to keep highlights and typewritten guidance without the triangle.",
+                    showDivider: false
+                ) {
+                    SettingsToggle(isOn: $virtualCursorVisible)
                 }
             }
 
