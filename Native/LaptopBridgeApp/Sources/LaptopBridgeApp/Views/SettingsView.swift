@@ -146,6 +146,8 @@ struct SettingsView: View {
             switch tab {
             case .general:
                 NativeSwiftRuntimePageView(model: model)
+            case .storage:
+                StorageAuditPageView()
             case .appearance:
                 AppearancePageView()
             default:
@@ -163,6 +165,8 @@ struct SettingsView: View {
         switch tab {
         case .general:
             GeneralPageView(model: model)
+        case .storage:
+            StorageAuditPageView()
         case .appearance:
             AppearancePageView()
         case .security:

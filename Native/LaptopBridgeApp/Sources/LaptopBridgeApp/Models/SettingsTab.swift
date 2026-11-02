@@ -2,6 +2,7 @@ import Foundation
 
 enum SettingsTab: String, Hashable, CaseIterable {
     case general = "General"
+    case storage = "Storage"
     case appearance = "Appearance"
     case security = "Security"
     case systemPermissions = "System permissions"

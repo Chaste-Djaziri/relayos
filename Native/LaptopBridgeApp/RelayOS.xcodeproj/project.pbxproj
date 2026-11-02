@@ -7,18 +7,22 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B7E7C0A00000000000000002 /* RelayOSCursorCompanion.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E7C0A00000000000000001 /* RelayOSCursorCompanion.swift */; };
-		F22222222222222222222222 /* CommandJobCompletionNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11111111111111111111111 /* CommandJobCompletionNotification.swift */; };
 		0C6F487398FDD7AB91D7A548 /* NgrokTunnelMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */; };
+		0E413FD6A1F466DBEE0AA2C9 /* RelayOSWalkthroughTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 547F4199D3C68772FC70E1F5 /* RelayOSWalkthroughTests.swift */; };
+		1045E048FF650A13D4DDF071 /* NativeMCPVisual.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76AEEE02F99AFF8666999A65 /* NativeMCPVisual.swift */; };
 		1082C54EAC0015720F7AD15F /* CommandPermissionsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A20318397E308D076DE7F /* CommandPermissionsPageView.swift */; };
 		10C20CCAA3DBA57333534A8D /* SavedCommandGrant.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DCD2DF7385FBDF3D206AAFC /* SavedCommandGrant.swift */; };
 		18A5EE9DDF88CE710907B224 /* relayos-white.png in Resources */ = {isa = PBXBuildFile; fileRef = 4D0A37E94818963512C7A078 /* relayos-white.png */; };
+		20585405D29E0F1FDA549CE0 /* StorageAuditPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E30BAC6342E6350C65A4F39A /* StorageAuditPageView.swift */; };
 		209F367D5A545995122990B6 /* SidebarItemModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A41ED5BBC85B05E57B15CF7 /* SidebarItemModel.swift */; };
 		2508024A777268584D880B1D /* SettingsCardRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B4C7CB4A4D712541902C002 /* SettingsCardRow.swift */; };
+		26A6DC19971133F998F523ED /* RelayOSCursorCompanion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B1BBF9D72F3505FA0F3617 /* RelayOSCursorCompanion.swift */; };
 		29BE237E49B747B5E15B2358 /* SidebarItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D79D365EF6A27D13BCE24C92 /* SidebarItemRow.swift */; };
 		2ABB0556B126CE0EB68FF233 /* SavedCommandGrantTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FA09765A5DC85740382BB61 /* SavedCommandGrantTests.swift */; };
 		2E07F8C23284AD4A004C90FD /* DiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CA8380B6A50B5CF1C4DD810 /* DiffView.swift */; };
 		33B6DE14D950D7F0C2E02183 /* GeneralPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0FC6EA3AE6683E2FD19EB01 /* GeneralPageView.swift */; };
+		33EF91AF2BBEB010A7C29B5D /* NativeMCPActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD95F4EFF3CB540BD09C233F /* NativeMCPActionTests.swift */; };
+		39A9E08B6B2360E5116DCCD8 /* ScreenSharingSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA33A11390AFD56E6F89E7EF /* ScreenSharingSessionTests.swift */; };
 		39ADF6F4C8CDD27B05E22BBD /* NativeMCPAuthorizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60F66F1777D669CF509C134 /* NativeMCPAuthorizationTests.swift */; };
 		3FDFF94F9A02A21C15ED1B7B /* ServiceSupervisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8D5FF69919504CE19785BDA /* ServiceSupervisor.swift */; };
 		4057EB6DC2594F9AA0377C0E /* CustomTrafficLights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117EEB3A4505CFA882C6F27F /* CustomTrafficLights.swift */; };
@@ -26,21 +30,27 @@
 		467C1609E856C0D65DC5BB27 /* ActivitySummaryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0EBA458D20DA0AA757B7A81 /* ActivitySummaryRow.swift */; };
 		485444AD71723A6C144A4DDB /* ToolsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3748BFE19E365DC80B44E55 /* ToolsPageView.swift */; };
 		4F1AF772A81526E6A1079485 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = F62CB8233B4CE97753E22C0F /* MCP */; };
+		51C07D36704A7415293DEFD6 /* RelayOSCursorTip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05A5A441CC142B7D3F5FA6B2 /* RelayOSCursorTip.swift */; };
 		5682B24C3ACBA814EB2A9115 /* SystemPermissionAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 722D2821D95B5CA5B25F7ACF /* SystemPermissionAccess.swift */; };
 		5BE88EB67B976D012C4575BE /* DevelopmentRuntimeLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C90047B7CAEB4939575F3864 /* DevelopmentRuntimeLocator.swift */; };
+		5C2A45D2A3034262574C6FA5 /* NativeMCPOAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42E32176131CDFF2988B5A52 /* NativeMCPOAuth.swift */; };
 		5CA2F14A7E880C022DDBD8CE /* PreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A4BED36861238A9D5852ED0 /* PreviewSupport.swift */; };
 		5F69A09CB5D0CEA499D69E6D /* BridgeModel+CommandJobs.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA1547CE08DBD57A9DFA1396 /* BridgeModel+CommandJobs.swift */; };
 		5FBF89074C57D79FB72B3FB5 /* SettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECF57EB1E8A94922036D54B4 /* SettingsTab.swift */; };
 		60D82807200B9A20652B43E2 /* ApprovalArrivalTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73BCA19D4162B0993AAB68B9 /* ApprovalArrivalTracker.swift */; };
 		61A9F7371A3D7905FB4C6988 /* RelayOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE28214DB3F8EEB280FF8542 /* RelayOSApp.swift */; };
+		63EAE4EA32F7335F60FAD605 /* RelayOSWalkthroughObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EBD37D50F5A48FD4316C8E7 /* RelayOSWalkthroughObserver.swift */; };
 		66ED3830CC3709D053488B80 /* BridgeModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 010C81D41E2B4A8F38171CA5 /* BridgeModel.swift */; };
 		682D99ABA596F6FB38FC5309 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CCB44FBECF23FB23825AD9F /* VisualEffectView.swift */; };
 		6989D8918649AE634984E2C9 /* MCPHealthMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C5CAC742DE9F4E13B3FFD16 /* MCPHealthMonitor.swift */; };
 		6AAF4AC47A074EEF9C6760F3 /* FreshSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2889B5D65542EA4A43A37FEC /* FreshSetupView.swift */; };
 		6B99344E704AD82C202228A8 /* SettingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1431B1972A552A6BD4503531 /* SettingsCard.swift */; };
 		6C10999D6B074EC5FB429C7D /* DesktopWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF620AE5C056396CFD9F836 /* DesktopWindowView.swift */; };
+		6E37AE2F342CEBC3C8476017 /* BridgeModel+ScreenSharing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9723AB97F723BAD46F2531CA /* BridgeModel+ScreenSharing.swift */; };
+		6E8D8ADBC760EBC3B0F256B0 /* RelayOSScreenHighlightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81EC99CCD1B1B763D4A1C43 /* RelayOSScreenHighlightTests.swift */; };
 		712333DEC9CE9601D19C1FA8 /* NativeSwiftRuntimePageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69449F9014113FB4EB7BA87F /* NativeSwiftRuntimePageView.swift */; };
 		74913A9BA4C1178043F221CF /* SystemPermissionsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F698E7F3F856A246A4878AB /* SystemPermissionsPageView.swift */; };
+		7947E754FA012D70E5C8DF43 /* CommandJobCompletionNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0981FB7746F1FB45A5EA98B3 /* CommandJobCompletionNotification.swift */; };
 		7B5F236A4C6B6EFEABADCC3A /* ApprovalSoundTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48AEEC9127B56E4240E8C5BE /* ApprovalSoundTests.swift */; };
 		7BD027BDD7E1E2EA0C0D490E /* ApprovalsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12E83C60B57771FC2D31462E /* ApprovalsPageView.swift */; };
 		7DD405A59B5B0844E46326CB /* NativeMCPSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B62F9FD9564BA09234B9C820 /* NativeMCPSystem.swift */; };
@@ -55,6 +65,7 @@
 		9607D773D0C2DEB2F23CF1EC /* CustomSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28C4A0F8F501A733194DE25E /* CustomSidebarView.swift */; };
 		9684BDA65EB9E5877050B290 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 160DA6357E98CDFF64BFC295 /* Keychain.swift */; };
 		9832DFC5790A3DB05C6A4CFD /* InstanceLeaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AAF3F10B93F830BC33B27E4 /* InstanceLeaseTests.swift */; };
+		9880BCB99A7E6AA69B7F85AE /* NativeMCPActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 612537FAB0E5D47AEC5DC7CF /* NativeMCPActions.swift */; };
 		9B9794F608EB97B1E819425C /* NgrokPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADEF7F916CC9B40C2956BFB0 /* NgrokPageView.swift */; };
 		9D6548FA22D02320900698AB /* NativeMCPAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 883F3D880993F435A52AD6B5 /* NativeMCPAuthorization.swift */; };
 		9DC38B230A00975957A04FC0 /* NativeMCPDevelopmentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14528F66396ABF533113585A /* NativeMCPDevelopmentStore.swift */; };
@@ -66,33 +77,32 @@
 		AC1D691BBB0D54DEA3D71251 /* TerminalJobsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FFE0B2257A52C54B7F257D8 /* TerminalJobsPageView.swift */; };
 		AC7B0895AC93C77ABA1A3B32 /* QuickPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3184FA7CCA10909266F6728 /* QuickPanel.swift */; };
 		B5E66B8DAF3787980A588658 /* ApprovalSound.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7781BA7F576AD97F981A5E31 /* ApprovalSound.swift */; };
+		B68868F48EA7E9BAB5D1483E /* NativeMCPOAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BA6D6998D11C54E6A44792D /* NativeMCPOAuthTests.swift */; };
+		B7B6EF41DC2D265259CC841F /* RelayOSCursorGuidanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BC4E8BBFEDF25053782129A /* RelayOSCursorGuidanceTests.swift */; };
+		B9962A9BEE72571E0FD603AF /* NotchPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3723B36BA3BD616D029DB7B1 /* NotchPanel.swift */; };
 		BFE4080DBC12E91E81D03C28 /* SettingsCollapsibleCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A13002A0BF9351E8BC8C147 /* SettingsCollapsibleCard.swift */; };
 		C0FFBE0E81E9C7124055CC4A /* CommandJobModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0209863FCD8E9B554E21541 /* CommandJobModels.swift */; };
 		C2B1F943CCDBABA72BF32661 /* ActivityPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4303862A504D6B755A0720 /* ActivityPageView.swift */; };
 		C47C604C813131975401521B /* BridgeModel+Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 074974C562F230CC62710F89 /* BridgeModel+Config.swift */; };
 		C6B6945B3F970815995F1B73 /* ApprovalArrivalNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B64825844B5227059987BE6 /* ApprovalArrivalNotification.swift */; };
+		C76627FCCA1361ECD19AAD27 /* NotchPanelPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DD7C6B7D828ECA01D62C74A /* NotchPanelPlacementTests.swift */; };
 		C79F2FA5977E0D04FDB46684 /* NativeMCPProjectFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B011275ED3B8DB2E5DCAFA47 /* NativeMCPProjectFiles.swift */; };
 		C94FB612983A59EF639CB39C /* SettingsButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD620B4A3907C4DB20516D13 /* SettingsButton.swift */; };
 		CAC144368BE6D1B3FDF2C59A /* InstanceLease.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A141544AB9DFABBB18D053 /* InstanceLease.swift */; };
 		CE7CD965B1A669000A30F54A /* SettingsToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 139BB1F09BF5193F847A5FDD /* SettingsToggle.swift */; };
 		D12705F9869D63CEA6A8E576 /* BridgeModel+ProcessControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 696C2E390D56A4200CCC662D /* BridgeModel+ProcessControl.swift */; };
+		D698239128ADC25D3E4023A5 /* RelayOSScreenHighlight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63B49E4B88C31DC0A8DD879B /* RelayOSScreenHighlight.swift */; };
 		DA2031F59D8084379EA893B3 /* NgrokTunnelMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA5E94A049DF259A6CE6DB7E /* NgrokTunnelMonitorTests.swift */; };
+		DB4D3642A1761BA5B2670E93 /* RelayOSCursorTipTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A43B7E1BF50950A3D211D8E /* RelayOSCursorTipTests.swift */; };
 		DCBDA4DE0585D229663DF181 /* TerminalOutputConsole.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7EA2B5E615FBC04E8BC4254 /* TerminalOutputConsole.swift */; };
 		E0E1369ACE82B43D84C43E6C /* ApprovalCenterModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5035C5D233584D80945951A4 /* ApprovalCenterModels.swift */; };
 		E40AEBC40B50EF1A64E8B874 /* SecurityPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8F22BF45B761B618C70CC1 /* SecurityPageView.swift */; };
 		E7036D84F04C4324B951656D /* BridgeModel+Permissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29739FD30F89DEF8044CA268 /* BridgeModel+Permissions.swift */; };
+		E775DA73888349DE8D4BCECE /* NativeGuidanceSessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC6F9FF9356F984D3599858C /* NativeGuidanceSessions.swift */; };
 		E7E3AE99D2E5CD6B44891B8C /* MCPHealthMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DFE6A41A2CDF9C522333953 /* MCPHealthMonitorTests.swift */; };
 		ED00DF5B4DB7A74138392679 /* NativeMCPHTTP.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D8F23734E7C4AC47103413 /* NativeMCPHTTP.swift */; };
 		F04D5EF531F6ADCD8BDF60F2 /* ApprovalCenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAC1EB8FF3BFA0F0F26D8D8C /* ApprovalCenterTests.swift */; };
-		F0B0B0B0B0B0B0B0B0B0B0B0 /* NativeMCPActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A0A0A0A0A0A0A0A0A0A0A0 /* NativeMCPActions.swift */; };
-		F0D0D0D0D0D0D0D0D0D0D0D0 /* NativeMCPActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0C0C0C0C0C0C0C0C0C0C0C0 /* NativeMCPActionTests.swift */; };
-		F0F0F0F0F0F0F0F0F0F0F0F0 /* NativeMCPOAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0E0E0E0E0E0E0E0E0E0E0E0 /* NativeMCPOAuth.swift */; };
 		F13E83639D9B1CADBAAB3FE7 /* CustomWindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBB57FD15B058094ADD00968 /* CustomWindowAccessor.swift */; };
-		F20202020202020202020202 /* NativeMCPOAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10101010101010101010101 /* NativeMCPOAuthTests.swift */; };
-		F40404040404040404040404 /* NativeMCPVisual.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30303030303030303030303 /* NativeMCPVisual.swift */; };
-		F60606060606060606060606 /* NativeGuidanceSessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50505050505050505050505 /* NativeGuidanceSessions.swift */; };
-		F80808080808080808080808 /* NotchPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F70707070707070707070707 /* NotchPanel.swift */; };
-		FA1010101010101010101010 /* NotchPanelPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90909090909090909090909 /* NotchPanelPlacementTests.swift */; };
 		FAFAE54B7AA70FB47C2B635E /* TerminalJobRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224FB2B0DF1453B35D63B411 /* TerminalJobRow.swift */; };
 		FCDF01F8EFB50197571E9377 /* ConnectionsPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703325659C195B82C5568E16 /* ConnectionsPageView.swift */; };
 		FDCFAB97EEEF00AE1DBDC584 /* SingleInstanceCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0606A340C321E3C38BC40B9C /* SingleInstanceCoordinator.swift */; };
@@ -109,11 +119,11 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		B7E7C0A00000000000000001 /* RelayOSCursorCompanion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSCursorCompanion.swift; sourceTree = "<group>"; };
-		F11111111111111111111111 /* CommandJobCompletionNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandJobCompletionNotification.swift; sourceTree = "<group>"; };
 		010C81D41E2B4A8F38171CA5 /* BridgeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeModel.swift; sourceTree = "<group>"; };
+		05A5A441CC142B7D3F5FA6B2 /* RelayOSCursorTip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSCursorTip.swift; sourceTree = "<group>"; };
 		0606A340C321E3C38BC40B9C /* SingleInstanceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleInstanceCoordinator.swift; sourceTree = "<group>"; };
 		074974C562F230CC62710F89 /* BridgeModel+Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+Config.swift"; sourceTree = "<group>"; };
+		0981FB7746F1FB45A5EA98B3 /* CommandJobCompletionNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandJobCompletionNotification.swift; sourceTree = "<group>"; };
 		0A4BED36861238A9D5852ED0 /* PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSupport.swift; sourceTree = "<group>"; };
 		0A75ABC2EF649483FACCE8E5 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NgrokTunnelMonitor.swift; sourceTree = "<group>"; };
@@ -126,6 +136,7 @@
 		160DA6357E98CDFF64BFC295 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
 		17FC7ACC1B8500D99CFA01C5 /* StatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBadge.swift; sourceTree = "<group>"; };
 		1CA8380B6A50B5CF1C4DD810 /* DiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffView.swift; sourceTree = "<group>"; };
+		1DD7C6B7D828ECA01D62C74A /* NotchPanelPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchPanelPlacementTests.swift; sourceTree = "<group>"; };
 		1E8F22BF45B761B618C70CC1 /* SecurityPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityPageView.swift; sourceTree = "<group>"; };
 		221A20318397E308D076DE7F /* CommandPermissionsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPermissionsPageView.swift; sourceTree = "<group>"; };
 		224FB2B0DF1453B35D63B411 /* TerminalJobRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalJobRow.swift; sourceTree = "<group>"; };
@@ -133,16 +144,24 @@
 		2889B5D65542EA4A43A37FEC /* FreshSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreshSetupView.swift; sourceTree = "<group>"; };
 		28C4A0F8F501A733194DE25E /* CustomSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomSidebarView.swift; sourceTree = "<group>"; };
 		29739FD30F89DEF8044CA268 /* BridgeModel+Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+Permissions.swift"; sourceTree = "<group>"; };
+		2BA6D6998D11C54E6A44792D /* NativeMCPOAuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPOAuthTests.swift; sourceTree = "<group>"; };
 		2C5CAC742DE9F4E13B3FFD16 /* MCPHealthMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPHealthMonitor.swift; sourceTree = "<group>"; };
 		2F8523F43A4AAE041F302654 /* CommandJobModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandJobModelsTests.swift; sourceTree = "<group>"; };
+		3723B36BA3BD616D029DB7B1 /* NotchPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchPanel.swift; sourceTree = "<group>"; };
 		40017314B96D04DB9DF7025F /* BridgeModel+Approvals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+Approvals.swift"; sourceTree = "<group>"; };
+		42E32176131CDFF2988B5A52 /* NativeMCPOAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPOAuth.swift; sourceTree = "<group>"; };
 		45B18B25B4B4D6AD68891289 /* LaptopBridgeAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaptopBridgeAppTests.swift; sourceTree = "<group>"; };
 		48AEEC9127B56E4240E8C5BE /* ApprovalSoundTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalSoundTests.swift; sourceTree = "<group>"; };
 		4D0A37E94818963512C7A078 /* relayos-white.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "relayos-white.png"; sourceTree = "<group>"; };
 		4FA09765A5DC85740382BB61 /* SavedCommandGrantTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedCommandGrantTests.swift; sourceTree = "<group>"; };
 		5035C5D233584D80945951A4 /* ApprovalCenterModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalCenterModels.swift; sourceTree = "<group>"; };
+		547F4199D3C68772FC70E1F5 /* RelayOSWalkthroughTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSWalkthroughTests.swift; sourceTree = "<group>"; };
 		5AAF3F10B93F830BC33B27E4 /* InstanceLeaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstanceLeaseTests.swift; sourceTree = "<group>"; };
+		5BC4E8BBFEDF25053782129A /* RelayOSCursorGuidanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSCursorGuidanceTests.swift; sourceTree = "<group>"; };
+		5EBD37D50F5A48FD4316C8E7 /* RelayOSWalkthroughObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSWalkthroughObserver.swift; sourceTree = "<group>"; };
+		612537FAB0E5D47AEC5DC7CF /* NativeMCPActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPActions.swift; sourceTree = "<group>"; };
 		61EEC49F3DCA38C9750BC9DF /* RelayOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RelayOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		63B49E4B88C31DC0A8DD879B /* RelayOSScreenHighlight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSScreenHighlight.swift; sourceTree = "<group>"; };
 		69449F9014113FB4EB7BA87F /* NativeSwiftRuntimePageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSwiftRuntimePageView.swift; sourceTree = "<group>"; };
 		696C2E390D56A4200CCC662D /* BridgeModel+ProcessControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+ProcessControl.swift"; sourceTree = "<group>"; };
 		69F5F0E0D7B976FF390AEDEA /* PermissionGuidePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionGuidePanel.swift; sourceTree = "<group>"; };
@@ -151,6 +170,7 @@
 		703325659C195B82C5568E16 /* ConnectionsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionsPageView.swift; sourceTree = "<group>"; };
 		722D2821D95B5CA5B25F7ACF /* SystemPermissionAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPermissionAccess.swift; sourceTree = "<group>"; };
 		73BCA19D4162B0993AAB68B9 /* ApprovalArrivalTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalArrivalTracker.swift; sourceTree = "<group>"; };
+		76AEEE02F99AFF8666999A65 /* NativeMCPVisual.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPVisual.swift; sourceTree = "<group>"; };
 		7781BA7F576AD97F981A5E31 /* ApprovalSound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalSound.swift; sourceTree = "<group>"; };
 		7A13002A0BF9351E8BC8C147 /* SettingsCollapsibleCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsCollapsibleCard.swift; sourceTree = "<group>"; };
 		7DFE6A41A2CDF9C522333953 /* MCPHealthMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPHealthMonitorTests.swift; sourceTree = "<group>"; };
@@ -159,24 +179,31 @@
 		8B4C7CB4A4D712541902C002 /* SettingsCardRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsCardRow.swift; sourceTree = "<group>"; };
 		8CF620AE5C056396CFD9F836 /* DesktopWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopWindowView.swift; sourceTree = "<group>"; };
 		8DCD2DF7385FBDF3D206AAFC /* SavedCommandGrant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedCommandGrant.swift; sourceTree = "<group>"; };
+		93B1BBF9D72F3505FA0F3617 /* RelayOSCursorCompanion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSCursorCompanion.swift; sourceTree = "<group>"; };
+		9723AB97F723BAD46F2531CA /* BridgeModel+ScreenSharing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+ScreenSharing.swift"; sourceTree = "<group>"; };
+		9A43B7E1BF50950A3D211D8E /* RelayOSCursorTipTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSCursorTipTests.swift; sourceTree = "<group>"; };
 		9B64825844B5227059987BE6 /* ApprovalArrivalNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalArrivalNotification.swift; sourceTree = "<group>"; };
 		A3184FA7CCA10909266F6728 /* QuickPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPanel.swift; sourceTree = "<group>"; };
 		A60F66F1777D669CF509C134 /* NativeMCPAuthorizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPAuthorizationTests.swift; sourceTree = "<group>"; };
 		A8D5FF69919504CE19785BDA /* ServiceSupervisor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceSupervisor.swift; sourceTree = "<group>"; };
 		ABDF00FAD2BE8C34B9A9EA20 /* RelayOSTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSTheme.swift; sourceTree = "<group>"; };
+		AD95F4EFF3CB540BD09C233F /* NativeMCPActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPActionTests.swift; sourceTree = "<group>"; };
 		ADEF7F916CC9B40C2956BFB0 /* NgrokPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NgrokPageView.swift; sourceTree = "<group>"; };
 		AF7EC9B8A1074531E5EC43E8 /* ManagedProcessSlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedProcessSlot.swift; sourceTree = "<group>"; };
 		B011275ED3B8DB2E5DCAFA47 /* NativeMCPProjectFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPProjectFiles.swift; sourceTree = "<group>"; };
 		B62F9FD9564BA09234B9C820 /* NativeMCPSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPSystem.swift; sourceTree = "<group>"; };
+		B81EC99CCD1B1B763D4A1C43 /* RelayOSScreenHighlightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSScreenHighlightTests.swift; sourceTree = "<group>"; };
 		BD620B4A3907C4DB20516D13 /* SettingsButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsButton.swift; sourceTree = "<group>"; };
 		C0209863FCD8E9B554E21541 /* CommandJobModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandJobModels.swift; sourceTree = "<group>"; };
 		C0EBA458D20DA0AA757B7A81 /* ActivitySummaryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySummaryRow.swift; sourceTree = "<group>"; };
 		C1A141544AB9DFABBB18D053 /* InstanceLease.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstanceLease.swift; sourceTree = "<group>"; };
 		C90047B7CAEB4939575F3864 /* DevelopmentRuntimeLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentRuntimeLocator.swift; sourceTree = "<group>"; };
+		CC6F9FF9356F984D3599858C /* NativeGuidanceSessions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeGuidanceSessions.swift; sourceTree = "<group>"; };
 		D79D365EF6A27D13BCE24C92 /* SidebarItemRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarItemRow.swift; sourceTree = "<group>"; };
 		D9609898F83304B547C9DA7F /* RelayOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RelayOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DBFC8DFBEF74BE9B3F0F8183 /* CommandGrantGroupCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandGrantGroupCard.swift; sourceTree = "<group>"; };
 		E0FC6EA3AE6683E2FD19EB01 /* GeneralPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralPageView.swift; sourceTree = "<group>"; };
+		E30BAC6342E6350C65A4F39A /* StorageAuditPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageAuditPageView.swift; sourceTree = "<group>"; };
 		E3C19994A787B50E533DE7DE /* relayos-black.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "relayos-black.png"; sourceTree = "<group>"; };
 		E6ECBB7F0469449A1B4C1679 /* AppearancePageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearancePageView.swift; sourceTree = "<group>"; };
 		EA1547CE08DBD57A9DFA1396 /* BridgeModel+CommandJobs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BridgeModel+CommandJobs.swift"; sourceTree = "<group>"; };
@@ -184,18 +211,11 @@
 		EBB57FD15B058094ADD00968 /* CustomWindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomWindowAccessor.swift; sourceTree = "<group>"; };
 		ECF57EB1E8A94922036D54B4 /* SettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTab.swift; sourceTree = "<group>"; };
 		ED4303862A504D6B755A0720 /* ActivityPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityPageView.swift; sourceTree = "<group>"; };
-		F0A0A0A0A0A0A0A0A0A0A0A0 /* NativeMCPActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPActions.swift; sourceTree = "<group>"; };
-		F0C0C0C0C0C0C0C0C0C0C0C0 /* NativeMCPActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPActionTests.swift; sourceTree = "<group>"; };
-		F0E0E0E0E0E0E0E0E0E0E0E0 /* NativeMCPOAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPOAuth.swift; sourceTree = "<group>"; };
-		F10101010101010101010101 /* NativeMCPOAuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPOAuthTests.swift; sourceTree = "<group>"; };
 		F1D8F23734E7C4AC47103413 /* NativeMCPHTTP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPHTTP.swift; sourceTree = "<group>"; };
-		F30303030303030303030303 /* NativeMCPVisual.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeMCPVisual.swift; sourceTree = "<group>"; };
 		F3748BFE19E365DC80B44E55 /* ToolsPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolsPageView.swift; sourceTree = "<group>"; };
-		F50505050505050505050505 /* NativeGuidanceSessions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeGuidanceSessions.swift; sourceTree = "<group>"; };
 		F5910DC8365E4FB254B2A822 /* ConnectionRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionRow.swift; sourceTree = "<group>"; };
-		F70707070707070707070707 /* NotchPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchPanel.swift; sourceTree = "<group>"; };
 		F7EA2B5E615FBC04E8BC4254 /* TerminalOutputConsole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalOutputConsole.swift; sourceTree = "<group>"; };
-		F90909090909090909090909 /* NotchPanelPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchPanelPlacementTests.swift; sourceTree = "<group>"; };
+		FA33A11390AFD56E6F89E7EF /* ScreenSharingSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenSharingSessionTests.swift; sourceTree = "<group>"; };
 		FA5E94A049DF259A6CE6DB7E /* NgrokTunnelMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NgrokTunnelMonitorTests.swift; sourceTree = "<group>"; };
 		FE28214DB3F8EEB280FF8542 /* RelayOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayOSApp.swift; sourceTree = "<group>"; };
 		FF6B093555EF31A324DD474A /* ServiceSupervisorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceSupervisorTests.swift; sourceTree = "<group>"; };
@@ -231,7 +251,9 @@
 			isa = PBXGroup;
 			children = (
 				FE28214DB3F8EEB280FF8542 /* RelayOSApp.swift */,
-				B7E7C0A00000000000000001 /* RelayOSCursorCompanion.swift */,
+				93B1BBF9D72F3505FA0F3617 /* RelayOSCursorCompanion.swift */,
+				05A5A441CC142B7D3F5FA6B2 /* RelayOSCursorTip.swift */,
+				63B49E4B88C31DC0A8DD879B /* RelayOSScreenHighlight.swift */,
 				0606A340C321E3C38BC40B9C /* SingleInstanceCoordinator.swift */,
 			);
 			path = App;
@@ -246,19 +268,21 @@
 				074974C562F230CC62710F89 /* BridgeModel+Config.swift */,
 				29739FD30F89DEF8044CA268 /* BridgeModel+Permissions.swift */,
 				696C2E390D56A4200CCC662D /* BridgeModel+ProcessControl.swift */,
+				9723AB97F723BAD46F2531CA /* BridgeModel+ScreenSharing.swift */,
 				C90047B7CAEB4939575F3864 /* DevelopmentRuntimeLocator.swift */,
 				160DA6357E98CDFF64BFC295 /* Keychain.swift */,
 				2C5CAC742DE9F4E13B3FFD16 /* MCPHealthMonitor.swift */,
+				CC6F9FF9356F984D3599858C /* NativeGuidanceSessions.swift */,
+				612537FAB0E5D47AEC5DC7CF /* NativeMCPActions.swift */,
 				883F3D880993F435A52AD6B5 /* NativeMCPAuthorization.swift */,
 				14528F66396ABF533113585A /* NativeMCPDevelopmentStore.swift */,
 				F1D8F23734E7C4AC47103413 /* NativeMCPHTTP.swift */,
+				42E32176131CDFF2988B5A52 /* NativeMCPOAuth.swift */,
 				B011275ED3B8DB2E5DCAFA47 /* NativeMCPProjectFiles.swift */,
 				B62F9FD9564BA09234B9C820 /* NativeMCPSystem.swift */,
-				F0A0A0A0A0A0A0A0A0A0A0A0 /* NativeMCPActions.swift */,
-				F0E0E0E0E0E0E0E0E0E0E0E0 /* NativeMCPOAuth.swift */,
-				F30303030303030303030303 /* NativeMCPVisual.swift */,
-				F50505050505050505050505 /* NativeGuidanceSessions.swift */,
+				76AEEE02F99AFF8666999A65 /* NativeMCPVisual.swift */,
 				0AC9C0A6D4E44C3FAC1150DE /* NgrokTunnelMonitor.swift */,
+				5EBD37D50F5A48FD4316C8E7 /* RelayOSWalkthroughObserver.swift */,
 				A8D5FF69919504CE19785BDA /* ServiceSupervisor.swift */,
 				722D2821D95B5CA5B25F7ACF /* SystemPermissionAccess.swift */,
 			);
@@ -289,8 +313,8 @@
 				73BCA19D4162B0993AAB68B9 /* ApprovalArrivalTracker.swift */,
 				5035C5D233584D80945951A4 /* ApprovalCenterModels.swift */,
 				7781BA7F576AD97F981A5E31 /* ApprovalSound.swift */,
+				0981FB7746F1FB45A5EA98B3 /* CommandJobCompletionNotification.swift */,
 				C0209863FCD8E9B554E21541 /* CommandJobModels.swift */,
-				F11111111111111111111111 /* CommandJobCompletionNotification.swift */,
 				C1A141544AB9DFABBB18D053 /* InstanceLease.swift */,
 				AF7EC9B8A1074531E5EC43E8 /* ManagedProcessSlot.swift */,
 				ABDF00FAD2BE8C34B9A9EA20 /* RelayOSTheme.swift */,
@@ -317,12 +341,17 @@
 				5AAF3F10B93F830BC33B27E4 /* InstanceLeaseTests.swift */,
 				45B18B25B4B4D6AD68891289 /* LaptopBridgeAppTests.swift */,
 				7DFE6A41A2CDF9C522333953 /* MCPHealthMonitorTests.swift */,
+				AD95F4EFF3CB540BD09C233F /* NativeMCPActionTests.swift */,
 				A60F66F1777D669CF509C134 /* NativeMCPAuthorizationTests.swift */,
-				F0C0C0C0C0C0C0C0C0C0C0C0 /* NativeMCPActionTests.swift */,
-				F10101010101010101010101 /* NativeMCPOAuthTests.swift */,
-				F90909090909090909090909 /* NotchPanelPlacementTests.swift */,
+				2BA6D6998D11C54E6A44792D /* NativeMCPOAuthTests.swift */,
 				FA5E94A049DF259A6CE6DB7E /* NgrokTunnelMonitorTests.swift */,
+				1DD7C6B7D828ECA01D62C74A /* NotchPanelPlacementTests.swift */,
+				5BC4E8BBFEDF25053782129A /* RelayOSCursorGuidanceTests.swift */,
+				9A43B7E1BF50950A3D211D8E /* RelayOSCursorTipTests.swift */,
+				B81EC99CCD1B1B763D4A1C43 /* RelayOSScreenHighlightTests.swift */,
+				547F4199D3C68772FC70E1F5 /* RelayOSWalkthroughTests.swift */,
 				4FA09765A5DC85740382BB61 /* SavedCommandGrantTests.swift */,
+				FA33A11390AFD56E6F89E7EF /* ScreenSharingSessionTests.swift */,
 				FF6B093555EF31A324DD474A /* ServiceSupervisorTests.swift */,
 			);
 			path = LaptopBridgeAppTests;
@@ -363,8 +392,8 @@
 			isa = PBXGroup;
 			children = (
 				F5910DC8365E4FB254B2A822 /* ConnectionRow.swift */,
+				3723B36BA3BD616D029DB7B1 /* NotchPanel.swift */,
 				A3184FA7CCA10909266F6728 /* QuickPanel.swift */,
-				F70707070707070707070707 /* NotchPanel.swift */,
 			);
 			path = QuickPanel;
 			sourceTree = "<group>";
@@ -396,6 +425,7 @@
 				ADEF7F916CC9B40C2956BFB0 /* NgrokPageView.swift */,
 				69F5F0E0D7B976FF390AEDEA /* PermissionGuidePanel.swift */,
 				1E8F22BF45B761B618C70CC1 /* SecurityPageView.swift */,
+				E30BAC6342E6350C65A4F39A /* StorageAuditPageView.swift */,
 				0F698E7F3F856A246A4878AB /* SystemPermissionsPageView.swift */,
 				224FB2B0DF1453B35D63B411 /* TerminalJobRow.swift */,
 				7FFE0B2257A52C54B7F257D8 /* TerminalJobsPageView.swift */,
@@ -477,7 +507,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2720;
+				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					4FEE4C369898E123DF2E6889 = {
 						ProvisioningStyle = Automatic;
@@ -540,11 +570,12 @@
 				C47C604C813131975401521B /* BridgeModel+Config.swift in Sources */,
 				E7036D84F04C4324B951656D /* BridgeModel+Permissions.swift in Sources */,
 				D12705F9869D63CEA6A8E576 /* BridgeModel+ProcessControl.swift in Sources */,
+				6E37AE2F342CEBC3C8476017 /* BridgeModel+ScreenSharing.swift in Sources */,
 				66ED3830CC3709D053488B80 /* BridgeModel.swift in Sources */,
 				82DCB56CEFBCA0B18B79B17E /* CommandGrantGroupCard.swift in Sources */,
 				9E0C04877E8C049602380544 /* CommandGrantItemRow.swift in Sources */,
+				7947E754FA012D70E5C8DF43 /* CommandJobCompletionNotification.swift in Sources */,
 				C0FFBE0E81E9C7124055CC4A /* CommandJobModels.swift in Sources */,
-				F22222222222222222222222 /* CommandJobCompletionNotification.swift in Sources */,
 				1082C54EAC0015720F7AD15F /* CommandPermissionsPageView.swift in Sources */,
 				8AA273FB86F6D44259DF5CCF /* ConnectionRow.swift in Sources */,
 				FCDF01F8EFB50197571E9377 /* ConnectionsPageView.swift in Sources */,
@@ -560,25 +591,28 @@
 				9684BDA65EB9E5877050B290 /* Keychain.swift in Sources */,
 				6989D8918649AE634984E2C9 /* MCPHealthMonitor.swift in Sources */,
 				82DE14E72189298BF2FD6410 /* ManagedProcessSlot.swift in Sources */,
+				E775DA73888349DE8D4BCECE /* NativeGuidanceSessions.swift in Sources */,
+				9880BCB99A7E6AA69B7F85AE /* NativeMCPActions.swift in Sources */,
 				9D6548FA22D02320900698AB /* NativeMCPAuthorization.swift in Sources */,
 				9DC38B230A00975957A04FC0 /* NativeMCPDevelopmentStore.swift in Sources */,
 				ED00DF5B4DB7A74138392679 /* NativeMCPHTTP.swift in Sources */,
+				5C2A45D2A3034262574C6FA5 /* NativeMCPOAuth.swift in Sources */,
 				C79F2FA5977E0D04FDB46684 /* NativeMCPProjectFiles.swift in Sources */,
 				7DD405A59B5B0844E46326CB /* NativeMCPSystem.swift in Sources */,
-				F0B0B0B0B0B0B0B0B0B0B0B0 /* NativeMCPActions.swift in Sources */,
-				F0F0F0F0F0F0F0F0F0F0F0F0 /* NativeMCPOAuth.swift in Sources */,
-				F40404040404040404040404 /* NativeMCPVisual.swift in Sources */,
-				F60606060606060606060606 /* NativeGuidanceSessions.swift in Sources */,
+				1045E048FF650A13D4DDF071 /* NativeMCPVisual.swift in Sources */,
 				712333DEC9CE9601D19C1FA8 /* NativeSwiftRuntimePageView.swift in Sources */,
 				9B9794F608EB97B1E819425C /* NgrokPageView.swift in Sources */,
 				0C6F487398FDD7AB91D7A548 /* NgrokTunnelMonitor.swift in Sources */,
+				B9962A9BEE72571E0FD603AF /* NotchPanel.swift in Sources */,
 				ABFFDF73F9860D8409937064 /* PermissionGuidePanel.swift in Sources */,
 				5CA2F14A7E880C022DDBD8CE /* PreviewSupport.swift in Sources */,
 				AC7B0895AC93C77ABA1A3B32 /* QuickPanel.swift in Sources */,
-				F80808080808080808080808 /* NotchPanel.swift in Sources */,
 				61A9F7371A3D7905FB4C6988 /* RelayOSApp.swift in Sources */,
-				B7E7C0A00000000000000002 /* RelayOSCursorCompanion.swift in Sources */,
+				26A6DC19971133F998F523ED /* RelayOSCursorCompanion.swift in Sources */,
+				51C07D36704A7415293DEFD6 /* RelayOSCursorTip.swift in Sources */,
+				D698239128ADC25D3E4023A5 /* RelayOSScreenHighlight.swift in Sources */,
 				921010956D0573613A2CE1D0 /* RelayOSTheme.swift in Sources */,
+				63EAE4EA32F7335F60FAD605 /* RelayOSWalkthroughObserver.swift in Sources */,
 				10C20CCAA3DBA57333534A8D /* SavedCommandGrant.swift in Sources */,
 				E40AEBC40B50EF1A64E8B874 /* SecurityPageView.swift in Sources */,
 				3FDFF94F9A02A21C15ED1B7B /* ServiceSupervisor.swift in Sources */,
@@ -593,6 +627,7 @@
 				29BE237E49B747B5E15B2358 /* SidebarItemRow.swift in Sources */,
 				FDCFAB97EEEF00AE1DBDC584 /* SingleInstanceCoordinator.swift in Sources */,
 				426F1A673AE1B4B874689E03 /* StatusBadge.swift in Sources */,
+				20585405D29E0F1FDA549CE0 /* StorageAuditPageView.swift in Sources */,
 				5682B24C3ACBA814EB2A9115 /* SystemPermissionAccess.swift in Sources */,
 				74913A9BA4C1178043F221CF /* SystemPermissionsPageView.swift in Sources */,
 				FAFAE54B7AA70FB47C2B635E /* TerminalJobRow.swift in Sources */,
@@ -613,12 +648,17 @@
 				9832DFC5790A3DB05C6A4CFD /* InstanceLeaseTests.swift in Sources */,
 				ABE652B39D6EDE743980F073 /* LaptopBridgeAppTests.swift in Sources */,
 				E7E3AE99D2E5CD6B44891B8C /* MCPHealthMonitorTests.swift in Sources */,
+				33EF91AF2BBEB010A7C29B5D /* NativeMCPActionTests.swift in Sources */,
 				39ADF6F4C8CDD27B05E22BBD /* NativeMCPAuthorizationTests.swift in Sources */,
-				F0D0D0D0D0D0D0D0D0D0D0D0 /* NativeMCPActionTests.swift in Sources */,
-				F20202020202020202020202 /* NativeMCPOAuthTests.swift in Sources */,
-				FA1010101010101010101010 /* NotchPanelPlacementTests.swift in Sources */,
+				B68868F48EA7E9BAB5D1483E /* NativeMCPOAuthTests.swift in Sources */,
 				DA2031F59D8084379EA893B3 /* NgrokTunnelMonitorTests.swift in Sources */,
+				C76627FCCA1361ECD19AAD27 /* NotchPanelPlacementTests.swift in Sources */,
+				B7B6EF41DC2D265259CC841F /* RelayOSCursorGuidanceTests.swift in Sources */,
+				DB4D3642A1761BA5B2670E93 /* RelayOSCursorTipTests.swift in Sources */,
+				6E8D8ADBC760EBC3B0F256B0 /* RelayOSScreenHighlightTests.swift in Sources */,
+				0E413FD6A1F466DBEE0AA2C9 /* RelayOSWalkthroughTests.swift in Sources */,
 				2ABB0556B126CE0EB68FF233 /* SavedCommandGrantTests.swift in Sources */,
+				39A9E08B6B2360E5116DCCD8 /* ScreenSharingSessionTests.swift in Sources */,
 				9E4D8D3F612F8FFE5A46A568 /* ServiceSupervisorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -657,7 +697,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = LS42X27YFY;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -820,11 +859,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = LS42X27YFY;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Xcode/RelayOS-Info.plist";

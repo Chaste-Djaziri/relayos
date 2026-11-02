@@ -19,6 +19,7 @@ struct CustomSidebarView: View {
 
     private let generalItems: [SidebarItemModel] = [
         SidebarItemModel(tab: .general, title: "General", icon: "gearshape"),
+        SidebarItemModel(tab: .storage, title: "Storage", icon: "internaldrive"),
         SidebarItemModel(tab: .appearance, title: "Appearance", icon: "paintpalette"),
         SidebarItemModel(tab: .security, title: "Security", icon: "lock.shield"),
         SidebarItemModel(tab: .systemPermissions, title: "System permissions", icon: "hand.raised.fill"),
@@ -164,6 +165,7 @@ struct CustomSidebarView: View {
         let keywords: String
         switch item.tab {
         case .general: keywords = "endpoint connection public mcp local restart notifications sound"
+        case .storage: keywords = "disk space cleanup files folders cache github projects credentials"
         case .appearance: keywords = "theme light dark color typography font size reduce motion translucent"
         case .security: keywords = "emergency stop revocation safety"
         case .systemPermissions: keywords = "screen recording full disk access accessibility apple events files privacy"
