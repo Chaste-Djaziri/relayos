@@ -2,6 +2,16 @@
 Status: Phase 01 native runtime foundation in progress (2026-10-31)
 Scope: /Users/chastedjaziri/Documents/GitHub/laptop-bridge
 
+## Read-only storage inspection — local work
+- [x] Add Settings → Storage with volume capacity, folder selection, bounded scan, caches, Git markers and secret filename counts.
+- [x] Add separate MCP proposal and one-time consumption, requiring physical local Approve Once (or Deny) for the exact folder.
+- [x] Guard scan root, entry limit, elapsed time, depth, symbolic links and mount crossings. No deletion, file-content reads or secret export.
+- [x] Pass six standalone scanner tests and compile/test native Swift app.
+- [ ] Run end-to-end MCP approval tests under the fully provisioned packaged Python runtime.
+- [x] Rebuilt, signed and deployed the hybrid app after isolated MCP/restart smoke tests. Handover succeeded with setup, tunnel and approval state preserved; previous app backed up.
+- [ ] Reconnect the RelayOS ChatGPT plugin to rediscover the new storage tools.
+- [ ] Verify remote Git backups, ignored files, untracked work and local secrets before recommending any cleanup.
+
 ## Screen-sharing experience — one-click session
 - [x] Implement explicit native UI Start/Stop for a 30-minute main-display sharing session; opt-in is off by default.
 - [x] Reuse one-time authenticated capture tokens and existing ScreenCaptureKit/MCP delivery without repeated inbox approvals during the session.

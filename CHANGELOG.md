@@ -4,6 +4,14 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 
 ## Unreleased
 
+### Read-only storage audit (local development)
+- Add native **Settings → Storage** with disk capacity and a user-selected bounded folder scan showing size estimates, cache candidates, Git project markers and credential-file counts. The UI cannot delete or transmit file contents.
+- Add MCP tools `disk_storage_overview`, `propose_storage_scan` and `scan_approved_storage`. Every folder scan requires an exact, fresh local **Approve Once**; existing project permissions do not authorize storage scans.
+- Enforce scan depth/time/entry caps, skip symlinks and other mounts, redact credential-like filenames, and never export secret values.
+- Treat local Git repository detection as insufficient proof of GitHub backup; do not execute git commands during an untrusted metadata scan. No cleanup actions have been added.
+- Native Swift tests pass; six standalone Python scanner tests pass and two MCP integration cases need full Python dependencies.
+- Rebuilt and Apple Development-signed the local hybrid app; isolated packaged MCP control and restart smoke tests passed. Installed via verified handover on 2026-11-02 at 03:01, preserving setup and ngrok, with rollback at `/Applications/RelayOS.app.pre-update-20261102-030054`. No changes pushed to GitHub.
+
 ### Virtual cursor visibility and macOS-only public downloads
 - Add a persistent, on-by-default **Show virtual cursor** switch in RelayOS Settings → General and the menu-bar control panel. Hiding it immediately suppresses only the colored pointer triangle while preserving cursor tips, visual region highlights, guidance-step completion and screen sharing.
 - Update the RelayOS website to offer a direct macOS Apple Silicon DMG download from GitHub Releases; show Windows as **Coming Soon**, with no active Windows download button.
