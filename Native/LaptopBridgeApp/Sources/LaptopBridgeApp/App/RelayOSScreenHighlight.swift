@@ -130,6 +130,16 @@ private struct RelayOSHighlightShape: Shape {
     }
 }
 
+/// Timing is deliberately shared between all shapes, including long
+/// freeform paths, so a car outline does not flash into view instantly.
+enum RelayOSHighlightTiming {
+    static let strokeDelay: Double = 0.35
+    static let strokeDuration: Double = 2.0
+    static let fillDelay: Double = strokeDelay + strokeDuration + 0.08
+    static let fillDuration: Double = 0.45
+    static let dismissDuration: Double = 0.28
+}
+
 struct RelayOSHighlightView: View {
     let region: RelayOSHighlightSpec
     @ObservedObject var presentation: RelayOSHighlightPresentation
@@ -156,10 +166,16 @@ struct RelayOSHighlightView: View {
         .allowsHitTesting(false)
         .accessibilityHidden(true)
         .onAppear {
-            withAnimation(.easeInOut(duration: 0.65).delay(0.18)) { drawn = 1 }
-            withAnimation(.easeIn(duration: 0.25).delay(0.76)) { showFill = true }
+            withAnimation(.easeInOut(
+                duration: RelayOSHighlightTiming.strokeDuration
+            ).delay(RelayOSHighlightTiming.strokeDelay)) { drawn = 1 }
+            withAnimation(.easeIn(
+                duration: RelayOSHighlightTiming.fillDuration
+            ).delay(RelayOSHighlightTiming.fillDelay)) { showFill = true }
         }
-        .animation(.easeOut(duration: 0.20), value: presentation.isVisible)
+        .animation(
+            .easeOut(duration: RelayOSHighlightTiming.dismissDuration),
+            value: presentation.isVisible)
     }
 }
 
@@ -214,7 +230,9 @@ final class RelayOSScreenHighlight {
             old.close()
         } else {
             model?.isVisible = false
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+            DispatchQueue.main.asyncAfter(
+                deadline: .now() + RelayOSHighlightTiming.dismissDuration + 0.02
+            ) {
                 old.orderOut(nil)
                 old.close()
             }

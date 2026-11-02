@@ -220,16 +220,23 @@ struct RelayOSCursorMotion {
     private var lastTick: TimeInterval?
     private var lastScreen: CGRect?
 
-    private static let angularFrequency: CGFloat = 29
+    // Preserve the responsive passive mouse companion, but move at an
+    // intentionally slower pace when ChatGPT selects a screen target.
+    static let followingFrequency: CGFloat = 29
+    static let guidingFrequency: CGFloat = 5.0
+    private var lastGuided: Bool?
 
     mutating func reset() {
         position = nil
         velocity = .zero
         lastTick = nil
         lastScreen = nil
+        lastGuided = nil
     }
 
-    mutating func advance(to target: CGRect, screen: CGRect, at time: TimeInterval) -> CGRect {
+    mutating func advance(
+        to target: CGRect, screen: CGRect, at time: TimeInterval, guided: Bool = false
+    ) -> CGRect {
         guard time.isFinite else {
             reset()
             return target
@@ -241,11 +248,16 @@ struct RelayOSCursorMotion {
             velocity = .zero
             lastTick = time
             lastScreen = screen
+            lastGuided = guided
             return target
         }
 
+        // Switching from real-mouse following to visual targeting must not
+        // inherit a large mouse-follow velocity and overshoot the item.
+        if lastGuided != guided { velocity = .zero }
+        lastGuided = guided
         let dt = CGFloat(time - previous)
-        let omega = Self.angularFrequency
+        let omega = guided ? Self.guidingFrequency : Self.followingFrequency
         let decay = exp(-omega * dt)
 
         // Analytical solution for a critically damped spring, one axis at a
@@ -498,7 +510,8 @@ final class RelayOSCursorCompanion {
             targetFrame = normalFrame
         }
         guard let screen = chosenScreen, let target = targetFrame else { return }
-        let frame = motion.advance(to: target, screen: screen, at: uptime)
+        let frame = motion.advance(
+            to: target, screen: screen, at: uptime, guided: targetPoint != nil)
         let pointingAngle: Double
         if let targetPoint {
             pointingAngle = RelayOSCursorPlacement.rotationToward(

@@ -4,6 +4,13 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 
 ## Unreleased
 
+### Slower, deliberate guidance animation
+- Make the virtual triangle's **directed** target travel visibly slower using a critically damped 5.0 rad/s guidance spring while retaining the original 29 rad/s passive mouse-follow speed. Reset velocity on mode transitions so ordinary mouse movement cannot launch the guide past a selected item.
+- Increase region/path outline drawing to 2.0 seconds after a 0.35-second lead-in; reveal the translucent accent fill after the outline completes. Maintain the existing one-target rule, proximity/timeout dismissal, and fast everyday cursor following.
+- Repair existing native highlight tests that used Swift-invalid shorthand fractional literals and exact floating-point equality, then add regression checks for slow travel and animation timing.
+- Verification: Python suite 153 passed with 53 subtests; full native Swift test suite passed. Signed deployment pending.
+
+
 ### Animated screen-region highlights
 - Extend RelayOS's visual-only pointer guidance with `highlight_screen_region` (rect, rounded rect, ellipse), `highlight_screen_path` (closed polygon, open/closed freeform path), and `clear_screen_highlight` MCP actions. Geometry uses bounded normalized full-display coordinates; no additional screenshot or mouse input is performed.
 - Add a separate, transparent, mouse-click-through SwiftUI overlay panel. Accent-color outlines animate from the upper-left/first supplied vertex, followed by an optional translucent fill; the existing triangular cursor can move/rotate toward the same item.

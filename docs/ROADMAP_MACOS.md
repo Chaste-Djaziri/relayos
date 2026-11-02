@@ -8,6 +8,13 @@ Scope: /Users/chastedjaziri/Documents/GitHub/laptop-bridge
 - [x] Run Python regression suite (137 passed, 19 subtests; one pre-existing Pydantic warning), confirm HTTP route registration/metadata contract, and pass git diff --check.
 - [ ] Deploy the signed bundle with a rollback backup, then verify a real consented full-screen JPEG is retrievable and inspectable from ChatGPT over the public tunnel.
 
+## Guidance animation pacing
+- [x] Preserve responsive passive real-mouse following (29 rad/s) while slowing targeted virtual-cursor travel (5 rad/s), including seamless mode switches without inherited cursor momentum.
+- [x] Extend animated outline to 2.0 seconds after a 0.35-second lead-in and delay fill until after the stroke; keep dismissal timing, proximity and timeout behavior.
+- [x] Add Swift unit regressions, repair pre-existing invalid fractional literals and numeric precision assertions in highlight tests; full `swift test` passed.
+- [x] Verify Python regression suite (153 passed, 53 subtests).
+- [ ] Rebuild/re-sign and install; live-verify slower visual pacing with the existing ChatGPT highlight tools.
+
 ## Animated screen-region highlight — source implementation
 - [x] Add full-display normalized rectangular, rounded-rectangular, and elliptical region highlighting with a draw-on stroke and optional translucent fill.
 - [x] Support bounded irregular polygons and open/closed freeform paths using 2–96 normalized vertices.

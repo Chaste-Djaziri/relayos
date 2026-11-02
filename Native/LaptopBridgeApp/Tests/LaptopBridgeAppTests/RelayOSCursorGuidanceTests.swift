@@ -62,6 +62,52 @@ final class RelayOSCursorGuidanceTests: XCTestCase {
         XCTAssertTrue(gate.update(pointer: CGPoint(x: 550, y: 500), target: target))
     }
 
+    func testGuidedTravelIsNoticeablySlowerWithoutSlowingNormalFollow() {
+        XCTAssertGreaterThan(
+            RelayOSCursorMotion.followingFrequency,
+            RelayOSCursorMotion.guidingFrequency * 4
+        )
+        let screen = CGRect(x: 0, y: 0, width: 1400, height: 900)
+        let start = CGRect(x: 120, y: 240, width: 38, height: 38)
+        let target = CGRect(x: 920, y: 240, width: 38, height: 38)
+        var following = RelayOSCursorMotion()
+        var guiding = RelayOSCursorMotion()
+        XCTAssertEqual(following.advance(to: start, screen: screen, at: 0), start)
+        XCTAssertEqual(guiding.advance(to: start, screen: screen, at: 0), start)
+        var normalFrame = start, guidedFrame = start
+        for tick in 1...18 {
+            let time = Double(tick) / 60.0
+            normalFrame = following.advance(
+                to: target, screen: screen, at: time)
+            guidedFrame = guiding.advance(
+                to: target, screen: screen, at: time, guided: true)
+        }
+        // At 0.3 seconds, ordinary follow has nearly caught up, while
+        // the guided marker is still visibly traveling toward the target.
+        XCTAssertGreaterThan(normalFrame.minX, guidedFrame.minX + 300)
+        XCTAssertGreaterThan(guidedFrame.minX, start.minX)
+        XCTAssertLessThan(guidedFrame.minX, target.minX)
+        for tick in 19...240 {
+            guidedFrame = guiding.advance(
+                to: target, screen: screen, at: Double(tick) / 60.0, guided: true)
+        }
+        XCTAssertEqual(guidedFrame.minX, target.minX, accuracy: 0.25)
+    }
+
+    func testSwitchingFromFollowToGuidanceKeepsPositionContinuous() {
+        let screen = CGRect(x: 0, y: 0, width: 1400, height: 900)
+        var motion = RelayOSCursorMotion()
+        let start = CGRect(x: 200, y: 240, width: 38, height: 38)
+        let elsewhere = CGRect(x: 1100, y: 240, width: 38, height: 38)
+        _ = motion.advance(to: start, screen: screen, at: 0)
+        let moving = motion.advance(to: elsewhere, screen: screen, at: 0.0167)
+        let switched = motion.advance(
+            to: start, screen: screen, at: 0.0334, guided: true)
+        // A mode switch does not teleport the marker or carry excessive
+        // velocity from the fast passive follow spring.
+        XCTAssertLessThan(abs(switched.minX - moving.minX), 5)
+    }
+
     func testTargetHoldsWhileMouseIsFarAndReturnsAfterTimeout() throws {
         let payload = """
         {"active":true,"id":"target-a","display":"main","x":0.8,"y":0.4,"expires_at":2000}

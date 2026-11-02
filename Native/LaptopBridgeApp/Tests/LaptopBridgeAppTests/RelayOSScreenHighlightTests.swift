@@ -12,7 +12,7 @@ final class RelayOSScreenHighlightTests: XCTestCase {
     }
 
     func testRectanglePathStartsAtUpperLeftAndCoversFullBounds() {
-        let rectangle = region("rect", bounds: [.1, .2, .3, .4])
+        let rectangle = region("rect", bounds: [0.1, 0.2, 0.3, 0.4])
         XCTAssertTrue(rectangle.isValid)
         let path = RelayOSHighlightGeometry.path(
             for: rectangle, in: CGRect(x: 0, y: 0, width: 1000, height: 800))
@@ -29,7 +29,7 @@ final class RelayOSScreenHighlightTests: XCTestCase {
     func testRoundedRectAndEllipsePathsRespectBounds() {
         let size = CGRect(x: 0, y: 0, width: 1000, height: 800)
         for shape in ["rounded_rect", "ellipse"] {
-            let spec = region(shape, bounds: [.1, .2, .3, .4])
+            let spec = region(shape, bounds: [0.1, 0.2, 0.3, 0.4])
             XCTAssertTrue(spec.isValid)
             let path = RelayOSHighlightGeometry.path(for: spec, in: size)
             XCTAssertEqual(path.boundingRect.minX, 100, accuracy: 0.1)
@@ -41,12 +41,12 @@ final class RelayOSScreenHighlightTests: XCTestCase {
 
     func testOpenFreeformAndPolygonCanTraceIrregularElements() {
         let rect = CGRect(x: 0, y: 0, width: 1000, height: 800)
-        let pts = [[.1,.1],[.8,.15],[.6,.6],[.2,.75]]
-        let polygon = region("polygon", bounds: [.1,.1,.7,.65], points: pts)
+        let pts = [[0.1,0.1],[0.8,0.15],[0.6,0.6],[0.2,0.75]]
+        let polygon = region("polygon", bounds: [0.1,0.1,0.7,0.65], points: pts)
         XCTAssertTrue(polygon.isValid)
         XCTAssertTrue(RelayOSHighlightGeometry.path(for: polygon, in: rect)
             .contains(CGPoint(x: 400, y: 250)))
-        let open = region("path", bounds: [.1,.1,.7,.65], points: pts, closed: false)
+        let open = region("path", bounds: [0.1,0.1,0.7,0.65], points: pts, closed: false)
         XCTAssertTrue(open.isValid)
         XCTAssertFalse(open.hasFill)
         let freeform = RelayOSHighlightGeometry.path(for: open, in: rect)
@@ -58,7 +58,7 @@ final class RelayOSScreenHighlightTests: XCTestCase {
 
     func testMouseProximityIncludesRegionInteriorAndOutlineMargin() {
         let display = CGRect(x: -1200, y: -100, width: 1200, height: 800)
-        let spec = region("rect", bounds: [.1, .2, .2, .1])
+        let spec = region("rect", bounds: [0.1, 0.2, 0.2, 0.1])
         let pointInside = CGPoint(x: -1020, y: display.maxY - 200)
         XCTAssertTrue(RelayOSHighlightGeometry.isNear(
             pointer: pointInside, region: spec, screen: display, radius: 48))
@@ -71,12 +71,23 @@ final class RelayOSScreenHighlightTests: XCTestCase {
     }
 
     func testInvalidSpecFailsClosed() {
-        let invalid = region("polygon", bounds: [.1,.1,.2,.3], points: [[0,0],[1,1]])
+        let invalid = region("polygon", bounds: [0.1,0.1,0.2,0.3], points: [[0,0],[1,1]])
         XCTAssertFalse(invalid.isValid)
         XCTAssertTrue(RelayOSHighlightGeometry.path(for: invalid,
             in: CGRect(x: 0, y: 0, width: 800, height: 500)).isEmpty)
-        let out = region("rect", bounds: [.9,.1,.5,.5])
+        let out = region("rect", bounds: [0.9,0.1,0.5,0.5])
         XCTAssertFalse(out.isValid)
+    }
+
+    func testOutlineIsSlowerThanPreviousAnimationAndFillFollowsStroke() {
+        XCTAssertGreaterThanOrEqual(RelayOSHighlightTiming.strokeDuration, 1.8)
+        XCTAssertGreaterThan(RelayOSHighlightTiming.strokeDelay, 0)
+        XCTAssertGreaterThanOrEqual(
+            RelayOSHighlightTiming.fillDelay,
+            RelayOSHighlightTiming.strokeDelay + RelayOSHighlightTiming.strokeDuration
+        )
+        XCTAssertGreaterThan(RelayOSHighlightTiming.fillDuration, 0)
+        XCTAssertGreaterThan(RelayOSHighlightTiming.dismissDuration, 0)
     }
 
     func testGuidanceJSONIncludesOptionalRegionAndExistingCursorRemainsCompatible() throws {
@@ -89,7 +100,8 @@ final class RelayOSScreenHighlightTests: XCTestCase {
         """
         let new = try JSONDecoder().decode(RelayOSPointerGuidance.self, from: Data(payload.utf8))
         XCTAssertTrue(new.region?.isValid == true)
-        XCTAssertEqual(new.region?.center, CGPoint(x: 0.25, y: 0.3))
+        XCTAssertEqual(new.region?.center.x ?? 0, 0.25, accuracy: 0.000001)
+        XCTAssertEqual(new.region?.center.y ?? 0, 0.3, accuracy: 0.000001)
         XCTAssertEqual(new.showCursor, false)
         XCTAssertEqual(new.proximityRadius, 30)
         let original = """
