@@ -31,11 +31,16 @@ struct ApprovalInboxItem: Decodable, Identifiable, Equatable {
     var id: String { requestID }
     var isOAuth: Bool { kind == "oauth_connection" }
     var isScreenCapture: Bool { kind == "screen_capture" }
+    var isFileManagement: Bool { ["file_access", "file_operation"].contains(kind) }
+    var isEmptyTrash: Bool { kind == "empty_trash" }
+    var requiresOnce: Bool { isOAuth || isScreenCapture || isFileManagement || isEmptyTrash }
     var isExpired: Bool { Date().timeIntervalSince1970 >= expiresAt }
 
     var title: String {
         if isOAuth { return "Connect \(target)" }
         if isScreenCapture { return "Share screenshot: \(target)" }
+        if isEmptyTrash { return "Permanently empty ALL Finder Trash" }
+        if isFileManagement { return kind == "file_access" ? "File access: \(target)" : target }
         if let scope = context.scopePrefix, !scope.isEmpty { return scope.joined(separator: " ") }
         if context.commandFamily == "git:add" { return "git add" }
         if let first = argv.first { return URL(fileURLWithPath: first).lastPathComponent }
@@ -44,6 +49,14 @@ struct ApprovalInboxItem: Decodable, Identifiable, Equatable {
 
     var scopeDescription: String {
         if isOAuth { return "MCP access requires a local one-time approval." }
+        if isEmptyTrash {
+            return "IRREVERSIBLE: Removes every item in Finder Trash on all volumes, including items not placed there by RelayOS. Type EMPTY TRASH before Approve Once."
+        }
+        if isFileManagement {
+            return kind == "file_access"
+                ? "Grants a 15-minute metadata-only session for this exact folder. File changes still need separate Once approvals."
+                : "Exact selected files/folders and action. Only Approve Once or Deny; check every path carefully."
+        }
         if isScreenCapture {
             return "One screenshot of exactly \\(target) will be sent to the requesting AI client. Approve Once or Deny; no continuous sharing."
         }

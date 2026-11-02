@@ -5,6 +5,7 @@ struct ApprovalCenterView: View {
     @ObservedObject var model: BridgeModel
     @Environment(\.colorScheme) private var colorScheme
     @State private var search = ""
+    @State private var trashConfirmation: [String: String] = [:]
 
     private var theme: ThemeColors {
         RelayOSTheme.colors(colorScheme)
@@ -78,13 +79,13 @@ struct ApprovalCenterView: View {
                 .overlay(RoundedRectangle(cornerRadius: 11).stroke(theme.cardBorder, lineWidth: 1))
             } else {
                 ForEach(visibleInbox) { item in
-                    SettingsCard(title: item.isScreenCapture ? "Screen Capture Request" : (item.isOAuth ? "OAuth Connection Request" : "Command Execution Request")) {
+                    SettingsCard(title: item.isEmptyTrash ? "Permanent Deletion Request" : (item.isFileManagement ? "File Management Request" : (item.isScreenCapture ? "Screen Capture Request" : (item.isOAuth ? "OAuth Connection Request" : "Command Execution Request")))) {
                         SettingsCardRow(
                             title: item.title,
                             subtitle: item.scopeDescription
                         ) {
                             StatusBadge(
-                                text: item.isScreenCapture ? "Screen share" : (item.isOAuth ? "Connection" : "Local request"),
+                                text: item.isEmptyTrash ? "Permanent deletion" : (item.isFileManagement ? "File operation" : (item.isScreenCapture ? "Screen share" : (item.isOAuth ? "Connection" : "Local request"))),
                                 status: .warning
                             )
                         }
@@ -99,7 +100,36 @@ struct ApprovalCenterView: View {
                                 .lineLimit(1)
                         }
 
-                        if !item.argv.isEmpty {
+                        if item.isEmptyTrash {
+                            VStack(alignment: .leading, spacing: 7) {
+                                Text("IRREVERSIBLE: Empties ALL Finder Trash on ALL volumes, including items you did not select in RelayOS.")
+                                    .font(.callout.weight(.semibold))
+                                    .foregroundStyle(.red)
+                                TextField("Type EMPTY TRASH", text: Binding(
+                                    get: { trashConfirmation[item.id] ?? "" },
+                                    set: { trashConfirmation[item.id] = $0 }
+                                ))
+                                    .textFieldStyle(.roundedBorder)
+                                    .accessibilityLabel("Type EMPTY TRASH to confirm permanent deletion")
+                            }
+                            .padding(.vertical, 6)
+                        }
+
+                        if item.isFileManagement && !item.argv.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Exact selected paths")
+                                    .font(.callout.weight(.semibold))
+                                ForEach(Array(item.argv.enumerated()), id: \.offset) { index, path in
+                                    Text("\(index + 1). \(path)")
+                                        .font(.system(size: 11, design: .monospaced))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .textSelection(.enabled)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                        }
+
+                        if !item.argv.isEmpty && !item.isFileManagement {
                             SettingsCardRow(
                                 title: "Command Arguments",
                                 subtitle: item.argv.joined(separator: " ")
@@ -118,10 +148,12 @@ struct ApprovalCenterView: View {
                                     title: item.isOAuth ? "Approve" : "Once",
                                     style: .primary
                                 ) {
-                                    model.decideApproval(item, decision: "once")
+                                    model.decideApproval(item, decision: "once",
+                                        confirmation: item.isEmptyTrash ? trashConfirmation[item.id] : nil)
+                                    if item.isEmptyTrash { trashConfirmation[item.id] = "" }
                                 }
 
-                                if !item.isOAuth && !item.isScreenCapture {
+                                if !item.requiresOnce {
                                     SettingsButton(title: "Session", style: .secondary) {
                                         model.decideApproval(item, decision: "session")
                                     }
@@ -134,7 +166,8 @@ struct ApprovalCenterView: View {
                                     model.decideApproval(item, decision: "deny")
                                 }
                             }
-                            .disabled(item.isExpired || model.approvalDecisionInFlight != nil)
+                            .disabled(item.isExpired || model.approvalDecisionInFlight != nil ||
+                                      (item.isEmptyTrash && trashConfirmation[item.id] != "EMPTY TRASH"))
                         }
                     }
                 }

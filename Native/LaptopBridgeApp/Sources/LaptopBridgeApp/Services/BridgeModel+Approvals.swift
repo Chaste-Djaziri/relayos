@@ -78,7 +78,7 @@ extension BridgeModel {
         }
     }
 
-    func decideApproval(_ item: ApprovalInboxItem, decision: String) {
+    func decideApproval(_ item: ApprovalInboxItem, decision: String, confirmation: String? = nil) {
         guard approvalDecisionInFlight == nil, !item.isExpired,
               let helper = approvalExecutable() else {
             approvalCenterError = "Request expired or another decision is in progress."
@@ -86,7 +86,8 @@ extension BridgeModel {
             return
         }
         guard ["once", "session", "persistent", "deny"].contains(decision),
-              (!(item.isOAuth || item.isScreenCapture) || decision == "once" || decision == "deny") else { return }
+              (!item.requiresOnce || decision == "once" || decision == "deny"),
+              (!item.isEmptyTrash || decision == "deny" || confirmation == "EMPTY TRASH") else { return }
         approvalDecisionInFlight = item.id
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let process = Process()
@@ -94,6 +95,9 @@ extension BridgeModel {
             process.executableURL = URL(fileURLWithPath: helper)
             process.arguments = ["-m", "laptop_bridge.approvals",
                                  "decide-inbox", item.id, decision]
+            if item.isEmptyTrash && decision == "once" {
+                process.arguments = (process.arguments ?? []) + ["--confirmation", "EMPTY TRASH"]
+            }
             self?.setApprovalWorkingDirectory(process, executable: helper)
             process.standardOutput = output
             do {

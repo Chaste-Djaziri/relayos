@@ -4,6 +4,30 @@ import XCTest
 @testable import LaptopBridgeApp
 
 final class ApprovalCenterTests: XCTestCase {
+    func testFileOperationAndTrashRequireOnceOnly() throws {
+        let file = """
+        {"request_id":"file-1","kind":"file_operation","target":"TRASH: /Users/test/Downloads/old.zip",
+         "argv":["/Users/test/Downloads/old.zip"],"context":{},
+         "created_at":100,"expires_at":400}
+        """
+        let item = try JSONDecoder().decode(ApprovalInboxItem.self, from: Data(file.utf8))
+        XCTAssertTrue(item.isFileManagement)
+        XCTAssertTrue(item.requiresOnce)
+        XCTAssertFalse(item.isEmptyTrash)
+        XCTAssertTrue(item.title.contains("TRASH"))
+        XCTAssertTrue(item.scopeDescription.contains("Approve Once"))
+
+        let empty = """
+        {"request_id":"empty-1","kind":"empty_trash",
+         "target":"PERMANENTLY EMPTY ALL FINDER TRASH ON ALL VOLUMES",
+         "argv":[],"context":{},"created_at":100,"expires_at":400}
+        """
+        let request = try JSONDecoder().decode(ApprovalInboxItem.self, from: Data(empty.utf8))
+        XCTAssertTrue(request.isEmptyTrash)
+        XCTAssertTrue(request.requiresOnce)
+        XCTAssertTrue(request.scopeDescription.contains("EMPTY TRASH"))
+    }
+
     func testDecodesProjectCommandAndReusableScope() throws {
         let json = """
         {"request_id":"req-1","kind":"project_command","target":"/tmp/repo:/usr/bin/git",

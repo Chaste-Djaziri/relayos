@@ -67,6 +67,30 @@ struct StorageAuditPageView: View {
                 .padding(14)
             }
 
+            SettingsCard(title: "File and app management for ChatGPT") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Files, folders and installed apps", systemImage: "folder.badge.gearshape")
+                        .font(.callout.weight(.semibold))
+                    Text("ChatGPT can request a 15-minute file-manager session for a specific folder. Approve the request locally to allow file names, sizes, dates, search and application bundle details.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Label("Changes always require separate approval", systemImage: "hand.raised")
+                        .font(.callout.weight(.semibold))
+                    Text("Moving to Trash, copying, moving, renaming and creating folders each require Approve Once. RelayOS protects system folders, credentials and its own active installation.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Label("Permanent deletion is separate", systemImage: "trash.slash")
+                        .font(.callout.weight(.semibold))
+                    Text("Empty Trash permanently removes ALL Finder Trash, including unrelated items. It requires a new approval and typing EMPTY TRASH on this Mac.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Text("To use the new tools in ChatGPT, refresh the RelayOS plugin after updating the installed application. No automatic scans or cleanup will begin.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(14)
+            }
+
             if let report {
                 SettingsCard(title: "Folder results") {
                     VStack(alignment: .leading, spacing: 12) {
