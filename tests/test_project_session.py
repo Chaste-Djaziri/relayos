@@ -497,6 +497,18 @@ def test_literal_prefix_validation_and_exact_only_interpreters(project_dir):
     assert validate_scope_prefix("/opt/homebrew/bin/npm", ["npm", "install", "left-pad"], ["npm", "install"]) == ["npm", "install"]
 
 
+def test_versioned_interpreter_prefixes_are_exact_only():
+    from laptop_bridge.command_policy import validate_scope_prefix
+    for executable, argv, prefix in (
+        ("/Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12",
+         ["python3", "-c", "print('hello')"], ["python3", "-c"]),
+        ("/opt/homebrew/bin/python3.13", ["python3", "-m", "pytest"], ["python3", "-m"]),
+        ("/opt/homebrew/bin/pip3.12", ["pip", "install", "module"], ["pip", "install"]),
+    ):
+        with pytest.raises(ValueError):
+            validate_scope_prefix(executable, argv, prefix)
+
+
 def test_one_time_prefix_approval_does_not_remember_other_arguments(project_dir):
     sid = _approved_project_session(project_dir)
     command = ["echo", "scope", "first"]

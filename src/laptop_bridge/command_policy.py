@@ -5,6 +5,7 @@ An approved prefix is a literal sequence of argv tokens, not a shell glob,
 string startswith or regular expression. Never automatically extend its scope.
 """
 from pathlib import Path
+import re
 
 # Existing approvals keep the established git-add family semantics.
 _REUSABLE_GIT_SUBCOMMANDS = {"add"}
@@ -49,7 +50,12 @@ def validate_scope_prefix(executable, argv, scope_prefix):
         raise ValueError("scope_prefix must contain valid literal argument strings")
     if argv[:len(scope_prefix)] != scope_prefix:
         raise ValueError("scope_prefix must be the literal beginning of argv")
-    if Path(executable).name.lower() in _NO_PREFIX_EXECUTABLES:
+    name = Path(executable).name.lower()
+    # On GitHub's hosted macOS runner the resolved interpreter is python3.12,
+    # not python3; version-suffixed interpreters must never inherit broad
+    # argument-prefix permissions to execute arbitrary -c/-m code.
+    interpreter = re.fullmatch(r"(?:python|pip)(?:[0-9]+(?:\.[0-9]+)*)?", name) is not None
+    if name in _NO_PREFIX_EXECUTABLES or interpreter:
         raise ValueError("This executable needs exact-command approval, not a reusable prefix")
     if scope_prefix[1].startswith("-") and Path(executable).name in {"git", "npm", "pnpm", "yarn"}:
         raise ValueError("Prefix must include a subcommand, not a global option")
