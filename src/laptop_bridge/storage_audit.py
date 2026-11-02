@@ -45,7 +45,7 @@ def permitted_scan_root(folder: str) -> Path:
         candidate = Path.home() / candidate
     path = candidate.resolve(strict=True)
     home = Path.home().resolve(strict=True)
-    other_roots = (Path("/Applications"), Path("/Library"), Path("/Volumes"))
+    other_roots = (Path("/Applications"), Path("/Library"), Path("/Volumes"), Path("/System/Applications"))
     if path != home and home not in path.parents and not any(
         root == path or root in path.parents for root in other_roots
     ):

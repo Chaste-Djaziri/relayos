@@ -31,12 +31,14 @@ def main():
     inbox_decision = sub.add_parser("decide-inbox")
     inbox_decision.add_argument("request_id")
     inbox_decision.add_argument("decision", choices=("once", "session", "persistent", "deny"))
+    inbox_decision.add_argument("--confirmation", default=None)
     sub.add_parser("emergency-stop-status")
     set_stop = sub.add_parser("set-emergency-stop")
     set_stop.add_argument("state", choices=("true", "false", "on", "off"))
     decide = sub.add_parser("decide-request")
     decide.add_argument("request_id")
     decide.add_argument("duration", choices=("once", "session", "persistent", "deny"))
+    decide.add_argument("--confirmation", default=None)
     revoke_perm = sub.add_parser("revoke-permission")
     revoke_perm.add_argument("grant_id")
     oauth = sub.add_parser("decide-oauth")
@@ -90,7 +92,7 @@ def main():
         print(json.dumps(approval_activity(limit=args.limit, search=args.search)))
         return
     if args.command == "decide-inbox":
-        print(json.dumps(decide_inbox_request(args.request_id, args.decision)))
+        print(json.dumps(decide_inbox_request(args.request_id, args.decision, confirmation=args.confirmation)))
         return
     if args.command == "list-pending-json":
         print(json.dumps(pending_requests()))
@@ -104,7 +106,7 @@ def main():
         print(json.dumps({"emergency_stop": emergency_stop()}))
         return
     if args.command == "decide-request":
-        decide_request(args.request_id, args.duration)
+        decide_request(args.request_id, args.duration, confirmation=args.confirmation)
         return
     if args.command == "deny":
         deny(args.request_id)

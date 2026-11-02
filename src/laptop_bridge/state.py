@@ -15,6 +15,7 @@ HISTORY_RETENTION = 30 * 24 * 60 * 60
 PROJECT_SESSION_TTL = 60 * 60
 JOB_TTL = 30
 GUIDANCE_SESSION_TTL = 15 * 60
+FILE_ACCESS_TTL = 15 * 60
 OAUTH_APPROVAL_TTL = 5 * 60
 OAUTH_CODE_TTL = 5 * 60
 OAUTH_ACCESS_TOKEN_TTL = 60 * 60
@@ -91,6 +92,10 @@ def _db():
                 token TEXT PRIMARY KEY, title TEXT NOT NULL, status TEXT NOT NULL,
                 check_at REAL NOT NULL, expires_at REAL, project_session TEXT,
                 metadata_json TEXT NOT NULL, created_at REAL NOT NULL, completed_at REAL
+            );
+            CREATE TABLE IF NOT EXISTS file_access_sessions (
+                token TEXT PRIMARY KEY, root TEXT NOT NULL, created_at REAL NOT NULL,
+                expires_at REAL NOT NULL, revoked_at REAL
             );
             CREATE TABLE IF NOT EXISTS guidance_sessions (
                 token TEXT PRIMARY KEY, created_at REAL NOT NULL,
@@ -230,6 +235,7 @@ def _expire(connection, now):
         _record(connection, row["kind"], row["target"], "expired")
     connection.execute("UPDATE project_sessions SET status = 'expired' WHERE status = 'active' AND expires_at <= ?", (now,))
     connection.execute("UPDATE guidance_sessions SET status = 'expired' WHERE status = 'active' AND expires_at <= ?", (now,))
+    connection.execute("DELETE FROM file_access_sessions WHERE expires_at <= ?", (now,))
     connection.execute("DELETE FROM desktop_jobs WHERE created_at < ?", (now - JOB_TTL,))
 
 
@@ -270,6 +276,7 @@ def set_emergency_stop(enabled):
             now = time.time()
             connection.execute("UPDATE project_sessions SET status = 'revoked', revoked_at = ? WHERE status = 'active'", (now,))
             connection.execute("UPDATE guidance_sessions SET status = 'stopped', stopped_at = ? WHERE status = 'active'", (now,))
+            connection.execute("UPDATE file_access_sessions SET revoked_at = ? WHERE revoked_at IS NULL", (now,))
             connection.execute("UPDATE desktop_jobs SET status = 'cancelled', completed_at = ? WHERE status IN ('pending', 'claimed')", (now,))
             connection.execute("UPDATE oauth_tokens SET revoked_at = ? WHERE revoked_at IS NULL", (now,))
             connection.execute("UPDATE oauth_authorizations SET status = 'denied', decided_at = ? WHERE status = 'pending'", (now,))
@@ -314,7 +321,7 @@ def _split_command_target(target, cwd=None):
     return None, None
 
 
-def decide_request(token, duration="once"):
+def decide_request(token, duration="once", confirmation=None):
     """Record a LOCAL user's choice; no approval can expand it later."""
     if duration not in {"once", "session", "persistent", "deny"}:
         raise ValueError("duration must be once, session, persistent, or deny")
@@ -326,12 +333,14 @@ def decide_request(token, duration="once"):
         return False
     # A screenshot request is never reusable, even if a generic client
     # submits a Session/Always choice to the local approval helper.
-    if row["kind"] in {"screen_capture", "storage_scan"} and duration not in {"once", "deny"}:
-        raise ValueError("Screen captures and storage scans require Approve Once or Deny")
+    if row["kind"] in {"screen_capture", "storage_scan", "file_access", "file_operation", "empty_trash"} and duration not in {"once", "deny"}:
+        raise ValueError("This sensitive action requires Approve Once or Deny")
+    if row["kind"] == "empty_trash" and duration == "once" and confirmation != "EMPTY TRASH":
+        raise PermissionError("Locally type EMPTY TRASH to authorize permanent deletion")
     if duration == "deny":
         _decide(token, "denied")
         return True
-    _decide(token, "approved", duration)
+    _decide(token, "approved", duration, confirmation=confirmation)
     if row["kind"] == "project_session":
         if duration == "persistent":
             grant_folder(row["target"], "persistent")
@@ -354,7 +363,7 @@ def decide_request(token, duration="once"):
     return True
 
 
-def _decide(token, status, duration="once"):
+def _decide(token, status, duration="once", confirmation=None):
     with _db() as connection:
         connection.execute("BEGIN IMMEDIATE")
         now = time.time()
@@ -369,9 +378,16 @@ def _decide(token, status, duration="once"):
         if status == "approved" and emergency_stop(connection):
             connection.rollback()
             raise PermissionError("Emergency stop prevents approving requests")
+        context = json.loads(row["context_json"] or "{}")
+        if row["kind"] == "empty_trash" and status == "approved":
+            if confirmation != "EMPTY TRASH":
+                connection.rollback()
+                raise PermissionError("Locally type EMPTY TRASH before approval")
+            context["typed_local_confirmation"] = True
         connection.execute(
-            "UPDATE requests SET status = ?, decided_at = ?, approved_duration = ? WHERE token = ?",
-            (status, now, duration if status == "approved" else None, token),
+            "UPDATE requests SET status = ?, decided_at = ?, approved_duration = ?, context_json = ? WHERE token = ?",
+            (status, now, duration if status == "approved" else None,
+             json.dumps(context), token),
         )
         _record(connection, row["kind"], row["target"], status)
         connection.commit()
@@ -391,6 +407,8 @@ def consume(token, expected_kind=None):
             raise PermissionError("Missing, expired, or incorrectly scoped approval")
         connection.execute("UPDATE requests SET status = 'consumed', consumed_at = ? WHERE token = ?", (now, token))
         connection.commit()
+    if row["kind"] == "empty_trash" and not json.loads(row["context_json"] or "{}").get("typed_local_confirmation"):
+        raise PermissionError("Missing the typed local Empty Trash confirmation")
     return {"kind": row["kind"], "details": {"target": row["target"], "argv": json.loads(row["argv_json"]), "context": json.loads(row["context_json"] or "{}")}, "approved_duration": row["approved_duration"] or "once"}
 
 
@@ -435,7 +453,7 @@ def approval_inbox():
     return sorted(result, key=lambda item: (item["created_at"], item["request_id"]))
 
 
-def decide_inbox_request(request_id, decision):
+def decide_inbox_request(request_id, decision, confirmation=None):
     """One local inbox entry, one deliberate decision; fail closed on stale IDs."""
     if decision not in {"once", "session", "persistent", "deny"}:
         raise ValueError("Invalid inbox decision")
@@ -447,7 +465,7 @@ def decide_inbox_request(request_id, decision):
             "SELECT status FROM oauth_authorizations WHERE token = ?", (request_id,)
         ).fetchone() if row is None else None
     if row is not None:
-        if not decide_request(request_id, decision):
+        if not decide_request(request_id, decision, confirmation=confirmation):
             raise PermissionError("Request was already decided or expired")
         return {"request_id": request_id, "kind": row["kind"], "decision": decision}
     if oauth is not None:
@@ -1528,3 +1546,38 @@ def complete_follow_up(token):
         connection.commit()
     if not updated:
         raise PermissionError("Unknown or already completed follow-up")
+
+def create_file_access_session(folder):
+    """Issue a short-lived metadata/operation session after a consumed local grant."""
+    token = secrets.token_urlsafe(24)
+    now = time.time()
+    with _db() as db:
+        db.execute("BEGIN IMMEDIATE")
+        if emergency_stop(db):
+            raise PermissionError("Emergency stop is enabled")
+        db.execute("INSERT INTO file_access_sessions VALUES (?, ?, ?, ?, NULL)",
+                   (token, str(folder), now, now + FILE_ACCESS_TTL))
+        db.commit()
+    return {"session_id": token, "root": str(folder), "expires_at": now + FILE_ACCESS_TTL,
+            "access": "scoped_file_manager", "expires_in_seconds": FILE_ACCESS_TTL}
+
+
+def file_access_session(token):
+    """Resolve an active exact-root session; Emergency Stop revokes all."""
+    if not isinstance(token, str) or not 12 <= len(token) <= 256:
+        raise PermissionError("Invalid file manager session")
+    with _db() as db:
+        if emergency_stop(db):
+            raise PermissionError("Emergency stop is enabled")
+        row = db.execute("SELECT root, expires_at FROM file_access_sessions "
+                         "WHERE token = ? AND revoked_at IS NULL AND expires_at > ?",
+                         (token, time.time())).fetchone()
+    if not row:
+        raise PermissionError("File manager session expired, revoked, or missing")
+    return {"root": row["root"], "expires_at": row["expires_at"]}
+
+
+def revoke_file_access_session(token):
+    with _db() as db:
+        db.execute("UPDATE file_access_sessions SET revoked_at = ? "
+                   "WHERE token = ? AND revoked_at IS NULL", (time.time(), token))
