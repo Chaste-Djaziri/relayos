@@ -17,6 +17,17 @@ Scope: /Users/chastedjaziri/Documents/GitHub/laptop-bridge
 - [x] Run Python regression suite (137 passed, 19 subtests; one pre-existing Pydantic warning), confirm HTTP route registration/metadata contract, and pass git diff --check.
 - [ ] Deploy the signed bundle with a rollback backup, then verify a real consented full-screen JPEG is retrievable and inspectable from ChatGPT over the public tunnel.
 
+## Autonomous native follow-along guidance
+- [x] Add explicit recipe-based `start_guided_walkthrough` / `guided_walkthrough_status` / `stop_guided_walkthrough` MCP actions; initial flow: System Settings → General.
+- [x] Native 1.2-second background observer verifies the foreground app, and bounded macOS Accessibility state/geometry verifies the selected General control. No screenshots, clicks, keyboard input or ChatGPT messages are produced by this observer.
+- [x] Only current-step guidance is shown; stale highlights clear on app switches. Highlight the General element only when the accessibility control is found within the main display.
+- [x] Automatic completion, 45-second attention reminder (no auto-skip), 60–900 second hard lifetime, Pause/Resume/Stop buttons in local menu bar and Emergency Stop revocation.
+- [x] Make UI verification fail closed if Accessibility is not enabled; display a prompt to grant it rather than inventing completion.
+- [x] Python and native Swift unit tests pass.
+- [ ] Signed production rebuild/deploy with rollback backup.
+- [ ] Live test the two-step System Settings → General flow with Accessibility granted. Confirm no false positives on other windows, app switching, or control lookup failures.
+- [ ] Extend the allowlisted recipe catalog only after live verification, with per-app accessibility predicates and optional user-authored plans.
+
 ## Cursor tip messages and typewriter responses
 - [x] Support short, bounded ChatGPT tip messages adjacent to RelayOS's virtual triangle without modifying the actual macOS mouse or accepting clicks.
 - [x] Add a separate click-through, screen-bounded SwiftUI bubble that follows directed cursor motion or ordinary passive mouse-follow and uses the RelayOS accent color.

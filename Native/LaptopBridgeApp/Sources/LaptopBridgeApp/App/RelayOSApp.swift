@@ -52,6 +52,7 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
                 NotchPanelCoordinator.shared.ensurePresentedOnLaunch(model: BridgeModel.shared)
             }
             RelayOSCursorCompanion.shared.start()
+            RelayOSWalkthroughObserver.shared.start()
             return
         }
         guard SingleInstanceCoordinator.shared.claimOrReplaceExistingInstance() else {
@@ -61,6 +62,7 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
         BridgeModel.shared.startServices()
         BridgeModel.shared.startCommandJobMonitoring()
         RelayOSCursorCompanion.shared.start()
+        RelayOSWalkthroughObserver.shared.start()
         Task { @MainActor in
             NotchPanelCoordinator.shared.ensurePresentedOnLaunch(model: BridgeModel.shared)
         }
@@ -68,6 +70,7 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         RelayOSCursorCompanion.shared.stop()
+        RelayOSWalkthroughObserver.shared.stop()
         nativeExperiment?.stop()
         nativeExperiment = nil
         BridgeModel.shared.stopNativeInboxPolling()

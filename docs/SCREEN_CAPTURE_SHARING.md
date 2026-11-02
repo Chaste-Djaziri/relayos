@@ -172,6 +172,36 @@ reconnecting the ChatGPT RelayOS connector may also be necessary to discover
 the new MCP tools. macOS-native tests and live visual behavior remain to be
 verified on the signed bundle.
 
+## Native automatic walkthroughs (read-only observation)
+
+RelayOS supports a bounded `system_settings_general` recipe for hands-free
+step verification. Invoke `start_guided_walkthrough(flow="system_settings_general",
+duration_seconds=600)` when the user asks to begin. The signed Mac app polls
+the token-authenticated `GET /control/walkthrough` endpoint every 1.2 seconds.
+It checks that System Settings (`com.apple.systempreferences`) is foreground,
+then examines macOS Accessibility metadata for the *General* item only.
+An exact, on-screen element rectangle may be used to highlight the control.
+Only verified selected state completes the final step; switching apps clears
+stale highlights and shows a return instruction.
+
+The assistant does not stay awake, stream screenshots, or poll itself: a
+local, temporary native observer handles progress. No mouse or keyboard
+input is injected and no screenshot is captured. The workflow expires after
+up to 15 minutes, and after 45 seconds on a step it shows an attention
+reminder but **never skips an unverified step**. A user can pause/resume/stop
+from the RelayOS menu-bar control center. Emergency Stop revokes immediately.
+`guided_walkthrough_status` reports current progress and
+`stop_guided_walkthrough` ends the session.
+
+If macOS Accessibility permission for RelayOS is missing or the control
+cannot be located, no completion is inferred and no fake highlight is drawn.
+Open **System Settings → Privacy & Security → Accessibility** and enable the
+installed signed RelayOS app to allow the verified General selection.
+
+The MVP is an allowlisted **System Settings → General** walkthrough, not a
+general-purpose visual agent or an arbitrary website automation engine.
+The flow is intentionally explicit and time-limited.
+
 ## ChatGPT responses beside the cursor
 
 A short plain-text RelayOS guidance tip can be shown without an additional

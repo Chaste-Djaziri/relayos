@@ -16,7 +16,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from . import keychain, state
-from . import ngrok, command_jobs, cursor_guidance, screen_capture
+from . import ngrok, command_jobs, cursor_guidance, screen_capture, walkthrough
 from .config import CONFIG_FILE, STATE_DIR, load_config, save_config
 
 TOKEN_FILE = STATE_DIR / "control.token"
@@ -117,6 +117,28 @@ async def handle(request: Request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     path = request.url.path
     method = request.method
+    if method == "GET" and path == "/control/walkthrough":
+        return JSONResponse(walkthrough.status())
+    if method == "POST" and path == "/control/walkthrough/observe":
+        payload = await json_body(request)
+        try:
+            return JSONResponse(walkthrough.observe(
+                payload.get("id"), payload.get("frontmost_bundle_id", ""),
+                general_selected=payload.get("general_selected", False),
+                accessibility=payload.get("accessibility", False),
+                general_bounds=payload.get("general_bounds")))
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        except PermissionError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=403)
+    if method == "POST" and path == "/control/walkthrough/control":
+        payload = await json_body(request)
+        try:
+            return JSONResponse(walkthrough.control(payload.get("action"), payload.get("id")))
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        except PermissionError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=403)
     if method == "POST" and path == "/control/cursor-guidance/arrived":
         body = await json_body(request)
         try:

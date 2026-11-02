@@ -4,6 +4,15 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 
 ## Unreleased
 
+### Automatic follow-along walkthrough engine (macOS)
+- Add opt-in MCP actions `start_guided_walkthrough`, `guided_walkthrough_status` and `stop_guided_walkthrough` for a bounded, recipe-locked `system_settings_general` walkthrough.
+- The signed native RelayOS companion polls the authenticated local endpoint every 1.2 seconds, checks the actual foreground bundle ID, then reads only the `General` control's Accessibility metadata (selection and bounded rectangle) to verify progress. Screenshots, arbitrary UI text, click/keyboard injection and automatic permission requests are not needed.
+- Display just the current instruction in the existing typewriter cursor-tip bubble. When a valid Accessibility rectangle is available, draw a precise cursor/highlight on General instead of guessing where Dock icons or controls are. Never advance on elapsed time or mouse proximity alone.
+- Handle foreground changes by dismissing stale highlights and guiding the user back; support time-limited sessions (60–900 seconds), a 45-second needs-attention reminder, and Pause/Resume/Stop controls in the menu-bar panel. Emergency Stop revokes a session.
+- Fail closed when macOS Accessibility consent is unavailable: instruction remains visible, but selected state is not asserted. No persistent screenshot storage or continuous ChatGPT polling.
+- Added unit tests for step progression, verified bounds, inactive app handling, revocation, timeouts, local control authentication and Swift observation rules; Python 182 passed (83 subtests), native Swift tests passed.
+
+
 ### Typewritten ChatGPT guidance beside the virtual cursor
 - Add a small click-through SwiftUI tip bubble beside the existing theme-accent triangular cursor, following its actual animated position and flipping/clamping inside the selected display, including monitors with negative coordinates.
 - Animate short plain-text responses character-by-character (~32 grapheme clusters/second), showing a subtle blinking insertion caret and dismissing the bubble on timeout or explicit clear. Limit messages to 240 characters / 1000 UTF-8 bytes, with no retained screenshots, input interception, chat transcript storage or injected clicks.

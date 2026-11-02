@@ -281,9 +281,10 @@ def set_emergency_stop(enabled):
         # including if it is switched off before their natural expiry.
         from .screenshot_links import store
         store.revoke_all()
-        from . import cursor_guidance, screen_capture
+        from . import cursor_guidance, screen_capture, walkthrough
         cursor_guidance.clear()
         screen_capture.revoke_sharing()
+        walkthrough.revoke()
 
 
 def emergency_stop(connection=None):

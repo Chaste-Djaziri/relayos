@@ -7,6 +7,7 @@ import AppKit
 struct QuickPanel: View {
     @ObservedObject var model: BridgeModel
     @ObservedObject private var notch = NotchPanelCoordinator.shared
+    @ObservedObject private var walkthrough = RelayOSWalkthroughObserver.shared
     @Environment(\.openWindow) private var openWindow
     @Environment(\.colorScheme) private var colorScheme
 
@@ -110,6 +111,43 @@ struct QuickPanel: View {
             .overlay(RoundedRectangle(cornerRadius: 13)
                 .strokeBorder(palette.cardBorder, lineWidth: 1))
             .padding(.bottom, 12)
+
+            if !model.isSwiftOnly && ["active", "paused"].contains(walkthrough.status.status) {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Label("Guided walkthrough", systemImage: "point.topleft.down.curvedto.point.bottomright.up")
+                            .font(.system(size: 12, weight: .semibold))
+                        Spacer()
+                        Text(walkthrough.status.status == "paused" ? "Paused" :
+                             "Step \((walkthrough.status.step ?? 0) + 1) / \(walkthrough.status.totalSteps ?? 2)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(accentColor)
+                    }
+                    Text(walkthrough.status.instruction ?? "")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if walkthrough.status.attentionNeeded == true {
+                        Text("Still waiting for this step. It will not advance without verification.")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.orange)
+                    }
+                    HStack(spacing: 9) {
+                        Button(walkthrough.status.status == "paused" ? "Resume" : "Pause") {
+                            walkthrough.control(walkthrough.status.status == "paused" ? "resume" : "pause")
+                        }
+                        Button("Stop walkthrough") {
+                            walkthrough.control("stop")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding(14)
+                .background(palette.cardBackground, in: RoundedRectangle(cornerRadius: 13))
+                .overlay(RoundedRectangle(cornerRadius: 13)
+                    .strokeBorder(accentColor.opacity(0.5)))
+                .padding(.bottom, 12)
+            }
 
             if !model.isSwiftOnly {
                 VStack(alignment: .leading, spacing: 10) {
