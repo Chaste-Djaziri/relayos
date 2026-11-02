@@ -2,6 +2,18 @@
 Status: Phase 01 native runtime foundation in progress (2026-10-31)
 Scope: /Users/chastedjaziri/Documents/GitHub/laptop-bridge
 
+## File and app management — explicit local consent
+- [x] Add 15-minute scoped file access, directory pagination, bounded filename search, metadata, .app bundle catalog and CLI tool inventory; no arbitrary file reads.
+- [x] Add one-time proposal/execution flow for Trash, move, copy, rename and mkdir with exact item snapshots, root protection and independent local authorization.
+- [x] Enforce backend + Swift UI **EMPTY TRASH** phrase for irreversible all-volume Finder Trash emptying; no implicit or always-allow destructive permissions.
+- [x] Prevent deleting credential areas, system folders, active RelayOS, symlink escapes or directories containing .git/.env markers; never silently overwrite a destination.
+- [x] Add Python unit tests and Swift approval-model tests.
+- [x] Build a signed hybrid bundle and pass isolated packaged MCP authentication smoke tests.
+- [ ] Perform a disposable-item Trash API integration check (no personal data) and independently verify app uninstallation semantics.
+- [ ] Deploy with rollback; the automatic handover request was blocked by a safety check on 2026-11-02, leaving the installed app unchanged.
+- [ ] Refresh RelayOS connection to rediscover tools, then test a real consented file manager session without deleting personal files.
+- [ ] Package-manager-specific uninstallation and recovery of individual Trash items are out of scope; require a separate future implementation.
+
 ## Read-only storage inspection — local work
 - [x] Add Settings → Storage with volume capacity, folder selection, bounded scan, caches, Git markers and secret filename counts.
 - [x] Add separate MCP proposal and one-time consumption, requiring physical local Approve Once (or Deny) for the exact folder.

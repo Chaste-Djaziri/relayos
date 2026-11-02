@@ -64,7 +64,8 @@ cp "$SWIFT_BUILD_DIR/arm64-apple-macosx/release/RelayOSScreenCapture" "$APP_PATH
   --name RelayOSMCPServer \
   --distpath "$STAGE_DIR" --workpath "$STAGE_DIR/build" --specpath "$STAGE_DIR" \
   --paths src --hidden-import mcp.server --hidden-import mcp.server.auth \
-  --hidden-import mcp.server.transport_security packaging/relayos_server_entry.py
+  --hidden-import mcp.server.transport_security \
+  --hidden-import Foundation --hidden-import objc packaging/relayos_server_entry.py
 cp "$STAGE_DIR/RelayOSMCPServer" "$APP_PATH/Contents/Resources/Runtime/RelayOSMCPServer"
 
 "$PYTHON_BIN" -m PyInstaller --noconfirm --clean --onefile \

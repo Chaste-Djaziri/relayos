@@ -4,6 +4,13 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 
 ## Unreleased
 
+### Scoped file/app management and approval-gated Trash
+- Add temporary, exact-folder file-manager sessions (15 minutes; local Approve Once), paginated folder listing, file details, bounded name search, installed macOS app bundle inspection and read-only developer tool inventory.
+- Add distinct, single-use approvals for moving selected files to Finder Trash, moving/copying/renaming items and creating folders. Reject symlink escapes, existing destination overwrites, credentials, system/RelayOS data and folders containing Git metadata or secret-like files.
+- Add an irreversible **Empty Finder Trash** MCP action, separate from move-to-Trash. The native approval screen displays all-volume scope and requires typing **EMPTY TRASH**; the SQLite-backed authorization gate validates the phrase, so CLI approvals cannot bypass it.
+- Preserve user-selected path detail in the native approval inbox; update Settings → Storage instructions, PyInstaller Foundation packaging, and regression tests. No user files are automatically deleted, nor are app support files or package-manager tools automatically uninstalled.
+- Implemented in the Mac's local Git checkout only; no GitHub push. Fourteen Python file-management tests and Swift tests passed; the signed production bundle and isolated packaged MCP smoke tests succeeded. The verified deployment command was blocked by a safety check, so the running installation was not updated.
+
 ### Read-only storage audit (local development)
 - Add native **Settings → Storage** with disk capacity and a user-selected bounded folder scan showing size estimates, cache candidates, Git project markers and credential-file counts. The UI cannot delete or transmit file contents.
 - Add MCP tools `disk_storage_overview`, `propose_storage_scan` and `scan_approved_storage`. Every folder scan requires an exact, fresh local **Approve Once**; existing project permissions do not authorize storage scans.
