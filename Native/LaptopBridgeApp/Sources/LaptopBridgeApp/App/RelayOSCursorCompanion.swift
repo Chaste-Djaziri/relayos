@@ -187,9 +187,10 @@ struct RelayOSPointerGuidance: Decodable {
     let region: RelayOSHighlightSpec?
     let proximityRadius: Double?
     let showCursor: Bool?
+    let tip: RelayOSCursorTip?
 
     enum CodingKeys: String, CodingKey {
-        case active, id, display, x, y, region
+        case active, id, display, x, y, region, tip
         case expiresAt = "expires_at"
         case proximityRadius = "proximity_radius"
         case showCursor = "show_cursor"
@@ -308,6 +309,8 @@ final class RelayOSCursorCompanion {
     private var orientation = RelayOSCursorOrientation()
     private let presentation = RelayOSCursorPresentation()
     private var guidance: RelayOSPointerGuidance?
+    private var tip: RelayOSCursorTip?
+    private let tipCompanion = RelayOSCursorTipCompanion()
     private var polling = false
     private var lastPoll: TimeInterval = 0
     private var pollGeneration = 0
@@ -358,6 +361,8 @@ final class RelayOSCursorCompanion {
         orientation.reset()
         presentation.angle = 0
         guidance = nil
+        tip = nil
+        tipCompanion.dismiss(immediately: true)
         anchoredID = nil
         anchoredFrame = nil
         arrivalGate = RelayOSCursorArrivalGate()
@@ -373,6 +378,10 @@ final class RelayOSCursorCompanion {
         // acknowledgement is delayed. Never dismiss a newer target by ID.
         dismissedID = id
         guidance = nil
+        if tip?.targetID == id {
+            tip = nil
+            tipCompanion.dismiss()
+        }
         anchoredID = nil
         anchoredFrame = nil
         arrivalGate = RelayOSCursorArrivalGate()
@@ -397,6 +406,7 @@ final class RelayOSCursorCompanion {
               let url = URL(string: "http://127.0.0.1:8765/control/cursor-guidance")
         else {
             guidance = nil
+            tip = nil
             return
         }
         polling = true
@@ -412,6 +422,7 @@ final class RelayOSCursorCompanion {
                 let (data, response) = try await URLSession.shared.data(for: request)
                 guard (response as? HTTPURLResponse)?.statusCode == 200 else {
                     self.guidance = nil
+                    self.tip = nil
                     return
                 }
                 let command = try JSONDecoder().decode(RelayOSPointerGuidance.self, from: data)
@@ -419,12 +430,15 @@ final class RelayOSCursorCompanion {
                 guard self.timer != nil else { return }
                 self.guidance = command.active && command.id != self.dismissedID
                     ? command : nil
+                self.tip = command.tip?.targetID == self.dismissedID
+                    ? nil : command.tip
                 // A new server-side target may resume guidance after release.
                 if command.active && command.id != self.dismissedID {
                     self.dismissedID = nil
                 }
             } catch {
                 self.guidance = nil
+                self.tip = nil
             }
         }
     }
@@ -502,6 +516,7 @@ final class RelayOSCursorCompanion {
                   let normalFrame = RelayOSCursorPlacement.frame(for: pointer, on: frames)
             else {
                 window.orderOut(nil)
+                tipCompanion.dismiss()
                 lastFrame = nil
                 motion.reset()
                 return
@@ -530,6 +545,12 @@ final class RelayOSCursorCompanion {
         }
         if !window.isVisible {
             window.orderFrontRegardless()
+        }
+        if let tip, tip.isValid(at: Date()) {
+            tipCompanion.show(tip, near: frame, on: screen)
+        } else {
+            self.tip = nil
+            tipCompanion.dismiss()
         }
     }
 }

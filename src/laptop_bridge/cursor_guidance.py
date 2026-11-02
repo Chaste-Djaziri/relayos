@@ -15,8 +15,51 @@ from . import state
 from .config import load_config
 
 MAX_HOLD_SECONDS = 60
+MAX_TIP_CHARS = 240
 _lock = threading.Lock()
 _active: dict | None = None
+_tip: dict | None = None
+
+
+def _validate_tip(message: str | None) -> str | None:
+    if message is None:
+        return None
+    if not isinstance(message, str):
+        raise ValueError("Tip message must be a string")
+    clean = message.strip()
+    if not clean or len(clean) > MAX_TIP_CHARS or len(clean.encode("utf-8")) > 1000:
+        raise ValueError("Tip message must be 1..240 characters (max 1000 UTF-8 bytes)")
+    if any(ord(ch) < 32 and ch not in "\\n\\t" for ch in clean) or clean.count("\\n") > 3:
+        raise ValueError("Tip message contains unsupported control characters")
+    return clean
+
+
+def _make_tip(message: str, expires_at: float, target_id: str | None = None) -> dict:
+    return {"id": secrets.token_hex(12), "text": message,
+            "expires_at": expires_at, "target_id": target_id}
+
+
+def show_tip(message: str, hold_seconds: float = 20) -> dict:
+    """Display a short ephemeral typewritten tip beside the *virtual* cursor."""
+    if not _permitted():
+        raise PermissionError("Screen Guidance is disabled or Emergency Stop is enabled")
+    clean = _validate_tip(message)
+    if clean is None:
+        raise ValueError("Tip message is required")
+    hold = _number(hold_seconds, "hold_seconds", 1, MAX_HOLD_SECONDS)
+    global _tip
+    with _lock:
+        _tip = _make_tip(clean, time.time() + hold)
+    return {"displaying": True, "hold_seconds": hold,
+            "message": "RelayOS will type the tip beside its virtual cursor. No click is generated."}
+
+
+def clear_tip() -> dict:
+    global _tip
+    with _lock:
+        _tip = None
+    return {"cleared": True}
+
 
 
 def _permitted() -> bool:
@@ -33,7 +76,8 @@ def _display(value: str) -> str:
     return value
 
 
-def point_to(x: float, y: float, display: str = "main", hold_seconds: float = 20) -> dict:
+def point_to(x: float, y: float, display: str = "main", hold_seconds: float = 20,
+             tip: str | None = None) -> dict:
     """Set a bounded target; x and y are 0..1 in top-left screenshot space."""
     if not _permitted():
         raise PermissionError("Screen Guidance is disabled or Emergency Stop is enabled")
@@ -43,6 +87,7 @@ def point_to(x: float, y: float, display: str = "main", hold_seconds: float = 20
     if isinstance(hold_seconds, bool) or not isinstance(hold_seconds, (int, float)) or not math.isfinite(hold_seconds) or not 1 <= hold_seconds <= MAX_HOLD_SECONDS:
         raise ValueError("hold_seconds must be between 1 and 60")
     display = _display(display)
+    tip_text = _validate_tip(tip)
     event = {
         "id": secrets.token_hex(12),
         "display": display,
@@ -50,9 +95,10 @@ def point_to(x: float, y: float, display: str = "main", hold_seconds: float = 20
         "y": float(y),
         "expires_at": time.time() + float(hold_seconds),
     }
-    global _active
+    global _active, _tip
     with _lock:
         _active = event
+        _tip = _make_tip(tip_text, event["expires_at"], event["id"]) if tip_text else None
     return {"pointing": True, "display": display, "x": float(x), "y": float(y),
             "hold_seconds": float(hold_seconds),
             "message": "RelayOS virtual cursor will point at the location. No mouse input or click is generated."}
@@ -86,7 +132,7 @@ def _visual_options(hold_seconds, proximity_radius, show_cursor,
 
 
 def _publish_highlight(display: str, region: dict, anchor: tuple[float, float],
-                       settings: dict) -> dict:
+                       settings: dict, tip: str | None = None) -> dict:
     if not _permitted():
         raise PermissionError("Screen Guidance is disabled or Emergency Stop is enabled")
     event = {
@@ -97,9 +143,11 @@ def _publish_highlight(display: str, region: dict, anchor: tuple[float, float],
         "proximity_radius": settings["proximity_radius"],
         "show_cursor": settings["show_cursor"],
     }
-    global _active
+    tip_text = _validate_tip(tip)
+    global _active, _tip
     with _lock:
         _active = event
+        _tip = _make_tip(tip_text, event["expires_at"], event["id"]) if tip_text else None
     return {"highlighting": True, "shape": region["shape"],
             "display": event["display"], "hold_seconds": settings["hold_seconds"],
             "proximity_radius": settings["proximity_radius"],
@@ -110,7 +158,7 @@ def highlight_region(shape: str, x: float, y: float, width: float, height: float
                      display: str = "main", hold_seconds: float = 20,
                      proximity_radius: float = 48, show_cursor: bool = True,
                      fill_opacity: float = 0.12, stroke_width: float = 2.5,
-                     corner_radius: float = 10) -> dict:
+                     corner_radius: float = 10, tip: str | None = None) -> dict:
     """Highlight a rectangle, rounded rectangle or ellipse on a display."""
     if shape not in REGION_SHAPES:
         raise ValueError("shape must be rect, rounded_rect or ellipse")
@@ -127,14 +175,14 @@ def highlight_region(shape: str, x: float, y: float, width: float, height: float
               "points": [], "closed": True, "corner_radius": corner,
               "fill_opacity": settings["fill_opacity"],
               "stroke_width": settings["stroke_width"]}
-    return _publish_highlight(display, region, (left + w / 2, top + h / 2), settings)
+    return _publish_highlight(display, region, (left + w / 2, top + h / 2), settings, tip)
 
 
 def highlight_path(points: list[list[float]], shape: str = "polygon",
                    display: str = "main", hold_seconds: float = 20,
                    proximity_radius: float = 48, show_cursor: bool = True,
                    fill_opacity: float = 0.12, stroke_width: float = 2.5,
-                   closed: bool | None = None) -> dict:
+                   closed: bool | None = None, tip: str | None = None) -> dict:
     """Highlight a polygon or open/closed freeform polyline. 2–96 vertices."""
     if shape not in PATH_SHAPES:
         raise ValueError("shape must be polygon or path")
@@ -163,21 +211,26 @@ def highlight_path(points: list[list[float]], shape: str = "polygon",
               "fill_opacity": settings["fill_opacity"] if closed else 0.,
               "stroke_width": settings["stroke_width"]}
     return _publish_highlight(display, region,
-                              ((left + right)/2, (top + bottom)/2), settings)
+                              ((left + right)/2, (top + bottom)/2), settings, tip)
 
 def current_target() -> dict:
     """Read for the authenticated *local* native cursor poller."""
-    global _active
+    global _active, _tip
     if not _permitted():
         clear()
         return {"active": False}
     with _lock:
-        if _active is None:
-            return {"active": False}
-        if time.time() >= _active["expires_at"]:
+        now = time.time()
+        if _active is not None and now >= _active["expires_at"]:
             _active = None
-            return {"active": False}
-        return {"active": True, **_active}
+        if _tip is not None and (now >= _tip["expires_at"] or
+                (_tip["target_id"] is not None and
+                 (_active is None or _active["id"] != _tip["target_id"]))):
+            _tip = None
+        result = {"active": True, **_active} if _active is not None else {"active": False}
+        if _tip is not None:
+            result["tip"] = _tip.copy()
+        return result
 
 
 def complete_target(target_id: str) -> dict:
@@ -185,18 +238,21 @@ def complete_target(target_id: str) -> dict:
 
     A delayed acknowledgement must never cancel a newer guidance target.
     """
-    global _active
+    global _active, _tip
     if not isinstance(target_id, str) or not 1 <= len(target_id) <= 128:
         raise ValueError("Invalid cursor guidance id")
     with _lock:
         if _active is not None and secrets.compare_digest(_active["id"], target_id):
             _active = None
+            if _tip is not None and _tip["target_id"] == target_id:
+                _tip = None
             return {"cleared": True}
     return {"cleared": False}
 
 
 def clear() -> dict:
-    global _active
+    global _active, _tip
     with _lock:
         _active = None
+        _tip = None
     return {"cleared": True}

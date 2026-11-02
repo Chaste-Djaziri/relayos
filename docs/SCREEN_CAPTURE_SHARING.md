@@ -172,6 +172,36 @@ reconnecting the ChatGPT RelayOS connector may also be necessary to discover
 the new MCP tools. macOS-native tests and live visual behavior remain to be
 verified on the signed bundle.
 
+## ChatGPT responses beside the cursor
+
+A short plain-text RelayOS guidance tip can be shown without an additional
+screen capture or screenshot approval:
+
+- `show_cursor_tip(message="Click your profile icon here", hold_seconds=20)`
+  displays an optional typewritten bubble next to the virtual cursor while
+  the cursor follows the real mouse (without moving or clicking it).
+- `point_screen_target(..., tip="Choose this tab")`,
+  `highlight_screen_region(..., tip="Open Settings here")`, and
+  `highlight_screen_path(..., tip="This is the control")` attach a bubble
+  to the existing target; the message closes with the highlighted target when
+  mouse proximity is reached or the target times out.
+- `clear_cursor_tip()` removes only the text, preserving the current
+  highlight. `clear_screen_pointer()` and `clear_screen_highlight()`
+  remove target and bubble.
+
+The small transparent, click-through SwiftUI bubble follows the current
+*virtual* triangle position, keeps within the display bounds, and types
+approximately 32 visible characters per second with a blinking caret. Its
+panel displays RelayOS's current accent color. Text is bounded to 240
+characters (1000 UTF-8 bytes); duration is 1–60 seconds. Exactly one
+message can be shown at once; a new tip replaces the old tip. It is not a
+general OS input or notification channel. Emergency Stop and disabled Screen
+Guidance revoke the tip, and no message transcript is stored.
+
+ChatGPT's normal chat output is **not automatically mirrored** to RelayOS:
+the assistant calls one of the MCP tip/guidance tools to display the chosen
+short text on the Mac.
+
 ## Remaining manual QA
 
 - Test the signed release app with the selected app, window and both internal

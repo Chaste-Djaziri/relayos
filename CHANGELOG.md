@@ -4,6 +4,14 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 
 ## Unreleased
 
+### Typewritten ChatGPT guidance beside the virtual cursor
+- Add a small click-through SwiftUI tip bubble beside the existing theme-accent triangular cursor, following its actual animated position and flipping/clamping inside the selected display, including monitors with negative coordinates.
+- Animate short plain-text responses character-by-character (~32 grapheme clusters/second), showing a subtle blinking insertion caret and dismissing the bubble on timeout or explicit clear. Limit messages to 240 characters / 1000 UTF-8 bytes, with no retained screenshots, input interception, chat transcript storage or injected clicks.
+- Expose `show_cursor_tip(message, hold_seconds=20)` and `clear_cursor_tip()` through MCP; optionally include `tip` with `point_screen_target`, `highlight_screen_region`, or `highlight_screen_path` to tie the message's dismissal to proximity/timeout of that target. Standalone messages appear next to the existing mouse-follow cursor.
+- Extend the authenticated local cursor poller's one-active-tip state, Emergency Stop clearing, target-bound arrival handling, and Swift/Python lifecycle and text-typing regression tests.
+- Native `swift test` and Python `pytest` suites pass. Signed deployment pending.
+
+
 ### One-click, bounded screenshot sharing
 - Add an explicit, **off-by-default 30-minute main-display sharing session** activated/stopped from the native macOS RelayOS menu-bar panel or Security settings. Show active status in the menu-bar icon and a remaining-time label; refresh the status alongside existing command-job polling.
 - While this local session is active, `request_screen_capture(display, main)` issues an immediately authorized, **single-use, scope-bound** request ID with no repetitive inbox prompt. Capture delivery still requires a separate `capture_approved_screen` call, the existing signed ScreenCaptureKit helper and macOS OS-level recording permission. Named applications, windows and external displays retain Approve Once.

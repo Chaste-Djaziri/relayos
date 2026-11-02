@@ -17,6 +17,15 @@ Scope: /Users/chastedjaziri/Documents/GitHub/laptop-bridge
 - [x] Run Python regression suite (137 passed, 19 subtests; one pre-existing Pydantic warning), confirm HTTP route registration/metadata contract, and pass git diff --check.
 - [ ] Deploy the signed bundle with a rollback backup, then verify a real consented full-screen JPEG is retrievable and inspectable from ChatGPT over the public tunnel.
 
+## Cursor tip messages and typewriter responses
+- [x] Support short, bounded ChatGPT tip messages adjacent to RelayOS's virtual triangle without modifying the actual macOS mouse or accepting clicks.
+- [x] Add a separate click-through, screen-bounded SwiftUI bubble that follows directed cursor motion or ordinary passive mouse-follow and uses the RelayOS accent color.
+- [x] Show text via grapheme-aware typewriter animation with a blinking caret; handle narrow edges and monitors with negative coordinates.
+- [x] Add `show_cursor_tip` / `clear_cursor_tip` MCP actions and optional target-bound `tip` text for point/region/path guidance.
+- [x] Support replacement, clear, bounded expiry, proximity completion of attached tips and Emergency Stop revocation; never persist messages.
+- [x] Add Python/Swift unit tests for typing, placement, decoding and lifecycle.
+- [ ] Signed install/deploy and verify the tip animates visually beside a moving triangle; reconnect ChatGPT's RelayOS integration if new actions are not yet advertised.
+
 ## Guidance animation pacing
 - [x] Preserve responsive passive real-mouse following (29 rad/s) while slowing targeted virtual-cursor travel (5 rad/s), including seamless mode switches without inherited cursor momentum.
 - [x] Extend animated outline to 2.0 seconds after a 0.35-second lead-in and delay fill until after the stroke; keep dismissal timing, proximity and timeout behavior.
