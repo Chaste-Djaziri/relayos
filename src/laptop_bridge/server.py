@@ -31,7 +31,7 @@ from starlette.responses import HTMLResponse, RedirectResponse, Response
 from .config import authorized_path, load_config, public_base_url
 from .command_policy import reusable_command_family, command_family_label, validate_scope_prefix, suggested_scope_prefix
 from .oauth import LocalApprovalOAuthProvider, approval_redirect
-from . import control, command_jobs, cursor_guidance, screen_capture, screenshot_links, state, walkthrough
+from . import control, command_jobs, cursor_guidance, screen_capture, screenshot_links, state, storage_audit, walkthrough
 from .state import (
     activate_project_session, consume, desktop_job_result, emergency_stop,
     project_session, queue_desktop_job, record_result, request,
@@ -263,6 +263,41 @@ def list_processes(limit: int = 50, sort_by: str = "cpu") -> list[dict]:
         results.sort(key=lambda x: (x["cpu_percent"], x["memory_percent"]), reverse=True)
 
     return results[:limit]
+
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True))
+def disk_storage_overview() -> dict:
+    """Report total, used and free disk space. No folders or files enumerated."""
+    if emergency_stop():
+        raise PermissionError("Emergency stop is enabled")
+    return storage_audit.disk_overview()
+
+
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=False))
+def propose_storage_scan(folder: str) -> dict:
+    """Request one local Approve Once for an exact folder's storage metadata.
+
+    Does not grant read-file-content, shell, write or deletion permissions.
+    """
+    if emergency_stop():
+        raise PermissionError("Emergency stop is enabled")
+    root = storage_audit.permitted_scan_root(folder)
+    token = request("storage_scan", {"target": str(root), "argv": []})
+    return {"request_id": token, "folder": str(root), "expires_in_seconds": 300,
+            "read_only": True, "message": "Approve Once in the RelayOS inbox, then call scan_approved_storage."}
+
+
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=False))
+def scan_approved_storage(request_id: str, max_entries: int = 25000,
+                          max_seconds: float = 10.0) -> dict:
+    """Consume local Once approval; return bounded metadata-only storage report."""
+    approved = consume(request_id, expected_kind="storage_scan")
+    root = storage_audit.permitted_scan_root(approved["details"]["target"])
+    result = storage_audit.scan_folder(root, max_entries=max_entries, max_seconds=max_seconds)
+    record_result("storage_scan", str(root), detail={
+        "entries_scanned": result["entries_scanned"],
+        "truncated": result["truncated"], "read_only": True})
+    return result
+
 
 @mcp.tool()
 def list_files(folder: str) -> list[dict]:

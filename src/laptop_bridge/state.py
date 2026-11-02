@@ -326,8 +326,8 @@ def decide_request(token, duration="once"):
         return False
     # A screenshot request is never reusable, even if a generic client
     # submits a Session/Always choice to the local approval helper.
-    if row["kind"] == "screen_capture" and duration not in {"once", "deny"}:
-        raise ValueError("Screen captures require Approve Once or Deny")
+    if row["kind"] in {"screen_capture", "storage_scan"} and duration not in {"once", "deny"}:
+        raise ValueError("Screen captures and storage scans require Approve Once or Deny")
     if duration == "deny":
         _decide(token, "denied")
         return True
