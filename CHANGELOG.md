@@ -4,6 +4,13 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 
 ## Unreleased
 
+### One-click, bounded screenshot sharing
+- Add an explicit, **off-by-default 30-minute main-display sharing session** activated/stopped from the native macOS RelayOS menu-bar panel or Security settings. Show active status in the menu-bar icon and a remaining-time label; refresh the status alongside existing command-job polling.
+- While this local session is active, `request_screen_capture(display, main)` issues an immediately authorized, **single-use, scope-bound** request ID with no repetitive inbox prompt. Capture delivery still requires a separate `capture_approved_screen` call, the existing signed ScreenCaptureKit helper and macOS OS-level recording permission. Named applications, windows and external displays retain Approve Once.
+- Enforce in-memory-only session identity and automatic expiration, immediate Stop and Emergency Stop revocation, expiration even for in-flight images, and no reuse across restart/new sessions. The public MCP connector cannot activate sharing; only the authenticated local control API used by the native UI can.
+- Add Python grant/expiration/race/authorization regression tests, native sharing status tests, and screen-sharing documentation. Signed installation pending after build and tests.
+
+
 ### Slower, deliberate guidance animation
 - Make the virtual triangle's **directed** target travel visibly slower using a critically damped 5.0 rad/s guidance spring while retaining the original 29 rad/s passive mouse-follow speed. Reset velocity on mode transitions so ordinary mouse movement cannot launch the guide past a selected item.
 - Increase region/path outline drawing to 2.0 seconds after a 0.35-second lead-in; reveal the translucent accent fill after the outline completes. Maintain the existing one-target rule, proximity/timeout dismissal, and fast everyday cursor following.

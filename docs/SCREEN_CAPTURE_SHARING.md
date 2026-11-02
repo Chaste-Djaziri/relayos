@@ -1,13 +1,10 @@
 <!-- Path: docs/SCREEN_CAPTURE_SHARING.md -->
 # RelayOS on-demand screen sharing with ChatGPT
 
-**Status:** Signed hybrid app installed at `/Applications/RelayOS.app` on
-2026-11-01 after isolated MCP smoke checks and a rollback-backed handover.
-The installed app still uses the prior capture implementation. The new
-short-lived HTTPS retrieval fallback is **source-only** pending a signed
-redeployment and a live visual acceptance test. The screen-sharing capability
-remains off until enabled locally, and an actual consented screenshot has
-**not** yet been visually validated in ChatGPT.
+**Status:** Existing on-demand screenshot sharing has been tested with
+ChatGPT on a signed RelayOS installation. The optional, time-bounded
+main-display sharing session documented below is implemented in source and
+must be deployed as a new signed app before it becomes available.
 
 This is **single-frame sharing**, not remote desktop control, hidden recording,
 or continuous video streaming. ChatGPT can request one capture of:
@@ -28,8 +25,12 @@ or continuous video streaming. ChatGPT can request one capture of:
 2. ChatGPT calls `request_screen_capture(scope, target)`. RelayOS queues a
    local `screen_capture` request with the exact scope and target. At this step
    no image is captured.
-3. The local user sees an Approval Inbox entry with the target and selects
-   **Once** or **Deny**. Session/Always cannot authorize screenshots.
+3. **Default:** the local user sees an Approval Inbox entry with the exact
+   target and selects **Once** or **Deny**; Session/Always decisions in the
+   generic inbox still cannot authorize screenshots. **Optional:** if the user
+   explicitly starts a time-bounded main-display sharing session in RelayOS,
+   repeated requests for `display:main` are instantly authorized with
+   independently consumable IDs, and no per-frame inbox prompt appears.
 4. If macOS has not granted Screen & System Audio Recording permission, the
    capture helper requests the OS permission **only at the approved capture**.
    macOS may require restarting RelayOS for the permission to take effect.
@@ -47,8 +48,9 @@ or continuous video streaming. ChatGPT can request one capture of:
    private. It expires after **120 seconds or three downloads**, whichever
    comes first. Use the link promptly; some image previewers consume a read.
 7. There is **no continuous stream**, background interval capture or audio.
-   A second screenshot, including one of the same app, requires a new locally
-   approved request. The screenshot is held only in a bounded in-process
+   Every screenshot needs a fresh request ID; the separate local Once
+   decision is skipped only for `display:main` while a user-enabled sharing
+   session is active. The screenshot is held only in a bounded in-process
    memory store (at most four images), not written to an image file or cloud
    storage. HTTP responses use `no-store`, no-referrer and no-index headers;
    expired images are discarded on access or at the next capture. Emergency
@@ -62,6 +64,42 @@ Emergency Stop blocks the capture. Pending approvals expire after five
 minutes, and denying an approval cannot be bypassed. Once-used request tokens
 cannot be replayed. The MCP listener removes the legacy ungated snapshot
 tools from its published tool list.
+
+## One-click main-display sharing (optional; 30 minutes)
+
+**Default is OFF.** In the signed RelayOS app, open the macOS menu-bar
+control center (or **Settings → Security**), then press
+**Share main display · 30 min**. This is an explicit decision made in
+the native Mac UI, not a permission ChatGPT or an MCP request can grant.
+
+During the session, `request_screen_capture(scope="display", target="")`
+returns `permission="active_sharing_session"`. ChatGPT can immediately
+use the returned one-time request ID with `capture_approved_screen`
+without another local prompt. No capture happens until that second tool
+call. **Named apps, windows and external displays** continue to require
+the normal local Approve Once confirmation.
+
+The always-visible RelayOS menu-bar indicator marks an active session.
+The local control interface shows an approximate countdown. **Stop sharing**
+revokes the session immediately. The session also stops after 30 minutes,
+on server restart, when Screen Guidance is disabled, or with Emergency Stop.
+An in-flight capture cannot deliver its image if sharing stops before the
+image is returned. Stopping also revokes outstanding temporary image links.
+A new session does not reactivate expired requests.
+Each frame remains a separately audited, single-use capture. The session
+exists only in the MCP server's memory, with no persistent Always-allow
+screen grant or background capture loop.
+
+This convenience mode does not override macOS's **Screen & System Audio
+Recording** permission for the signed RelayOS capture helper. It affects
+only RelayOS's own repeated approval prompts.
+
+**Local control contract:** the token-authenticated
+`GET /control/screen-sharing` reports active status and remaining seconds,
+and `POST /control/screen-sharing` accepts
+`{"enabled":true,"duration_seconds":1800}` or
+`{"enabled":false}`, invoked by the native UI. The server enforces
+60–3600 seconds per activation. No public MCP tool can start a session.
 
 ## Files
 

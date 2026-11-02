@@ -29,6 +29,10 @@ final class BridgeModel: ObservableObject {
     @Published var geminiConnected = false
     @Published var chatGPTConnected = false
     @Published var screenGuidance = false
+    @Published var screenSharingActive = false
+    @Published var screenSharingSecondsRemaining = 0
+    @Published var screenSharingBusy = false
+    @Published var screenSharingError: String?
     @Published var projectTools = false
     @Published var ngrokToken = ""
     @Published var ngrokDomainValue = ""

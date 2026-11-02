@@ -162,6 +162,12 @@ struct RelayOSApp: App {
             HStack(spacing: 3) {
                 Image(systemName: "square.stack.3d.up.fill")
                     .frame(width: 18, height: 18)
+                if model.screenSharingActive {
+                    Image(systemName: "record.circle.fill")
+                        .foregroundStyle(.green)
+                        .frame(width: 12, height: 12)
+                        .accessibilityLabel("Main display sharing active")
+                }
                 if (model.isSwiftOnly ? model.nativePendingCount : model.approvalInbox.count) > 0 {
                     Text("\(model.isSwiftOnly ? model.nativePendingCount : model.approvalInbox.count)")
                         .font(.system(size: 11, weight: .bold))

@@ -112,6 +112,47 @@ struct QuickPanel: View {
             .padding(.bottom, 12)
 
             if !model.isSwiftOnly {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: model.screenSharingActive ? "rectangle.inset.filled.and.person.filled" : "rectangle.dashed")
+                            .foregroundStyle(model.screenSharingActive ? Color.green : accentColor)
+                        Text("Screen sharing")
+                            .font(.system(size: 12, weight: .semibold))
+                        Spacer()
+                        Text(model.screenSharingSummary)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(model.screenSharingActive ? Color.green : Color.secondary)
+                    }
+                    Text(model.screenSharingActive
+                         ? "Main display available to connected ChatGPT without repeated prompts. Stop whenever you want."
+                         : "Temporarily allow main-display screenshots for 30 minutes. Other apps and windows still require approval.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let error = model.screenSharingError {
+                        Text(error).font(.system(size: 11)).foregroundStyle(.red)
+                    }
+                    Button {
+                        model.setScreenSharing(!model.screenSharingActive)
+                    } label: {
+                        Label(model.screenSharingActive ? "Stop sharing" : "Share main display · 30 min",
+                              systemImage: model.screenSharingActive ? "stop.circle.fill" : "play.circle.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(model.screenSharingBusy ||
+                              (!model.screenSharingActive && (!model.screenGuidance || model.emergencyStop)) ||
+                              model.isDevelopmentClient)
+                }
+                .padding(14)
+                .background(palette.cardBackground, in: RoundedRectangle(cornerRadius: 13))
+                .overlay(RoundedRectangle(cornerRadius: 13)
+                    .strokeBorder(model.screenSharingActive ? Color.green.opacity(0.6) : palette.cardBorder,
+                                  lineWidth: 1))
+                .padding(.bottom, 12)
+            }
+
+            if !model.isSwiftOnly {
                 Button {
                     if let active = model.commandJobs.first(where: \.active) {
                         model.selectCommandJob(active.id)

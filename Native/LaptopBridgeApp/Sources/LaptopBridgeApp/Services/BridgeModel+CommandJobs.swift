@@ -35,12 +35,14 @@ extension BridgeModel {
     func startCommandJobMonitoring() {
         guard !isPreview, !isSwiftOnly, commandJobMonitoringTimer == nil else { return }
         refreshCommandJobs()
+        refreshScreenSharing()
         let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
         timer.schedule(deadline: .now() + 1, repeating: .seconds(2))
         timer.setEventHandler { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.refreshCommandJobs()
+                self.refreshScreenSharing()
                 if self.selectedCommandJobID != nil { self.refreshCommandJobOutput() }
             }
         }

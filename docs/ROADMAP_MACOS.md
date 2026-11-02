@@ -2,6 +2,15 @@
 Status: Phase 01 native runtime foundation in progress (2026-10-31)
 Scope: /Users/chastedjaziri/Documents/GitHub/laptop-bridge
 
+## Screen-sharing experience — one-click session
+- [x] Implement explicit native UI Start/Stop for a 30-minute main-display sharing session; opt-in is off by default.
+- [x] Reuse one-time authenticated capture tokens and existing ScreenCaptureKit/MCP delivery without repeated inbox approvals during the session.
+- [x] Restrict to main display. Other apps/windows/displays keep per-capture approval.
+- [x] Surface active indicator in menu bar + native settings and refresh countdown from authenticated local control status.
+- [x] Revoke on Stop/timeout/Emergency Stop/restart and prevent in-flight or stale requests being replayed; no persistent screenshot grant.
+- [ ] Run regression suites, signed build/deployment with a rollback, then verify multiple ChatGPT captures in a single session.
+- [ ] Verify macOS Screen Recording permission remains enforced on signed release.
+
 ## Screen capture delivery — current development branch
 - [x] Preserve exact per-frame local approval and native ScreenCaptureKit JPEG response.
 - [x] Add memory-only HTTPS retrieval fallback through the existing tunnel, with expiring random tokens, bounded reads and Emergency Stop revocation.
