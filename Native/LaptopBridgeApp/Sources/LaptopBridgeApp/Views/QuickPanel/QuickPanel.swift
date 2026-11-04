@@ -8,6 +8,7 @@ struct QuickPanel: View {
     @ObservedObject var model: BridgeModel
     @ObservedObject private var notch = NotchPanelCoordinator.shared
     @ObservedObject private var walkthrough = RelayOSWalkthroughObserver.shared
+    @ObservedObject private var liveLesson = RelayOSLiveLessonObserver.shared
     @Environment(\.openWindow) private var openWindow
     @Environment(\.colorScheme) private var colorScheme
 
@@ -134,6 +135,48 @@ struct QuickPanel: View {
             .overlay(RoundedRectangle(cornerRadius: 13)
                 .strokeBorder(palette.cardBorder, lineWidth: 1))
             .padding(.bottom, 12)
+
+            if let lesson = liveLesson.snapshot,
+               lesson.status == "active" || lesson.status == "paused" {
+                VStack(alignment: .leading, spacing: 9) {
+                    HStack {
+                        Label("Live guidance", systemImage: "pencil.tip.crop.circle")
+                            .font(.system(size: 12, weight: .semibold))
+                        Spacer()
+                        Text("Step \((lesson.step_index ?? 0) + 1)/\(lesson.total_steps ?? 1)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(accentColor)
+                    }
+                    Text(lesson.instruction ?? "")
+                        .font(.system(size: 11))
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 8) {
+                        if lesson.verify?.kind == "manual", lesson.active {
+                            Button("Done") { liveLesson.action("confirm") }
+                        }
+                        Button(lesson.active ? "Pause" : "Resume") {
+                            liveLesson.action(lesson.active ? "pause" : "resume")
+                        }
+                        Button("Stop") { liveLesson.action("stop") }
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding(13)
+                .background(palette.cardBackground,
+                            in: RoundedRectangle(cornerRadius: 13))
+                .padding(.bottom, 12)
+            }
+
+            if !model.isSwiftOnly {
+                Button {
+                    RelayOSOnscreenAnnotations.shared.clear()
+                } label: {
+                    Label("Clear on-screen drawings", systemImage: "eraser")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .buttonStyle(.bordered)
+                .padding(.bottom, 12)
+            }
 
             if !model.isSwiftOnly && ["active", "paused"].contains(walkthrough.status.status) {
                 VStack(alignment: .leading, spacing: 10) {

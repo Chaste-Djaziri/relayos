@@ -53,8 +53,9 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
             }
             RelayOSCursorCompanion.shared.start()
             RelayOSWalkthroughObserver.shared.start()
-        RelayOSGuidanceNotepad.shared.start()
-        RelayOSLiveLessonObserver.shared.start()
+            RelayOSGuidanceNotepad.shared.start()
+            RelayOSLiveLessonObserver.shared.start()
+            RelayOSOnscreenAnnotations.shared.start()
             return
         }
         guard SingleInstanceCoordinator.shared.claimOrReplaceExistingInstance() else {
@@ -67,6 +68,7 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
         RelayOSWalkthroughObserver.shared.start()
         RelayOSGuidanceNotepad.shared.start()
         RelayOSLiveLessonObserver.shared.start()
+        RelayOSOnscreenAnnotations.shared.start()
         Task { @MainActor in
             NotchPanelCoordinator.shared.ensurePresentedOnLaunch(model: BridgeModel.shared)
         }
@@ -77,6 +79,7 @@ final class RelayOSApplicationDelegate: NSObject, NSApplicationDelegate {
         RelayOSWalkthroughObserver.shared.stop()
         RelayOSLiveLessonObserver.shared.stop()
         RelayOSGuidanceNotepad.shared.stop()
+        RelayOSOnscreenAnnotations.shared.stop()
         nativeExperiment?.stop()
         nativeExperiment = nil
         BridgeModel.shared.stopNativeInboxPolling()
@@ -154,6 +157,11 @@ struct RelayOSApp: App {
                 .keyboardShortcut("n", modifiers: [.command, .option])
 
                 Divider()
+                Button("Clear On-Screen Drawings") {
+                    RelayOSOnscreenAnnotations.shared.clear()
+                }
+                .keyboardShortcut("k", modifiers: [.command, .option, .shift])
+
                 Button("Review Approvals") {
                     model.showApprovalCenter()
                     openWindow(id: "main")
