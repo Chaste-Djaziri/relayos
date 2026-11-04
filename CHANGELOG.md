@@ -4,6 +4,14 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 
 ## Unreleased
 
+### Direct screen labeling and persistent multi-mark overlays (2026-11-04)
+- Add `draw_screen_annotations`, `screen_annotation_status`, `erase_screen_annotations` and `clear_all_screen_annotations` MCP tools. Render multiple text labels, circles, rectangles, code excerpts, leader arrows and freehand scribbles over the actual full display without opening the Teaching Notepad.
+- Add click-through, non-capturable transparent macOS drawing panels, animated marker strokes and label backgrounds, foreground-app-bound visibility and per-display placement. The screen overlay is distinct from the legacy one-target highlight/cursor.
+- Update the approved guided-lesson engine to show step instructions on the screen instead of forcing a notepad window. Clean up only its own labels on advance/pause/stop; keep other drawings intact. Add local menu-bar Done/Pause/Stop and Clear drawings controls.
+- Add isolated on-screen drawing tests, native geometry and display/app visibility tests, and workflow documentation in `docs/SCREEN_ANNOTATIONS.md`.
+- Preserve screenshot consent and existing safety controls. Drawing is time limited and display-anchored; moving/scrolling UI requires a fresh screenshot and replacement labels.
+
+
 ### Local teaching notepad and approved activity-driven lessons (2026-11-04)
 - Add native floating, draggable, resizable and scrollable Teaching Notepad, with authenticated local snapshot transport, per-annotation drawing IDs, code/text/shape/arrow/path primitives, Clear/Hide and expiry.
 - Add MCP tools to open/draw/edit/read the board and to propose/activate/check/stop a bounded guided lesson after local Approve Once.

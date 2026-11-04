@@ -1,5 +1,16 @@
 # RelayOS macOS-First Implementation Roadmap
 
+## Direct in-place screen scribbles and labels (2026-11-04)
+- [x] Add multi-element public MCP drawing tools (plain text, labels, code, arrow/line, rect/ellipse and freeform) with exact IDs, per-display replacement, expiry and erase.
+- [x] Add non-intercepting, transparent, non-capturable SwiftUI display panels independent from the Teaching Notepad.
+- [x] Make guided lessons default to small in-place instruction labels and typewriter tips; preserve unrelated annotations when steps change.
+- [x] Offer native menu-bar Clear Drawings and Live Lesson Done/Pause/Stop controls.
+- [x] Pass backend, SwiftUI build and native geometry/tests.
+- [ ] Verify real screenshot-grounded car/image annotation placement on user's current screen after signed deployment.
+- [ ] Add dynamic anchors to target window/accessibility geometry so ink remains aligned during window moves, zooms and scrolling.
+- [ ] Add opt-in model agent loop for continuous visual re-evaluation; MCP alone cannot wake ChatGPT indefinitely.
+
+
 ## Interactive Teaching Notepad & session-scoped progress observation (2026-11-04)
 - [x] Native draggable, resizable floating notepad with 2-axis scrolling, drawing rendering and local Clear/Hide.
 - [x] Authenticated MCP editing tools: text, code, shapes, lines, arrows, paths, individual removal and clear.
