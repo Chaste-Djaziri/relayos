@@ -12,7 +12,7 @@ import secrets
 import threading
 import time
 
-from . import cursor_guidance, guidance_workspace, state
+from . import cursor_guidance, screen_annotations, state
 from .config import load_config
 
 _lock = threading.RLock()
@@ -71,7 +71,7 @@ def _visible():
     if session["status"] == "active" and (time.time() >= session["expires_at"] or state.emergency_stop()
             or not load_config().get("capabilities", {}).get("screen_guidance", False)):
         session["status"] = "expired"
-        guidance_workspace.revoke()
+        _clear_step_ink(session)
         cursor_guidance.clear()
     index = session["step_index"]
     steps = session["plan"]["steps"]
@@ -89,24 +89,31 @@ def status():
         return _visible()
 
 
+def _clear_step_ink(session):
+    ids = session.get("step_annotation_ids") or []
+    session["step_annotation_ids"] = []
+    if ids:
+        try:
+            screen_annotations.erase(ids=ids)
+        except PermissionError:
+            pass
+
+
 def _display_step(session):
+    """Default to a discreet direct screen label; never launch the notepad."""
+    _clear_step_ink(session)
     step = session["plan"]["steps"][session["step_index"]]
-    title = f"RelayOS Lesson · {session['step_index'] + 1}/{len(session['plan']['steps'])}"
-    remaining = max(60, min(MAX_SECONDS, int(session["expires_at"] - time.time())))
-    board = guidance_workspace.open_board(title=title, duration_seconds=remaining)
-    session["notepad_id"] = board["id"]
-    elements = [
-        {"kind":"text", "text":session["plan"]["goal"], "x":.05, "y":.04,
-         "w":.88, "font_size":28, "color":"accent"},
-        {"kind":"text", "text":f"STEP {session['step_index'] + 1}  —  {step['instruction']}",
-         "x":.05, "y":.13, "w":.9, "font_size":23, "color":"white"},
-    ]
-    if step["notes"]:
-        elements.append({"kind":"code" if "\n" in step["notes"] else "text",
-                         "text":step["notes"], "x":.05, "y":.26, "w":.9,
-                         "font_size":18, "color":"green"})
-    guidance_workspace.add_elements(board["id"], elements)
-    cursor_guidance.show_tip(step["instruction"][:240], 60)
+    instruction = step["instruction"]
+    suffix = "  •  RelayOS menu → Done when finished" if step["verify"]["kind"] == "manual" else ""
+    label = f"STEP {session['step_index'] + 1}/{len(session['plan']['steps'])}: {instruction[:130]}{suffix}"
+    remaining = min(900, max(5, int(session["expires_at"] - time.time())))
+    response = screen_annotations.draw([{
+        "kind": "label", "text": label, "x": .025, "y": .84,
+        "w": .57, "font_size": 17, "color": "accent",
+    }], duration_seconds=remaining)
+    session["step_annotation_ids"] = response["ids"]
+    session["notepad_id"] = None
+    cursor_guidance.show_tip(instruction[:240], 60)
 
 
 def activate(request_id):
@@ -121,6 +128,7 @@ def activate(request_id):
             "id":secrets.token_urlsafe(16), "status":"active", "plan":plan,
             "step_index":0, "expires_at":time.time() + plan["duration_seconds"],
             "events":[], "next_event_id":1, "notepad_id":None,
+            "step_annotation_ids":[],
         }
         _display_step(_current)
         return _visible()
@@ -137,6 +145,7 @@ def _advance(session):
     session["step_index"] += 1
     if session["step_index"] == len(session["plan"]["steps"]):
         session["status"] = "completed"
+        _clear_step_ink(session)
         cursor_guidance.show_tip("Lesson complete. Great work!", 30)
         return
     _display_step(session)
@@ -185,10 +194,11 @@ def local_control(action, session_id):
             raise PermissionError("Unknown lesson")
         if action == "stop":
             _current["status"] = "stopped"
-            guidance_workspace.revoke()
+            _clear_step_ink(_current)
             cursor_guidance.clear()
         elif action == "pause" and _current["status"] == "active":
             _current["status"] = "paused"
+            _clear_step_ink(_current)
             cursor_guidance.clear()
         elif action == "resume" and _current["status"] == "paused":
             _permitted()
@@ -204,5 +214,6 @@ def revoke():
     with _lock:
         if _current is not None:
             _current["status"] = "stopped"
-        guidance_workspace.revoke()
+        if _current is not None:
+            _clear_step_ink(_current)
         cursor_guidance.clear()

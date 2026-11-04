@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from laptop_bridge import cursor_guidance, guided_lesson, guidance_workspace, state
+from laptop_bridge import cursor_guidance, guided_lesson, guidance_workspace, screen_annotations, state
 
 
 class GuidanceWorkspaceTests(TestCase):
@@ -140,3 +140,23 @@ class GuidanceWorkspaceTests(TestCase):
             hidden = asyncio.run(call("POST", "/control/guidance-notepad/action",
                                       {"action":"hide"}, True))
             self.assertFalse(json.loads(hidden.body)["visible"])
+
+    def test_guided_lesson_uses_screen_overlay_without_opening_notepad(self):
+        external = screen_annotations.draw([
+            {"kind":"ellipse","x":.2,"y":.3,"w":.1,"h":.15}
+        ])["ids"][0]
+        proposed = guided_lesson.propose("Explain code on my screen", [
+            {"instruction":"Open the editor","verify":{"kind":"app_active"}},
+            {"instruction":"Review the expression","verify":{"kind":"manual"}},
+        ])
+        state.approve(proposed["request_id"])
+        sid = guided_lesson.activate(proposed["request_id"])["session_id"]
+        self.assertFalse(guidance_workspace.current()["active"])
+        original_ids = [x["id"] for x in screen_annotations.current()["annotations"]]
+        self.assertEqual(len(original_ids), 2)
+        self.assertIn(external, original_ids)
+        guided_lesson.observe(sid, "app_active", "com.apple.finder")
+        self.assertEqual(len(screen_annotations.current()["annotations"]), 2)
+        self.assertNotIn(original_ids[1], [x["id"] for x in screen_annotations.current()["annotations"]])
+        guided_lesson.local_control("stop", sid)
+        self.assertEqual([x["id"] for x in screen_annotations.current()["annotations"]], [external])
