@@ -1,4 +1,17 @@
 # RelayOS macOS-First Implementation Roadmap
+
+## Interactive Teaching Notepad & session-scoped progress observation (2026-11-04)
+- [x] Native draggable, resizable floating notepad with 2-axis scrolling, drawing rendering and local Clear/Hide.
+- [x] Authenticated MCP editing tools: text, code, shapes, lines, arrows, paths, individual removal and clear.
+- [x] Explicit local Once approval before bounded activity observation (app, click, scroll and typing occurrence; no text); native session controls.
+- [x] Advance pre-authored steps on verified event categories and update the visible instructional notepad and cursor tip.
+- [x] Native Swift suite and Python suite (210 passed, 89 subtests) verified; packaged helper isolated restart/auth smoke passed.
+- [x] Signed production build, rollback-protected install and localhost/tunnel recovery verified on 2026-11-04.
+- [ ] Reconnect ChatGPT's RelayOS plugin to expose the new tools; perform the first hands-on macOS notepad/lesson walkthrough.
+- [ ] Add an optional on-device/model API orchestration loop with user-configured credentials for genuinely adaptive multi-step tutoring, opt-in capture scopes, budgets and stop controls; **not supplied by the ChatGPT connector alone**.
+- [ ] Add Accessibility-based element verification and compiler/test-result verification, so a click or typing activity cannot be mistaken for correct task completion.
+- [ ] Evaluate explicit foreground-session capture rate limiting, sensitive-app exclusions and redaction before any automatic model-visible screenshot analysis.
+
 Status: Phase 01 native runtime foundation in progress (2026-10-31)
 Scope: /Users/chastedjaziri/Documents/GitHub/laptop-bridge
 

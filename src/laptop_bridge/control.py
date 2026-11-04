@@ -16,7 +16,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from . import keychain, state
-from . import ngrok, command_jobs, cursor_guidance, screen_capture, walkthrough
+from . import ngrok, command_jobs, cursor_guidance, screen_capture, walkthrough, guidance_workspace, guided_lesson
 from .config import CONFIG_FILE, STATE_DIR, load_config, save_config
 
 TOKEN_FILE = STATE_DIR / "control.token"
@@ -117,6 +117,40 @@ async def handle(request: Request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     path = request.url.path
     method = request.method
+    if method == "GET" and path == "/control/guidance-notepad":
+        return JSONResponse(guidance_workspace.current())
+    if method == "POST" and path == "/control/guidance-notepad/action":
+        payload = await json_body(request)
+        try:
+            if payload.get("action") not in {"hide", "clear", "close", "show"}:
+                raise ValueError("Unsupported local notepad action")
+            return JSONResponse(guidance_workspace.local_action(payload["action"]))
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        except PermissionError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=403)
+    if method == "GET" and path == "/control/guided-lesson":
+        return JSONResponse(guided_lesson.status())
+    if method == "POST" and path == "/control/guided-lesson/event":
+        payload = await json_body(request)
+        try:
+            return JSONResponse(guided_lesson.observe(
+                payload.get("session_id"), payload.get("kind"),
+                bundle_id=payload.get("bundle_id", ""),
+                x=payload.get("x"), y=payload.get("y")))
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        except (PermissionError, TypeError) as exc:
+            return JSONResponse({"error": str(exc)}, status_code=403)
+    if method == "POST" and path == "/control/guided-lesson/action":
+        payload = await json_body(request)
+        try:
+            return JSONResponse(guided_lesson.local_control(
+                payload.get("action"), payload.get("session_id")))
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        except PermissionError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=403)
     if method == "GET" and path == "/control/walkthrough":
         return JSONResponse(walkthrough.status())
     if method == "POST" and path == "/control/walkthrough/observe":

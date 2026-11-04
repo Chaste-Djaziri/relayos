@@ -292,6 +292,9 @@ def set_emergency_stop(enabled):
         cursor_guidance.clear()
         screen_capture.revoke_sharing()
         walkthrough.revoke()
+        from . import guidance_workspace, guided_lesson
+        guided_lesson.revoke()
+        guidance_workspace.revoke()
 
 
 def emergency_stop(connection=None):

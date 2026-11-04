@@ -4,6 +4,14 @@ All notable RelayOS changes are recorded here. Entries under **Unreleased** are 
 
 ## Unreleased
 
+### Local teaching notepad and approved activity-driven lessons (2026-11-04)
+- Add native floating, draggable, resizable and scrollable Teaching Notepad, with authenticated local snapshot transport, per-annotation drawing IDs, code/text/shape/arrow/path primitives, Clear/Hide and expiry.
+- Add MCP tools to open/draw/edit/read the board and to propose/activate/check/stop a bounded guided lesson after local Approve Once.
+- Add a session-scoped native action observer for foreground app, click, scroll and typing occurrence metadata; no raw keystrokes, field values, clipboard or window titles. Pause/Stop, Emergency Stop and Screen Guidance revocation terminate observation.
+- Add pre-authored steps with action-based verification and local manual-completion button; advance current cursor tip and notepad without requiring another ChatGPT request. Not a continuously running ChatGPT/model agent and not proof that code is correct.
+- Add tests and docs at `docs/LIVE_GUIDANCE_NOTEBOOK.md`. Native Swift tests and full Python suite (210 passed, 89 subtests) passed. Signed hybrid bundle built and deployed successfully through the verified rollback-protected handover on 2026-11-04 at 04:07; backup: `/Applications/RelayOS.app.pre-update-20261104-040718`. MCP 8765 and ngrok 4040 restored with setup intact. A hands-on UI test and plugin refresh are still required.
+
+
 ### Scoped file/app management and approval-gated Trash
 - Add temporary, exact-folder file-manager sessions (15 minutes; local Approve Once), paginated folder listing, file details, bounded name search, installed macOS app bundle inspection and read-only developer tool inventory.
 - Add distinct, single-use approvals for moving selected files to Finder Trash, moving/copying/renaming items and creating folders. Reject symlink escapes, existing destination overwrites, credentials, system/RelayOS data and folders containing Git metadata or secret-like files.
