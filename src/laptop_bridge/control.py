@@ -16,7 +16,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from . import keychain, state
-from . import ngrok, command_jobs, cursor_guidance, screen_capture, walkthrough, guidance_workspace, guided_lesson
+from . import ngrok, command_jobs, cursor_guidance, screen_capture, walkthrough, guidance_workspace, guided_lesson, screen_annotations
 from .config import CONFIG_FILE, STATE_DIR, load_config, save_config
 
 TOKEN_FILE = STATE_DIR / "control.token"
@@ -117,6 +117,12 @@ async def handle(request: Request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     path = request.url.path
     method = request.method
+    if method == "GET" and path == "/control/screen-annotations":
+        return JSONResponse(screen_annotations.current())
+    if method == "POST" and path == "/control/screen-annotations/clear":
+        # This route is for native user-facing Clear controls, never the
+        # public tunnel; the loopback token above is mandatory.
+        return JSONResponse(screen_annotations.erase_all())
     if method == "GET" and path == "/control/guidance-notepad":
         return JSONResponse(guidance_workspace.current())
     if method == "POST" and path == "/control/guidance-notepad/action":
